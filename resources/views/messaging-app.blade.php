@@ -1596,9 +1596,15 @@ key="mic-action"
 
 <div class="status-viewer-media-backdrop" v-if="(currentStatus.content_url || currentStatus.contentUrl)" :style="{ backgroundImage: 'url(' + (currentStatus.contentUrl || ('/storage/' + currentStatus.content_url)) + ')' }"></div>
 
-<img v-if="currentStatus.type === 'image' && (currentStatus.content_url || currentStatus.contentUrl)" class="status-viewer-img" :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))" alt="" @load="statusViewerReady = true; startStatusProgress()">
+<img v-if="currentStatus.type === 'image' && (currentStatus.content_url || currentStatus.contentUrl)" class="status-viewer-img"
+     :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))" alt=""
+     :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', maxWidth:'none', maxHeight:'none', width:'auto', height:'auto', minWidth:'100%', minHeight:'100%', objectFit:'cover' }"
+     @load="statusViewerReady = true; startStatusProgress()">
 
-<video v-else-if="currentStatus.type === 'video' && (currentStatus.content_url || currentStatus.contentUrl)" ref="statusViewerVideo" class="status-viewer-img" autoplay playsinline :muted="statusViewerMuted" :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))" @loadedmetadata="onStatusVideoReady" @canplay="onStatusVideoReady"></video>
+<video v-else-if="currentStatus.type === 'video' && (currentStatus.content_url || currentStatus.contentUrl)" ref="statusViewerVideo" class="status-viewer-img" autoplay playsinline :muted="statusViewerMuted"
+      :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))"
+      :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', maxWidth:'none', maxHeight:'none', width:'auto', height:'auto', minWidth:'100%', minHeight:'100%', objectFit:'cover' }"
+      @loadedmetadata="onStatusVideoReady" @canplay="onStatusVideoReady"></video>
 
   <div v-for="(layer, lIdx) in getStatusTextLayers(currentStatus)" :key="'txt-'+lIdx"
        class="status-viewer-text-layer"
@@ -4996,6 +5002,10 @@ durationHours: 24,
 privacyType: 'all',
 mediaFile: null,
 mediaPreview: null,
+mediaPosX: 50,
+mediaPosY: 50,
+mediaScale: 1,
+mediaRotate: 0,
 audioFile: null,
 texts: [],
 activeTextIndex: -1,
@@ -14974,7 +14984,7 @@ this.statusEditorOpen = true;
 
 this.statusTextSelected = false;
 
-this.statusEditor = { type: 'text', textContent: '', textColor: '#ffffff', fontStyle: 'Tajawal', fontSize: 28, textPosX: 50, textPosY: 50, rotate: 0, bgColor: this.randomGradient(), textBgStyle: 'none', filterStyle: null, durationHours: 24, privacyType: 'all', mediaFile: null, mediaPreview: null, audioFile: null, texts: [], activeTextIndex: -1 };
+this.statusEditor = { type: 'text', textContent: '', textColor: '#ffffff', fontStyle: 'Tajawal', fontSize: 28, textPosX: 50, textPosY: 50, rotate: 0, bgColor: this.randomGradient(), textBgStyle: 'none', filterStyle: null, durationHours: 24, privacyType: 'all', mediaFile: null, mediaPreview: null, mediaPosX: 50, mediaPosY: 50, mediaScale: 1, mediaRotate: 0, audioFile: null, texts: [], activeTextIndex: -1 };
 this.statusAlignGuides = { cx: false, cy: false, ex: false, ey: false };
 this.statusContextMenu = false;
 
@@ -15395,6 +15405,11 @@ fd.append('duration_hours', this.statusEditor.durationHours);
 
 if (this.statusEditor.mediaDurationSec) fd.append('media_duration_sec', this.statusEditor.mediaDurationSec);
 
+if (this.statusEditor.mediaPosX != null) fd.append('media_pos_x', this.statusEditor.mediaPosX);
+if (this.statusEditor.mediaPosY != null) fd.append('media_pos_y', this.statusEditor.mediaPosY);
+fd.append('media_scale', this.statusEditor.mediaScale ?? 1);
+fd.append('media_rotate', this.statusEditor.mediaRotate ?? 0);
+
 fd.append('privacy_type', this.statusEditor.privacyType);
 
 if (this.statusEditor.mediaFile) fd.append('media', this.statusEditor.mediaFile);
@@ -15716,6 +15731,11 @@ privacyType: 'all',
 mediaFile: null,
 
 mediaPreview: s.contentUrl || null,
+
+mediaPosX: s.mediaPosX ?? 50,
+mediaPosY: s.mediaPosY ?? 50,
+mediaScale: s.mediaScale ?? 1,
+mediaRotate: s.mediaRotate ?? 0,
 
 audioFile: null,
 
