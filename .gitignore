@@ -191,6 +191,9 @@ storage/framework/cache/data/*
 storage/framework/sessions/*
 storage/inspect_*.php
 
+# Database exports
+iglal_system.sql
+
 # Project-specific exclusions (non-Laravel files)
 diff_blade.txt
 diff_blade2.txt
