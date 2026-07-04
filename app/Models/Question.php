@@ -1,0 +1,27 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Question extends Model
+{
+    protected $fillable = [
+        'exam_id',
+        'question_text',
+        'question_type',
+        'order',
+        'video_timestamp',
+    ];
+
+    // العلاقات
+    public function exam()
+    {
+        return $this->belongsTo(Exam::class);
+    }
+
+    public function answers()
+    {
+        return $this->hasMany(Answer::class);
+    }
+}

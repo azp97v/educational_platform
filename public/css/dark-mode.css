@@ -1,0 +1,298 @@
+/**
+ * Dark Mode Theme Styles
+ * ينطبق على جميع الصفحات عند تفعيل الوضع الليلي
+ */
+
+:root {
+    /* Light Mode Colors (Default) */
+    --bg-primary: #F4F6F8;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #E9EDF2;
+    --text-primary: #222B3D;
+    --text-secondary: #5E6675;
+    --text-tertiary: #7D8797;
+    --border-color: rgba(198, 166, 117, 0.14);
+    --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-medium: 0 10px 40px rgba(0, 0, 0, 0.1);
+    --shadow-dark: 0 20px 80px rgba(0, 0, 0, 0.08);
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --input-bg: white;
+    --input-border: #ddd;
+    --input-focus: rgba(198, 166, 117, 0.14);
+}
+
+/* Dark Mode Colors */
+body.dark-mode {
+    --bg-primary: #050505;
+    --bg-secondary: #0F0F10;
+    --bg-tertiary: #191A1C;
+    --text-primary: #F5F7FA;
+    --text-secondary: #C7CED9;
+    --text-tertiary: #A2ACBC;
+    --border-color: rgba(198, 166, 117, 0.2);
+    --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 10px 40px rgba(0, 0, 0, 0.4);
+    --shadow-dark: 0 20px 80px rgba(0, 0, 0, 0.5);
+    --card-bg: rgba(15, 15, 16, 0.96);
+    --input-bg: #191A1C;
+    --input-border: rgba(198, 166, 117, 0.25);
+    --input-focus: rgba(198, 166, 117, 0.2);
+}
+
+/* ============================================
+   Universal Dark Mode Styles
+   ============================================ */
+
+body.dark-mode,
+body.dark-mode * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+body.dark-mode {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
+    color: var(--text-primary);
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6 {
+    color: var(--text-primary);
+}
+
+body.dark-mode p,
+body.dark-mode span,
+body.dark-mode div {
+    color: var(--text-primary);
+}
+
+body.dark-mode a {
+    color: #C6A675;
+}
+
+body.dark-mode a:hover {
+    color: #997722;
+}
+
+/* ============================================
+   Forms & Inputs
+   ============================================ */
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--input-border);
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+    background-color: var(--input-bg);
+    border-color: #C6A675;
+    box-shadow: 0 0 0 3px var(--input-focus);
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+
+body.dark-mode .btn {
+    color: white;
+}
+
+body.dark-mode .btn-primary {
+    background: linear-gradient(135deg, #997722 0%, #997722 100%);
+    border-color: transparent;
+}
+
+body.dark-mode .btn-secondary {
+    background: linear-gradient(135deg, #191A1C 0%, #4a4a4a 100%);
+    color: #C6A675;
+    border-color: #C6A675;
+}
+
+body.dark-mode .btn-secondary:hover {
+    background: #C6A675;
+    color: #222B3D;
+}
+
+/* ============================================
+   Cards & Containers
+   ============================================ */
+
+body.dark-mode .card,
+body.dark-mode .success-card,
+body.dark-mode .login-container,
+body.dark-mode .register-box,
+body.dark-mode .verify-box,
+body.dark-mode .success-box {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-dark);
+}
+
+body.dark-mode .feature-item {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* ============================================
+   Alerts
+   ============================================ */
+
+body.dark-mode .alert {
+    color: var(--text-primary);
+}
+
+body.dark-mode .alert-error {
+    background: rgba(214, 69, 69, 0.16);
+    border-right-color: #ff6b6b;
+    color: #ff6b6b;
+}
+
+body.dark-mode .alert-success {
+    background: rgba(34, 153, 102, 0.16);
+    border-right-color: #66d966;
+    color: #66d966;
+}
+
+body.dark-mode .alert-warning {
+    background: rgba(242, 183, 5, 0.16);
+    border-right-color: #ffb84d;
+    color: #ffb84d;
+}
+
+body.dark-mode .alert-info {
+    background: rgba(32, 178, 170, 0.15);
+    border-right-color: #2EC4B6;
+    color: #2EC4B6;
+}
+
+/* ============================================
+   Navigation & Links
+   ============================================ */
+
+body.dark-mode .nav-link {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .nav-link:hover {
+    color: #C6A675;
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+
+body.dark-mode ::-webkit-scrollbar {
+    width: 12px;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #997722;
+    border-radius: 6px;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #C6A675;
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+
+body.dark-mode ::selection {
+    background: #997722;
+    color: white;
+}
+
+body.dark-mode ::-moz-selection {
+    background: #997722;
+    color: white;
+}
+
+/* ============================================
+   Decorative Elements
+   ============================================ */
+
+body.dark-mode .bg-decoration {
+    opacity: 0.3;
+}
+
+body.dark-mode .decoration-1 {
+    background: radial-gradient(circle, rgba(198, 166, 117, 0.14) 0%, transparent 70%);
+}
+
+body.dark-mode .decoration-2 {
+    background: radial-gradient(circle, rgba(153, 119, 34, 0.12) 0%, transparent 70%);
+}
+
+body.dark-mode .decoration-3 {
+    background: radial-gradient(circle, rgba(6, 51, 14, 0.05) 0%, transparent 70%);
+}
+
+/* ============================================
+   Gradients in Dark Mode
+   ============================================ */
+
+body.dark-mode .success-icon {
+    background: linear-gradient(135deg, #997722 0%, #997722 100%);
+}
+
+body.dark-mode .check-circle {
+    background: linear-gradient(135deg, #997722 0%, #997722 100%);
+}
+
+body.dark-mode .cta-text {
+    background: rgba(198, 166, 117, 0.12);
+    border-right-color: #997722;
+    color: var(--text-primary);
+}
+
+/* ============================================
+   Responsive Dark Mode
+   ============================================ */
+
+@media (max-width: 480px) {
+    body.dark-mode .dark-mode-toggle {
+        width: 45px;
+        height: 45px;
+        font-size: 1.3rem;
+        top: 15px;
+        left: 15px;
+    }
+}
+
+/* ============================================
+   Print Mode
+   ============================================ */
+
+@media print {
+    body.dark-mode {
+        background: white;
+        color: black;
+    }
+
+    body.dark-mode * {
+        background: white !important;
+        color: black !important;
+    }
+}
+
+
+

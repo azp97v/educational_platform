@@ -1,0 +1,126 @@
+:root {
+    --font-heading: "DIN Next LT Arabic", "DIN Next Arabic", "29LT Bukra", "Bukra", "Cairo", sans-serif;
+    --font-body: "Cairo", "IBM Plex Sans Arabic", "Tajawal", sans-serif;
+    --font-number: "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+
+    --brand-gold: #C6A675;
+    --brand-gold-dark: #997722;
+    --brand-gold-soft: rgba(198, 166, 117, 0.14);
+    --brand-white: #FFFFFF;
+    --brand-bg-light: #F4F6F8;
+    --brand-text-dark: #222B3D;
+    --brand-text-muted: #5E6675;
+    --brand-danger: #D64545;
+    --brand-success: #229966;
+    --brand-pending: #F2B705;
+
+    --gold: var(--brand-gold);
+    --gold-dark: var(--brand-gold-dark);
+    --gold-light: var(--brand-gold-soft);
+    --color-gold: var(--brand-gold);
+    --color-gold-dark: var(--brand-gold-dark);
+    --color-gold-light: var(--brand-gold-soft);
+
+    --bg: var(--brand-bg-light);
+    --bg-primary: var(--brand-bg-light);
+    --bg-secondary: var(--brand-white);
+    --bg-tertiary: #E9EDF2;
+    --card-bg: var(--brand-white);
+    --sidebar-bg: var(--brand-white);
+
+    --text-primary: var(--brand-text-dark);
+    --text-secondary: var(--brand-text-muted);
+    --text-tertiary: #7D8797;
+    --text-muted: #95A0AF;
+
+    --danger: var(--brand-danger);
+    --color-danger: var(--brand-danger);
+    --danger-light: rgba(214, 69, 69, 0.12);
+    --success: var(--brand-success);
+    --color-success: var(--brand-success);
+    --warning: var(--brand-pending);
+    --color-warning: var(--brand-pending);
+
+    --border: #DFE5EC;
+    --border-color: #DFE5EC;
+
+    --radius-sm: 12px;
+    --radius-md: 12px;
+    --radius-lg: 12px;
+    --radius-xl: 12px;
+
+    --shadow-sm: 0 1px 4px rgba(22, 26, 33, 0.04);
+    --shadow: 0 2px 10px rgba(22, 26, 33, 0.05);
+    --shadow-md: 0 4px 14px rgba(22, 26, 33, 0.06);
+    --shadow-lg: 0 8px 22px rgba(22, 26, 33, 0.08);
+}
+
+[data-theme="dark"],
+body.dark-mode {
+    --bg: #050505;
+    --bg-primary: #050505;
+    --bg-secondary: #0F0F10;
+    --bg-tertiary: #191A1C;
+    --card-bg: #0F0F10;
+    --sidebar-bg: #0F0F10;
+
+    --text-primary: #F5F7FA;
+    --text-secondary: #C7CED9;
+    --text-tertiary: #A2ACBC;
+    --text-muted: #8A93A3;
+
+    --border: #24262B;
+    --border-color: #24262B;
+
+    --gold-light: rgba(198, 166, 117, 0.2);
+    --color-gold-light: rgba(198, 166, 117, 0.2);
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+    --shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 22px rgba(0, 0, 0, 0.34);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+html,
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6, .section-title, .logo-name, .nav-btn, .title {
+    font-family: var(--font-heading);
+}
+
+.stat-number,
+.counter,
+.amount,
+.score,
+.points,
+.xp,
+.notification-badge,
+[data-number],
+[data-numeric],
+.numeric {
+    font-family: var(--font-number);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+body,
+body *,
+html,
+html * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card,
+.modal,
+.form-section,
+.notification-dropdown,
+.profile-dropdown {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}

@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة إجلال | لوحة التحكم</title>
+  <meta name="description" content="منصة إجلال التعليمية - لوحة تحكم الإدارة">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #C4963A;
+      --gold-dark: #A07A28;
+      --gold-light: rgba(196,150,58,0.12);
+      --bg: #EBEBEB;
+      --sidebar-bg: #FFFFFF;
+      --card-bg: #FFFFFF;
+      --text-primary: #1C1C1E;
+      --text-secondary: #6C6C70;
+      --text-muted: #AEAEB2;
+      --success: #34C759;
+      --danger: #FF3B30;
+      --sidebar-w: 230px;
+      --topbar-h: 65px;
+      --radius-xl: 22px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 9px;
+      --shadow: 0 2px 18px rgba(0,0,0,0.07);
+      --shadow-hover: 0 8px 28px rgba(0,0,0,0.12);
+      --transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    [data-theme="dark"] {
+      --bg: #1C1C1E;
+      --sidebar-bg: #2C2C2E;
+      --card-bg: #2C2C2E;
+      --text-primary: #F2F2F7;
+      --text-secondary: #AEAEB2;
+      --text-muted: #636366;
+      --shadow: 0 2px 18px rgba(0,0,0,0.35);
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ─── Layout ─── */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      position: fixed;
+      right: 0; top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 200;
+      box-shadow: -3px 0 14px rgba(0,0,0,0.04);
+      transition: var(--transition);
+    }
+
+    .sidebar-logo {
+      padding: 26px 18px 22px;
+      text-align: center;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .logo-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 10px;
+      color: var(--gold);
+      font-size: 44px;
+      line-height: 56px;
+    }
+
+    .logo-name {
+      font-size: 18px; font-weight: 900;
+      color: var(--text-primary);
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow-y: auto;
+    }
+
+    .nav-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 14px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: 'Tajawal', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: right;
+      transition: var(--transition);
+    }
+
+    .nav-btn i { font-size: 18px; width: 20px; text-align: center; flex-shrink: 0; }
+
+    .nav-btn:hover { background: var(--gold-light); color: var(--gold); }
+
+    .nav-btn.active {
+      background: var(--gold);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(196,150,58,0.35);
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .nav-btn.logout { color: var(--danger); }
+    .nav-btn.logout:hover { background: rgba(255,59,48,0.08); color: var(--danger); }
+
+    /* ─── Main ─── */
+    .main {
+      margin-right: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── Topbar ─── */
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--sidebar-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0; z-index: 100;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+      gap: 16px;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+    .user-btn {
+      padding: 7px 16px;
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .user-btn:hover { background: var(--gold-dark); }
+
+    .icon-btn {
+      width: 38px; height: 38px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: var(--transition);
+      position: relative;
+    }
+    .icon-btn:hover { background: var(--gold-light); color: var(--gold); }
+
+    .notif-dot {
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 8px; height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      border: 2px solid var(--sidebar-bg);
+    }
+
+    .search-wrap {
+      flex: 1; max-width: 340px;
+      position: relative;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 40px 10px 14px;
+      background: var(--bg);
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px; color: var(--text-primary);
+      outline: none;
+      transition: var(--transition);
+    }
+    .search-wrap input::placeholder { color: var(--text-muted); }
+    .search-wrap input:focus { box-shadow: 0 0 0 2px rgba(196,150,58,0.3); }
+
+    .search-icon {
+      position: absolute;
+      right: 13px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted); font-size: 16px;
+      pointer-events: none;
+    }
+
+    /* ─── Pages ─── */
+    .content { padding: 24px; flex: 1; }
+
+    .page { display: none; animation: fadeUp 0.35s ease; }
+    .page.active { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Card base ─── */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+    .card:hover { box-shadow: var(--shadow-hover); }
+
+    /* ─── Page header ─── */
+    .page-hdr { margin-bottom: 22px; }
+    .page-hdr h1 { font-size: 24px; font-weight: 900; }
+    .page-hdr p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* ────────────────────────────────────────────
+       PAGE: الرئيسية
+    ──────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .stat-card { padding: 22px; }
+    .stat-icon {
+      width: 46px; height: 46px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 12px;
+    }
+    .stat-icon.gold   { background: var(--gold-light); color: var(--gold); }
+    .stat-icon.green  { background: rgba(52,199,89,0.12); color: #34C759; }
+    .stat-icon.blue   { background: rgba(0,122,255,0.1); color: #007AFF; }
+    .stat-icon.purple { background: rgba(175,82,222,0.1); color: #AF52DE; }
+
+    .stat-val {
+      font-size: 34px; font-weight: 900;
+      color: var(--gold); line-height: 1;
+    }
+    .stat-lbl {
+      font-size: 12px; color: var(--text-secondary);
+      margin-top: 4px; font-weight: 500;
+    }
+
+    .home-bottom { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; }
+
+    .chart-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px;
+    }
+    .chart-ttl { font-size: 15px; font-weight: 700; }
+
+    .filter-btn {
+      width: 34px; height: 34px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: var(--card-bg);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 15px; color: var(--text-secondary);
+      transition: var(--transition);
+    }
+    .filter-btn:hover { background: var(--gold-light); color: var(--gold); border-color: var(--gold); }
+
+    /* ────────────────────────────────────────────
+       PAGE: التقارير
+    ──────────────────────────────────────────── */
+    .reports-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; }
+
+    .success-card {
+      padding: 44px 28px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 16px;
+      text-align: center;
+    }
+
+    .success-circle {
+      width: 86px; height: 86px;
+      border-radius: 50%;
+      border: 3px solid rgba(52,199,89,0.2);
+      background: rgba(52,199,89,0.07);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; color: #34C759;
+    }
+
+    .success-ttl { font-size: 16px; color: var(--text-secondary); font-weight: 500; }
+
+    .success-num {
+      font-size: 58px; font-weight: 900;
+      color: var(--gold); line-height: 1;
+    }
+
+    .success-tags { display: flex; gap: 10px; }
+    .tag {
+      padding: 5px 12px;
+      background: var(--bg);
+      border-radius: 20px;
+      font-size: 12px; color: var(--text-secondary);
+    }
+
+    .chart-card { padding: 24px; }
+
+    /* ────────────────────────────────────────────
+       PAGE: المسرات
+    ──────────────────────────────────────────── */
+    .courses-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px,1fr));
+      gap: 18px;
+    }
+
+    .course-card {
+      padding: 24px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .course-badge {
+      position: absolute;
+      top: 16px; right: 16px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-live { background: rgba(52,199,89,0.12); color: #34C759; }
+
+    .course-icon-box {
+      width: 52px; height: 52px;
+      background: var(--gold-light);
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    .course-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .course-teacher { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+
+    .progress-lbl {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .progress-bar {
+      height: 6px; background: var(--bg);
+      border-radius: 3px; overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+      border-radius: 3px; transition: width 1s ease;
+    }
+
+    .course-foot {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .course-students { font-size: 13px; color: var(--text-secondary); }
+    .course-students strong { color: var(--gold); font-weight: 800; font-size: 15px; }
+    .course-manage {
+      font-size: 12px; color: var(--gold);
+      font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 3px;
+      background: none; border: none;
+      font-family: 'Tajawal', sans-serif;
+    }
+
+    .add-course-card {
+      border: 2px dashed rgba(196,150,58,0.3);
+      background: transparent;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; min-height: 200px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .add-course-card:hover {
+      border-color: var(--gold);
+      background: var(--gold-light);
+    }
+    .add-circle {
+      width: 44px; height: 44px;
+      border: 2px dashed var(--gold);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: var(--gold);
+    }
+    .add-course-card span { font-size: 14px; color: var(--gold); font-weight: 700; }
+
+    /* ────────────────────────────────────────────
+       PAGE: الإجازات
+    ──────────────────────────────────────────── */
+    .certs-card {
+      padding: 40px;
+      text-align: center;
+    }
+
+    .cert-icon { font-size: 62px; color: var(--gold); margin-bottom: 10px; }
+    .cert-desc {
+      font-size: 15px; color: var(--text-secondary);
+      max-width: 420px; margin: 0 auto 30px;
+      line-height: 1.65;
+    }
+
+    .certs-divider { border-top: 1px solid rgba(0,0,0,0.06); padding-top: 28px; }
+
+    .certs-row {
+      display: flex; justify-content: center;
+      gap: 40px; flex-wrap: wrap;
+    }
+
+    .cert-item { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+
+    .cert-id-row { display: flex; align-items: center; gap: 8px; }
+    .cert-id { font-size: 14px; font-weight: 700; }
+    .dl-btn {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: var(--gold-light);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gold); font-size: 15px;
+      transition: var(--transition);
+    }
+    .dl-btn:hover { background: var(--gold); color: #fff; }
+
+    .cert-course-name { font-size: 13px; color: var(--gold); font-weight: 700; }
+    .cert-date { font-size: 12px; color: var(--text-muted); }
+
+    /* ────────────────────────────────────────────
+       PAGE: المتنافسين
+    ──────────────────────────────────────────── */
+    .comp-tabs {
+      display: flex; gap: 10px; margin-bottom: 20px;
+    }
+    .comp-tab {
+      padding: 8px 20px;
+      border: none; border-radius: 20px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: var(--transition);
+      background: var(--card-bg); color: var(--text-secondary);
+    }
+    .comp-tab.active { background: var(--gold); color: #fff; }
+
+    /* Leaderboard list */
+    .lb-card { padding: 22px; }
+    .lb-list { display: flex; flex-direction: column; gap: 10px; }
+    .lb-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      background: var(--bg); border-radius: var(--radius-lg);
+      transition: var(--transition);
+    }
+    .lb-item:hover { background: var(--gold-light); }
+
+    .lb-rank { font-size: 22px; min-width: 32px; text-align: center; }
+
+    .lb-info { flex: 1; }
+    .lb-name { font-size: 15px; font-weight: 700; }
+    .lb-streak {
+      font-size: 12px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 4px; margin-top: 2px;
+    }
+
+    .lb-right { text-align: left; }
+    .lb-pts { font-size: 22px; font-weight: 900; color: var(--gold); }
+    .lb-pts-lbl { font-size: 11px; color: var(--text-muted); }
+
+    /* Numbered rank badge for 4+ */
+    .lb-num-badge {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 2px solid rgba(0,0,0,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    /* Top3 divider */
+    .lb-top3-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: 8px 0;
+      color: var(--text-muted);
+      font-size: 11px; font-weight: 600;
+    }
+    .lb-top3-divider::before, .lb-top3-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(0,0,0,0.07);
+    }
+
+    /* Podium */
+    .podium-card {
+      padding: 36px 40px;
+      text-align: center;
+    }
+    .podium-title { font-size: 30px; font-weight: 900; margin-bottom: 4px; }
+    .podium-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 40px; }
+
+    .podium-wrap {
+      display: flex; justify-content: center;
+      align-items: flex-end; gap: 14px;
+    }
+
+    .podium-person { display: flex; flex-direction: column; align-items: center; }
+
+    .podium-avatar {
+      width: 62px; height: 62px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff;
+      margin-bottom: 8px; position: relative;
+    }
+    .podium-avatar.gold-av   { background: var(--gold); width: 76px; height: 76px; font-size: 22px; }
+    .podium-avatar.silver-av { background: #A8A8A8; }
+    .podium-avatar.bronze-av { background: #C47A4A; }
+
+    .crown { position: absolute; top: -18px; font-size: 22px; }
+
+    .podium-block {
+      width: 88px; border-radius: 12px 12px 0 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 900; color: #fff;
+    }
+    .block-1 { height: 106px; background: linear-gradient(160deg, #D4A83A, #A07828); width: 100px; }
+    .block-2 { height: 74px;  background: linear-gradient(160deg, #C8C8C8, #8A8A8A); }
+    .block-3 { height: 52px;  background: linear-gradient(160deg, #E2B084, #C47A4A); }
+
+    /* ────────────────────────────────────────────
+       PAGE: المنتسبين
+    ──────────────────────────────────────────── */
+    .students-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px;
+    }
+    .page-title { font-size: 22px; font-weight: 900; }
+
+    .btn-primary {
+      padding: 9px 18px;
+      background: var(--gold); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: var(--transition);
+    }
+    .btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+    .table-card { padding: 0; overflow: hidden; }
+
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      padding: 13px 18px; text-align: right;
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      background: var(--bg); border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .data-table td {
+      padding: 13px 18px;
+      font-size: 13px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(196,150,58,0.04); }
+
+    .stu-cell { display: flex; align-items: center; gap: 10px; }
+    .stu-av {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--gold-light); color: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800;
+    }
+    .stu-nm { font-size: 14px; font-weight: 700; }
+    .stu-id { font-size: 11px; color: var(--text-muted); }
+
+    .mini-bar { width: 80px; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; display: inline-block; margin-left: 8px; }
+    .mini-fill { height: 100%; background: var(--gold); border-radius: 3px; }
+
+    .badge {
+      padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-active   { background: rgba(52,199,89,0.12); color: #34C759; }
+    .badge-inactive { background: rgba(255,59,48,0.08); color: #FF3B30; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🕌</div>
+      <div class="logo-name">إدارة إجلال</div>
+      <div class="logo-sub">منصة التعليمية</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" id="nb-home"         onclick="gotoPage('home')">        <i class="ri-layout-grid-line"></i><span>الرئيسية</span>    </button>
+      <button class="nav-btn"        id="nb-students"     onclick="gotoPage('students')">     <i class="ri-group-line"></i><span>المنتسبين</span>        </button>
+      <button class="nav-btn"        id="nb-competition"  onclick="gotoPage('competition')">  <i class="ri-trophy-line"></i><span>المتنافسين</span>      </button>
+      <button class="nav-btn"        id="nb-courses"      onclick="gotoPage('courses')">      <i class="ri-book-open-line"></i><span>المسرات</span>       </button>
+      <button class="nav-btn"        id="nb-certificates" onclick="gotoPage('certificates')"> <i class="ri-award-line"></i><span>الإجازات</span>          </button>
+      <button class="nav-btn"        id="nb-reports"      onclick="gotoPage('reports')">      <i class="ri-bar-chart-2-line"></i><span>التقارير</span>    </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-btn logout" onclick="alert('تم تسجيل الخروج')">
+        <i class="ri-logout-box-r-line"></i><span>خروج</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="user-btn">أداء العمل</button>
+        <div style="position:relative">
+          <button class="icon-btn"><i class="ri-notification-3-line"></i></button>
+          <div class="notif-dot"></div>
+        </div>
+        <button class="icon-btn" id="darkBtn" onclick="toggleDark()" title="الوضع الليلي">
+          <i class="ri-moon-line" id="darkIcon"></i>
+        </button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" placeholder="يبحث بسريع في النظام..." id="searchInp">
+        <i class="ri-search-line search-icon"></i>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ████████ PAGE: الرئيسية ████████ -->
+      <div class="page active" id="page-home">
+        <div class="page-hdr">
+          <h1>مرحباً بك 👋</h1>
+          <p>نظرة عامة على نشاط منصة إجلال</p>
+        </div>
+
+        <div class="stats-row">
+          <div class="card stat-card">
+            <div class="stat-icon gold"><i class="ri-group-line"></i></div>
+            <div class="stat-val">1,247</div>
+            <div class="stat-lbl">إجمالي المنتسبين</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon green"><i class="ri-book-open-line"></i></div>
+            <div class="stat-val">12</div>
+            <div class="stat-lbl">المسرات النشطة</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon blue"><i class="ri-award-line"></i></div>
+            <div class="stat-val">384</div>
+            <div class="stat-lbl">إجازات مُصدَرة</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon purple"><i class="ri-bar-chart-2-line"></i></div>
+            <div class="stat-val">87%</div>
+            <div class="stat-lbl">نسبة النجاح العامة</div>
+          </div>
+        </div>
+
+        <div class="home-bottom">
+          <div class="card" style="padding:24px">
+            <div class="chart-hdr">
+              <div class="chart-ttl">📈 نمو الجمعية (شهري)</div>
+              <button class="filter-btn"><i class="ri-equalizer-line"></i></button>
+            </div>
+            <div style="height:220px"><canvas id="homeChartEl"></canvas></div>
+          </div>
+          <div class="card" style="padding:24px">
+            <div class="chart-hdr">
+              <div class="chart-ttl">🏆 أفضل المسرات</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;margin-top:4px" id="bestCourses"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ████████ PAGE: المنتسبين ████████ -->
+      <div class="page" id="page-students">
+        <div class="students-hdr">
+          <div class="page-title">المنتسبون</div>
+          <button class="btn-primary"><i class="ri-user-add-line"></i> إضافة منتسب</button>
+        </div>
+        <div class="card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>الطالب</th>
+                <th>المسار</th>
+                <th>الإنجاز</th>
+                <th>النقاط</th>
+                <th>الحالة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="studentsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ████████ PAGE: المتنافسين ████████ -->
+      <div class="page" id="page-competition">
+        <div class="comp-tabs">
+          <button class="comp-tab active" id="tab-lb"    onclick="switchCompTab('lb')">قائمة المتنافسين</button>
+          <button class="comp-tab"        id="tab-podium" onclick="switchCompTab('podium')">أبطال الجمعية</button>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="comp-lb">
+          <div class="card lb-card">
+            <div class="lb-list" id="lbList"></div>
+          </div>
+        </div>
+
+        <!-- Podium -->
+        <div id="comp-podium" style="display:none">
+          <div class="card podium-card">
+            <div class="podium-title">أبطال جمعية إجلال</div>
+            <div class="podium-sub">"وفي ذلك فليتنافس المتنافسون" 👑</div>
+            <div class="podium-wrap">
+              <!-- 3rd -->
+              <div class="podium-person">
+                <div class="podium-avatar bronze-av">ع.م</div>
+                <div class="podium-block block-3">3</div>
+              </div>
+              <!-- 1st -->
+              <div class="podium-person">
+                <div class="podium-avatar gold-av">
+                  <span class="crown">👑</span>
+                  SQ
+                </div>
+                <div class="podium-block block-1">1<br><span style="font-size:13px;font-weight:500">يقال الموسم</span></div>
+              </div>
+              <!-- 2nd -->
+              <div class="podium-person">
+                <div class="podium-avatar silver-av">خ.ع</div>
+                <div class="podium-block block-2">2</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ████████ PAGE: المسرات ████████ -->
+      <div class="page" id="page-courses">
+        <div class="students-hdr">
+          <div class="page-title">المسرات</div>
+          <button class="btn-primary"><i class="ri-add-line"></i> مسار جديد</button>
+        </div>
+        <div class="courses-grid" id="coursesGrid"></div>
+      </div>
+
+      <!-- ████████ PAGE: الإجازات ████████ -->
+      <div class="page" id="page-certificates">
+        <div class="card certs-card">
+          <div class="cert-icon"><i class="ri-award-fill"></i></div>
+          <div class="cert-desc">
+            إليك قائمة بآخر الإجازات المصدرة والجاهزة للتحميل من قِبل طلاب الجمعية.
+          </div>
+          <div class="certs-divider">
+            <div class="certs-row" id="certsRow"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ████████ PAGE: التقارير ████████ -->
+      <div class="page" id="page-reports">
+        <div class="page-hdr">
+          <h1>التقارير</h1>
+          <p>إحصائيات شاملة لأداء المنصة</p>
+        </div>
+        <div class="reports-grid">
+          <div class="card success-card">
+            <div class="success-circle"><i class="ri-check-double-line"></i></div>
+            <div class="success-ttl">نسبة النجاح العامة</div>
+            <div class="success-num">850</div>
+            <div class="success-tags">
+              <span class="tag">أختبار مميّز</span>
+              <span class="tag">مسار علمي</span>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <div class="chart-hdr">
+              <div class="chart-ttl">📊 نمو الجمعية (شهري)</div>
+              <button class="filter-btn"><i class="ri-equalizer-line"></i></button>
+            </div>
+            <div style="height:230px"><canvas id="reportsChartEl"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ─────────────── DATA ─────────────── */
+const coursesData = [
+  { title:'متن الجزرية',      teacher:'د. يوسف القاسم',        progress:80, students:450 },
+  { title:'الأربعين النووية', teacher:'الشيخ أحمد علي',       progress:65, students:320 },
+  { title:'تحفة الأطفال',    teacher:'الشيخ عمر الفاروق',     progress:95, students:180 },
+];
+
+const studentsData = [
+  { init:'أح', name:'أحمد محمد السيد',    id:'ST-001', course:'متن الجزرية',      prog:78, pts:'4,250', active:true },
+  { init:'خا', name:'خالد عبدالرحمن',     id:'ST-002', course:'الأربعين النووية',  prog:65, pts:'3,890', active:true },
+  { init:'فا', name:'فاطمة علي الحسن',    id:'ST-003', course:'تحفة الأطفال',     prog:92, pts:'3,150', active:true },
+  { init:'سا', name:'سارة محمد النجار',   id:'ST-004', course:'متن الجزرية',      prog:55, pts:'2,900', active:true },
+  { init:'عب', name:'عبدالله عمر الهاشمي',id:'ST-005', course:'الأربعين النووية', prog:40, pts:'1,820', active:false},
+  { init:'نو', name:'نور أحمد الشريف',   id:'ST-006', course:'تحفة الأطفال',     prog:88, pts:'3,600', active:true },
+];
+
+const lbData = [
+  { rank:'🥇', n:1, name:'أحمد محمد السيد',       pts:'4,250', streak:'شابع العلمي 45 يوم' },
+  { rank:'🥈', n:2, name:'خالد عبدالرحمن',          pts:'3,890', streak:'شابع العلمي 32 يوم' },
+  { rank:'🥉', n:3, name:'فاطمة علي الحسن',          pts:'3,150', streak:'شابع العلمي 18 يوم' },
+  { rank:'✨',  n:4, name:'سارة محمد النجار',         pts:'2,900', streak:'شابع العلمي 12 يوم' },
+  { rank:null, n:5, name:'عبدالرحمن سليمان الغامدي', pts:'2,640', streak:'شابع العلمي 9 أيام' },
+  { rank:null, n:6, name:'نور حسن الزهراني',          pts:'2,380', streak:'شابع العلمي 7 أيام' },
+  { rank:null, n:7, name:'محمد يوسف العتيبي',         pts:'2,110', streak:'شابع العلمي 5 أيام' },
+  { rank:null, n:8, name:'ريم أحمد الشهري',           pts:'1,870', streak:'شابع العلمي 4 أيام' },
+  { rank:null, n:9, name:'عمر فهد القحطاني',          pts:'1,620', streak:'شابع العلمي 3 أيام' },
+  { rank:null, n:10,name:'هدى ناصر الدوسري',          pts:'1,390', streak:'شابع العلمي يوم' },
+];
+
+const certsData = [
+  { id:'IJ-8881', course:'متن الجزرية', date:'فبراير 2024' },
+  { id:'IJ-8882', course:'متن الجزرية', date:'فبراير 2024' },
+  { id:'IJ-8883', course:'متن الجزرية', date:'فبراير 2024' },
+];
+
+/* ─────────────── RENDER ─────────────── */
+// Best courses (home page)
+const bestCEl = document.getElementById('bestCourses');
+coursesData.forEach(c => {
+  bestCEl.innerHTML += `
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:14px;font-weight:700">${c.title}</span>
+        <span style="font-size:13px;color:var(--gold);font-weight:800">${c.progress}%</span>
+      </div>
+      <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden">
+        <div style="width:${c.progress}%;height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold));border-radius:3px"></div>
+      </div>
+    </div>`;
+});
+
+// Students table
+const sBdy = document.getElementById('studentsBody');
+studentsData.forEach(s => {
+  sBdy.innerHTML += `
+    <tr>
+      <td>
+        <div class="stu-cell">
+          <div class="stu-av">${s.init}</div>
+          <div>
+            <div class="stu-nm">${s.name}</div>
+            <div class="stu-id">${s.id}</div>
+          </div>
+        </div>
+      </td>
+      <td>${s.course}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="mini-bar"><div class="mini-fill" style="width:${s.prog}%"></div></div>
+          <span style="font-size:12px;color:var(--gold);font-weight:700">${s.prog}%</span>
+        </div>
+      </td>
+      <td style="color:var(--gold);font-weight:800;font-size:15px">${s.pts}</td>
+      <td><span class="badge ${s.active?'badge-active':'badge-inactive'}">${s.active?'نشط':'غير نشط'}</span></td>
+      <td><button class="filter-btn"><i class="ri-eye-line"></i></button></td>
+    </tr>`;
+});
+
+// Leaderboard
+const lbEl = document.getElementById('lbList');
+lbData.forEach((l, i) => {
+  // Insert divider after top 3
+  if (i === 3) {
+    lbEl.innerHTML += `<div class="lb-top3-divider">المراكز التالية</div>`;
+  }
+  const rankDisplay = l.rank
+    ? `<div class="lb-rank">${l.rank}</div>`
+    : `<div class="lb-num-badge">${l.n}</div>`;
+  lbEl.innerHTML += `
+    <div class="lb-item">
+      ${rankDisplay}
+      <div class="lb-info">
+        <div class="lb-name">${l.name}</div>
+        <div class="lb-streak"><i class="ri-fire-line" style="color:var(--gold)"></i>${l.streak}</div>
+      </div>
+      <div class="lb-right">
+        <div class="lb-pts">${l.pts}</div>
+        <div class="lb-pts-lbl">نقطة</div>
+      </div>
+    </div>`;
+});
+
+// Courses grid
+const cgEl = document.getElementById('coursesGrid');
+coursesData.forEach(c => {
+  cgEl.innerHTML += `
+    <div class="card course-card">
+      <span class="course-badge badge-live">حي</span>
+      <div class="course-icon-box"><i class="ri-book-open-line"></i></div>
+      <div class="course-title">${c.title}</div>
+      <div class="course-teacher">${c.teacher}</div>
+      <div class="progress-lbl"><span>الإنجاز</span><span>${c.progress}%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${c.progress}%"></div></div>
+      <div class="course-foot">
+        <div class="course-students"><strong>${c.students}</strong> طالب</div>
+        <button class="course-manage">إدارة <i class="ri-arrow-left-s-line"></i></button>
+      </div>
+    </div>`;
+});
+cgEl.innerHTML += `
+  <div class="card add-course-card" onclick="alert('إضافة مسار جديد')">
+    <div class="add-circle"><i class="ri-add-line"></i></div>
+    <span>إضافة مسار جديد</span>
+  </div>`;
+
+// Certificates
+const crEl = document.getElementById('certsRow');
+certsData.forEach(c => {
+  crEl.innerHTML += `
+    <div class="cert-item">
+      <div class="cert-id-row">
+        <span class="cert-id">${c.id}</span>
+        <button class="dl-btn" title="تحميل"><i class="ri-download-line"></i></button>
+      </div>
+      <div class="cert-course-name">${c.course}</div>
+      <div class="cert-date">${c.date}</div>
+    </div>`;
+});
+
+/* ─────────────── CHARTS ─────────────── */
+const months = ['يناير','فبراير','مارس','إبريل','مايو','يونيو','يوليو','أغسطس'];
+const growthData = [85,140,110,195,160,230,280,320];
+
+function buildChart(canvasId) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'المنتسبون',
+        data: growthData,
+        backgroundColor: 'rgba(196,150,58,0.25)',
+        borderColor: '#C4963A',
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false,
+        hoverBackgroundColor: 'rgba(196,150,58,0.6)',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family:'Tajawal', size:11 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family:'Tajawal', size:11 } } }
+      }
+    }
+  });
+}
+
+let homeChart = null, reportsChart = null;
+
+/* ─────────────── NAV ─────────────── */
+const pages = ['home','students','competition','courses','certificates','reports'];
+
+function gotoPage(name) {
+  pages.forEach(p => {
+    document.getElementById('page-'+p).classList.remove('active');
+    document.getElementById('nb-'+p).classList.remove('active');
+  });
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nb-'+name).classList.add('active');
+
+  // init charts lazily
+  if (name === 'home' && !homeChart) homeChart = buildChart('homeChartEl');
+  if (name === 'reports' && !reportsChart) reportsChart = buildChart('reportsChartEl');
+}
+
+/* ─────────────── COMP TABS ─────────────── */
+function switchCompTab(tab) {
+  document.getElementById('comp-lb').style.display     = tab==='lb' ? 'block' : 'none';
+  document.getElementById('comp-podium').style.display = tab==='podium' ? 'block' : 'none';
+  document.getElementById('tab-lb').classList.toggle('active', tab==='lb');
+  document.getElementById('tab-podium').classList.toggle('active', tab==='podium');
+}
+
+/* ─────────────── DARK MODE ─────────────── */
+let dark = false;
+function toggleDark() {
+  dark = !dark;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : '');
+  document.getElementById('darkIcon').className = dark ? 'ri-sun-line' : 'ri-moon-line';
+  // Update chart colors if needed
+}
+
+/* ─────────────── INIT ─────────────── */
+homeChart = buildChart('homeChartEl');
+</script>
+</body>
+</html>
