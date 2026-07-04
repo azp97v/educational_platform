@@ -42,12 +42,12 @@ class SecurityHeaders
 
         $csp = [
             "default-src 'self'",
-            "script-src 'self' 'nonce-{$nonce}' 'unsafe-eval' https://*.pusher.com https://*.reverb.com https://cdn.jsdelivr.net https://unpkg.com",
+            "script-src 'self' 'nonce-{$nonce}' 'unsafe-eval' https://*.pusher.com https://*.reverb.com https://cdn.jsdelivr.net https://unpkg.com https://www.youtube.com https://s.ytimg.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
             "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com",
             "img-src 'self' data: blob: https:",
             "media-src 'self' data: blob: https:",
-            "connect-src 'self' ws: wss: https://*.pusher.com https://*.reverb.com http://localhost:* https://cdn.jsdelivr.net",
+            "connect-src 'self' ws: wss: https://*.pusher.com https://*.reverb.com http://localhost:* https://cdn.jsdelivr.net https://www.youtube.com",
             "worker-src 'self' blob:",
             "frame-src 'self' https:",
             "object-src 'none'",
