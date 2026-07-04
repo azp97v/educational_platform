@@ -340,6 +340,8 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 
 <div class="layout">
 
+<div v-if="showSidebar && !isDesktop" class="sidebar-mobile-backdrop" @click="showSidebar = false" style="position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);"></div>
+
 <aside class="sidebar" :class="{ show: showSidebar }">
 
 <div class="s-head">
@@ -1229,7 +1231,17 @@ key="mic-action"
 
 </template>
 
-<template v-else><div class="empty">@{{ t.selectChat }}</div></template>
+<template v-else>
+<div class="empty">
+<div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+<i class="ri-message-3-line" style="font-size:48px;color:var(--gold);opacity:.4;"></i>
+<span>@{{ t.selectChat }}</span>
+<button v-if="!isDesktop" class="call-btn" style="background:var(--gold);color:#000;width:auto;border-radius:12px;padding:0 20px;height:44px;font-size:14px;font-weight:700;gap:6px;display:flex;align-items:center;" @click="showSidebar = true">
+<i class="ri-contacts-book-line"></i> المحادثات
+</button>
+</div>
+</div>
+</template>
 
 </main>
 
@@ -3909,26 +3921,59 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 </div>
 </div>
 
-<!-- Call overlay -->
+<!-- Call ended summary flash -->
+<div class="call-ended-flash" v-if="callEndedSummary" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:400;background:var(--panel);border:1px solid var(--theme-border);border-radius:14px;padding:12px 24px;box-shadow:0 12px 40px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;animation:call-ended-pop .3s cubic-bezier(.34,1.56,.64,1);">
+<i class="ri-phone-fill" style="color:var(--muted);transform:rotate(135deg);"></i>
+<span>انتهت المكالمة</span>
+<span v-if="callEndedSummary.duration" style="color:var(--gold);">· @{{ callEndedSummary.duration }}</span>
+</div>
 
-<div class="call-overlay" v-show="callState === 'calling' || callState === 'in-call'" :class="{ 'is-active': !!callState }" :data-call-state="callState">
+<!-- Call minimized chip -->
+<div class="call-minimized-chip" v-if="callState && callMinimized" @click="callMinimized = false" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:300;background:var(--panel);border:1px solid var(--theme-border);border-radius:999px;padding:10px 20px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px;cursor:pointer;animation:incoming-call-slide-in .3s var(--ease-out);">
+<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--gold),var(--gold-2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;animation:call-pulse 1.8s ease-in-out infinite;">
+<img v-if="callContact && callContact.avatar_url" :src="callContact.avatar_url" style="width:100%;height:100%;object-fit:cover;" v-on:error="$event.target.style.display='none'">
+<span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
+</div>
+<div style="display:flex;flex-direction:column;min-width:0;">
+<span style="font-size:13px;font-weight:700;">@{{ callContact ? callContact.name : '' }}</span>
+<span style="font-size:11px;color:var(--gold);">@{{ callState === 'calling' ? getCallStatusText() : formatCallElapsed() }}</span>
+</div>
+<button class="call-btn end" style="width:36px;height:36px;font-size:16px;" @click.stop="endCall" title="إنهاء"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i></button>
+</div>
+
+<!-- Call overlay -->
+<div class="call-overlay" v-show="(callState === 'calling' || callState === 'in-call') && !callMinimized" :class="{ 'is-active': !!callState }" :data-call-state="callState">
+
+<!-- FaceTime-style blurred avatar background -->
+<div class="call-bg-blur" v-if="callContact && callContact.avatar_url" :style="{ backgroundImage: 'url(' + callContact.avatar_url + ')' }"></div>
+
+<!-- Minimize button -->
+<button class="call-minimize-btn" @click="callMinimized = true" title="تصغير"><i class="ri-subtract-line"></i></button>
 
 <div class="call-participants-grid" :class="'count-' + Math.min(callParticipants.length, 4)" v-if="callState === 'in-call' && callType === 'video'">
-<div class="call-participant-tile" v-for="p in callParticipants" :key="p.id">
+<div class="call-participant-tile" v-for="p in callParticipants" :key="p.id" :class="{'speaking': speakingUserId === p.id}">
 <video :ref="'remoteMedia_' + p.id" autoplay playsinline></video>
-<div class="call-participant-label">@{{ p.name }}</div>
+<div class="call-participant-label"><i v-if="speakingUserId === p.id" class="ri-mic-fill" style="font-size:11px;color:#4ade80;"></i> @{{ p.name }}</div>
+<div class="call-cam-off-placeholder" v-if="p.cameraOff">
+<div class="call-avatar" style="width:64px;height:64px;font-size:28px;animation:none;box-shadow:none;">
+<span>@{{ getAuthorInitial(p.name) }}</span>
+</div>
+</div>
 </div>
 </div>
 <audio v-for="p in callParticipants" :key="'a'+p.id" :ref="'remoteMedia_' + p.id" autoplay v-if="callState === 'in-call' && callType !== 'video'"></audio>
 
-<video ref="localVideo" autoplay playsinline muted style="position:absolute;bottom:100px;left:16px;width:96px;height:130px;object-fit:cover;border-radius:12px;z-index:2;box-shadow:0 8px 24px rgba(0,0,0,.4);" v-show="callType === 'video' && callState === 'in-call' && !cameraOff"></video>
+<!-- Draggable local video PiP -->
+<video ref="localVideo" autoplay playsinline muted
+  class="call-pip"
+  :style="{ bottom: pipPos.bottom + 'px', left: pipPos.left + 'px' }"
+  v-show="callType === 'video' && callState === 'in-call' && !cameraOff"
+  @pointerdown.prevent="startPipDrag"
+></video>
 
 <div class="call-avatar" v-show="!(callType === 'video' && callState === 'in-call')">
-
 <img v-if="callContact && callContact.avatar_url" :src="callContact.avatar_url" alt="" v-on:error="handleAvatarError($event, callContact)">
-
 <span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
-
 </div>
 
 <div class="call-name">
@@ -3936,34 +3981,24 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 </div>
 
 <div class="call-status">
-
 <span v-if="callState === 'calling'">@{{ getCallStatusText() }}</span>
-
 <span v-else-if="callState === 'in-call'">@{{ formatCallElapsed() }}</span>
-
 </div>
 
 <div class="call-actions">
-
 <button class="call-btn mute" :class="{active: callMuted}" @click="toggleMute" title="كتم الصوت"><i :class="callMuted ? 'ri-mic-off-line' : 'ri-mic-line'"></i></button>
-
 <button class="call-btn speaker" :class="{active: speakerMuted}" @click="toggleSpeaker" title="السماعة"><i :class="speakerMuted ? 'ri-volume-mute-line' : 'ri-volume-up-line'"></i></button>
-
 <button class="call-btn end" @click="endCall" title="إنهاء"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i></button>
-
 <button class="call-btn cam" :class="{active: cameraOff}" @click="toggleCamera" title="الكاميرا" v-if="callType === 'video'"><i :class="cameraOff ? 'ri-camera-off-line' : 'ri-camera-line'"></i></button>
-
 <button class="call-btn switch-cam" @click="switchCamera" title="تبديل الكاميرا" v-if="callType === 'video' && !cameraOff"><i class="ri-camera-switch-line"></i></button>
-
 <button class="call-btn add-participant" @click="openAddParticipant" title="إضافة مشارك" v-if="callState === 'in-call' && callParticipants.length < 5"><i class="ri-user-add-line"></i></button>
-
 </div>
 
 </div>
 
-<!-- Incoming call: small closable floating widget (Google Meet style) -->
+<!-- Incoming call: floating widget -->
 <div class="incoming-call-widget" v-if="callState === 'incoming'">
-<button class="incoming-call-close" @click="rejectIncomingCall" title="إغلاق"><i class="ri-close-line"></i></button>
+<button class="incoming-call-close" @click="rejectIncomingCall" title="رفض وإغلاق"><i class="ri-close-line"></i></button>
 <div class="incoming-call-avatar">
 <img v-if="callContact && callContact.avatar_url" :src="callContact.avatar_url" alt="" v-on:error="handleAvatarError($event, callContact)">
 <span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
@@ -3974,7 +4009,8 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 </div>
 <div class="incoming-call-actions">
 <button class="call-btn end" @click="rejectIncomingCall" title="رفض"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i></button>
-<button class="call-btn end" style="background:#34C759;" @click="answerIncomingCall" title="قبول"><i class="ri-phone-fill"></i></button>
+<button v-if="callType === 'video'" class="call-btn end" style="background:#1e7e34;" @click="answerIncomingCall('audio')" title="قبول بالصوت فقط"><i class="ri-mic-line"></i></button>
+<button class="call-btn end" style="background:#34C759;" @click="answerIncomingCall()" title="قبول"><i :class="callType === 'video' ? 'ri-vidicon-fill' : 'ri-phone-fill'"></i></button>
 </div>
 </div>
 
@@ -4029,11 +4065,11 @@ try {
 window.Echo = new Echo.default({
     broadcaster: 'reverb',
     key: @json(config('broadcasting.connections.reverb.key')),
-    wsHost: @json(config('broadcasting.connections.reverb.options.host')),
-    wsPort: @json((int) config('broadcasting.connections.reverb.options.port')),
-    wssPort: @json((int) config('broadcasting.connections.reverb.options.port')),
-    forceTLS: @json(config('broadcasting.connections.reverb.options.scheme') === 'https'),
-    enabledTransports: ['ws', 'wss'],
+    wsHost: @json(parse_url(config('app.url'), PHP_URL_HOST)),
+    wsPort: 443,
+    wssPort: 443,
+    forceTLS: true,
+    enabledTransports: ['wss'],
     authEndpoint: '/broadcasting/auth',
     auth: {
         headers: {
@@ -4191,7 +4227,7 @@ messageInput: '',
 
 textareaHeight: 44,
 
-showSidebar: window.innerWidth > 1080,
+showSidebar: true,
 
 showEmojiPicker: false,
 
@@ -4850,6 +4886,15 @@ qrBgOptions: [
 callState: null, // null | 'calling' | 'in-call' | 'incoming'
 callIsRinging: false,
 callTimeoutTimer: null,
+callMinimized: false,
+callEndedSummary: null,
+speakingUserId: null,
+speakingAnalysers: {},
+speakingTimer: null,
+pipPos: { bottom: 100, left: 16 },
+pipDragging: false,
+pipDragOffset: { x: 0, y: 0 },
+outgoingRingtone: null,
 
 callType: null,  // 'audio' | 'video'
 
@@ -13978,9 +14023,11 @@ candidate: event.candidate.toJSON(),
 }
 };
 pc.ontrack = (event) => {
-this.upsertParticipantTile(remoteUserId, { stream: event.streams[0] });
+const stream = event.streams[0];
+this.upsertParticipantTile(remoteUserId, { stream });
 this.remoteStreamsVersion++;
 this.$nextTick(() => this.attachParticipantStreams());
+if (stream) this.attachSpeakingAnalyser(remoteUserId, stream);
 };
 const entry = this.getPeerEntry(remoteUserId);
 entry.pc = pc;
@@ -14122,6 +14169,8 @@ this.callParticipants = contacts.map(c => ({ id: Number(c.id), name: c.name, ava
 this.callState = 'calling';
 this.callMuted = false;
 this.cameraOff = false;
+this.callMinimized = false;
+this.startOutgoingRingtone();
 
 const result = await this.postCallAction(this.callsInitiateRoute, {
 participant_ids: contacts.map(c => Number(c.id)),
@@ -14160,8 +14209,9 @@ offer: { sdp: offer.sdp, type: offer.type },
 if (this.$refs.localVideo) this.$refs.localVideo.srcObject = this.localStream;
 },
 
-async answerIncomingCall() {
+async answerIncomingCall(typeOverride) {
 if (!this.incomingCallOffer || !this.currentCallId) return;
+if (typeOverride) this.callType = typeOverride;
 
 const callerId = this.callContact.id;
 if (!(await this.startLocalMedia(this.callType))) { this.rejectIncomingCall(); return; }
@@ -14262,6 +14312,23 @@ return { sdp: offer.sdp, type: offer.type };
 cleanupCall() {
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 this.callIsRinging = false;
+this.stopOutgoingRingtone();
+
+// Show call ended summary
+if (this.callStartedAt) {
+const secs = Math.floor((Date.now() - this.callStartedAt) / 1000);
+const m = Math.floor(secs / 60).toString().padStart(2, '0');
+const s = (secs % 60).toString().padStart(2, '0');
+this.callEndedSummary = { duration: m + ':' + s };
+setTimeout(() => { this.callEndedSummary = null; }, 3000);
+}
+
+// Stop speaking detection
+if (this.speakingTimer) { clearInterval(this.speakingTimer); this.speakingTimer = null; }
+Object.values(this.speakingAnalysers).forEach(a => { try { a.disconnect?.(); } catch(_) {} });
+this.speakingAnalysers = {};
+this.speakingUserId = null;
+
 Object.values(this.peerConnections).forEach(entry => {
 try { entry.pc?.close(); } catch (_) {}
 });
@@ -14284,6 +14351,8 @@ this.callStartedAt = null;
 this.callParticipants = [];
 this.isGroupCall = false;
 this.showAddParticipant = false;
+this.callMinimized = false;
+this.pipPos = { bottom: 100, left: 16 };
 },
 
 toggleMute() {
@@ -14336,6 +14405,87 @@ const secs = Math.floor((Date.now() - this.callStartedAt) / 1000);
 const m = Math.floor(secs / 60).toString().padStart(2, '0');
 const s = (secs % 60).toString().padStart(2, '0');
 return `${m}:${s}`;
+},
+
+// ── Outgoing ringtone (Web Audio API) ──────────────────────
+startOutgoingRingtone() {
+try {
+if (this.outgoingRingtone) this.stopOutgoingRingtone();
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+if (!AudioCtx) return;
+const ctx = new AudioCtx();
+const play = () => {
+const osc = ctx.createOscillator();
+const gain = ctx.createGain();
+osc.connect(gain); gain.connect(ctx.destination);
+osc.type = 'sine'; osc.frequency.value = 440;
+gain.gain.setValueAtTime(0, ctx.currentTime);
+gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.08);
+gain.gain.setValueAtTime(0.18, ctx.currentTime + 0.35);
+gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.45);
+osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+};
+let running = true;
+const loop = () => { if (!running) return; play(); setTimeout(loop, 2000); };
+loop();
+this.outgoingRingtone = { ctx, stop() { running = false; try { ctx.close(); } catch(_) {} } };
+} catch(_) {}
+},
+stopOutgoingRingtone() {
+if (this.outgoingRingtone) { this.outgoingRingtone.stop(); this.outgoingRingtone = null; }
+},
+
+// ── Speaking detector ──────────────────────────────────────
+startSpeakingDetection() {
+if (this.speakingTimer) return;
+this.speakingTimer = setInterval(() => {
+let loudest = null; let maxVol = 0.02;
+Object.entries(this.speakingAnalysers).forEach(([uid, analyser]) => {
+const buf = new Uint8Array(analyser.frequencyBinCount);
+analyser.getByteFrequencyData(buf);
+const vol = buf.reduce((a, b) => a + b, 0) / buf.length / 255;
+if (vol > maxVol) { maxVol = vol; loudest = uid; }
+});
+this.speakingUserId = loudest ? Number(loudest) : null;
+}, 250);
+},
+attachSpeakingAnalyser(userId, stream) {
+try {
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+if (!AudioCtx || !stream) return;
+const ctx = new AudioCtx();
+const src = ctx.createMediaStreamSource(stream);
+const analyser = ctx.createAnalyser();
+analyser.fftSize = 256;
+src.connect(analyser);
+this.speakingAnalysers[String(userId)] = analyser;
+this.startSpeakingDetection();
+} catch(_) {}
+},
+
+// ── PiP drag ──────────────────────────────────────────────
+startPipDrag(e) {
+this.pipDragging = true;
+const el = this.$refs.localVideo;
+if (!el) return;
+const rect = el.getBoundingClientRect();
+this.pipDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+const onMove = (ev) => {
+if (!this.pipDragging) return;
+const vw = window.innerWidth, vh = window.innerHeight;
+const w = rect.width, h = rect.height;
+const left = Math.min(Math.max(ev.clientX - this.pipDragOffset.x, 0), vw - w);
+const top = Math.min(Math.max(ev.clientY - this.pipDragOffset.y, 0), vh - h);
+this.pipPos = { left: left, bottom: vh - top - h };
+};
+const onUp = () => {
+this.pipDragging = false;
+window.removeEventListener('pointermove', onMove);
+window.removeEventListener('pointerup', onUp);
+};
+window.addEventListener('pointermove', onMove);
+window.addEventListener('pointerup', onUp);
+el.setPointerCapture(e.pointerId);
 },
 
 initCallSignaling() {

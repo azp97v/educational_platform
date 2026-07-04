@@ -2037,13 +2037,14 @@ $initialMessagesJson = $messages->map(fn ($message) => [
      */
     public function publicProfileCard(User $user)
     {
-        // If scanning own QR — go to messaging app (self profile open)
-        if (Auth::id() === $user->id) {
-            return redirect()->route('messaging');
+        $authUser = Auth::user();
+        $route = $authUser->role === 'teacher' ? 'teacher.messaging' : 'student.messaging';
+
+        if ((int) Auth::id() === (int) $user->id) {
+            return redirect()->route($route);
         }
 
-        // Open messaging app with the scanned user's conversation
-        return redirect()->route('messaging', ['open_user' => $user->id]);
+        return redirect()->route($route, ['open_user' => $user->id]);
     }
 
     // ── E2E Encryption ──────────────────────────────────────────────────────
