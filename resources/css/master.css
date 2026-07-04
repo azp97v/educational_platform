@@ -1,0 +1,881 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MASTER.CSS - نظام التنسيق الموحد لمنصة إجلال التعليمية
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * نظام شامل يتضمن:
+ * ✓ نظام المتغيرات (الألوان والأحجام والظلال)
+ * ✓ Reset CSS
+ * ✓ Typography
+ * ✓ Layout Base
+ * ✓ Component Styles
+ * ✓ Dark Mode Support
+ * ✓ Animations & Transitions
+ * ✓ Utility Classes
+ * 
+ * استخدام: أضف هذا الملف في <head> قبل أي CSS آخر
+ * <link rel="stylesheet" href="{{ asset('css/master.css') }}">
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📦 1. THEME & COLOR SYSTEM
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+    /* 🎨 Brand Colors (هوية إجلال) */
+    --color-gold: #C4963A;
+    --color-gold-dark: #A07A28;
+    --color-gold-light: rgba(196, 150, 58, 0.12);
+    
+    /* 🎯 Status Colors */
+    --color-success: #34C759;
+    --color-success-dark: #248A3D;
+    --color-danger: #FF3B30;
+    --color-danger-dark: #E63028;
+    --color-warning: #FF9500;
+    --color-info: #007AFF;
+    
+    /* 🎨 Neutral Colors (Light Mode) */
+    --bg-primary: #F0F2F5;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #E5E5EA;
+    
+    --text-primary: #1C1C1E;
+    --text-secondary: #6C6C70;
+    --text-tertiary: #AEAEB2;
+    --text-muted: #99999E;
+    
+    /* 🌙 Dark Mode */
+    --dark-bg-primary: #121212;
+    --dark-bg-secondary: #1E1E1E;
+    --dark-bg-tertiary: #2a2a2a;
+    
+    --dark-text-primary: #F2F2F7;
+    --dark-text-secondary: #AEAEB2;
+    --dark-text-tertiary: #636366;
+    
+    /* 📐 Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 20px;
+    --space-2xl: 24px;
+    --space-3xl: 32px;
+    --space-4xl: 40px;
+    
+    /* 📏 Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --radius-2xl: 32px;
+    
+    /* 🪟 Sizes */
+    --sidebar-width: 240px;
+    --topbar-height: 70px;
+    --max-content-width: 1400px;
+    
+    /* 💫 Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.16);
+    
+    /* ⚡ Transitions */
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* 🔤 Typography */
+    --font-family-primary: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-mono: 'Courier New', monospace;
+}
+
+/* 🌙 Dark Theme */
+[data-theme="dark"] {
+    --bg-primary: var(--dark-bg-primary);
+    --bg-secondary: var(--dark-bg-secondary);
+    --bg-tertiary: var(--dark-bg-tertiary);
+    
+    --text-primary: var(--dark-text-primary);
+    --text-secondary: var(--dark-text-secondary);
+    --text-tertiary: var(--dark-text-tertiary);
+    
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ⚙️ 2. RESET & BASE STYLES
+   ───────────────────────────────────────────────────────────────────────── */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    direction: rtl;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: var(--transition-base);
+}
+
+a {
+    color: var(--color-gold);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-gold-dark);
+}
+
+button {
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+input,
+textarea,
+select {
+    font-family: var(--font-family-primary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ✍️ 3. TYPOGRAPHY
+   ───────────────────────────────────────────────────────────────────────── */
+
+h1, .h1 {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: var(--space-lg);
+}
+
+h2, .h2 {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.3;
+    margin-bottom: var(--space-lg);
+}
+
+h3, .h3 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: var(--space-md);
+}
+
+h4, .h4 {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: var(--space-md);
+}
+
+h5, .h5 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: var(--space-sm);
+}
+
+h6, .h6 {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: var(--space-sm);
+}
+
+p {
+    margin-bottom: var(--space-lg);
+    color: var(--text-secondary);
+}
+
+.text-small {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.text-muted {
+    color: var(--text-tertiary);
+}
+
+.text-bold {
+    font-weight: 700;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🎨 4. BUTTONS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+}
+
+/* Primary Button */
+.btn-primary {
+    background-color: var(--color-gold);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(196, 150, 58, 0.3);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-gold-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(196, 150, 58, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(196, 150, 58, 0.3);
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--bg-tertiary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--text-tertiary);
+    color: #fff;
+}
+
+/* Danger Button */
+.btn-danger {
+    background-color: var(--color-danger);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: var(--color-danger-dark);
+    transform: translateY(-2px);
+}
+
+/* Success Button */
+.btn-success {
+    background-color: var(--color-success);
+    color: #fff;
+}
+
+.btn-success:hover {
+    background-color: var(--color-success-dark);
+    transform: translateY(-2px);
+}
+
+/* Size Variants */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-lg {
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.btn-block {
+    width: 100%;
+    display: flex;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📦 5. CARDS & CONTAINERS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-base);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.card-footer {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--bg-tertiary);
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.card-body {
+    color: var(--text-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📝 6. FORMS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.form-group {
+    margin-bottom: var(--space-xl);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    transition: var(--transition-fast);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px var(--color-gold-light);
+}
+
+.form-control::placeholder {
+    color: var(--text-tertiary);
+}
+
+.form-control:disabled {
+    background-color: var(--bg-tertiary);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Radio & Checkbox */
+input[type="radio"],
+input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--color-gold);
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.form-check label {
+    margin: 0;
+    cursor: pointer;
+}
+
+.form-error {
+    color: var(--color-danger);
+    font-size: 12px;
+    margin-top: var(--space-sm);
+}
+
+.form-success {
+    color: var(--color-success);
+    font-size: 12px;
+    margin-top: var(--space-sm);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🔔 7. ALERTS & MESSAGES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.alert {
+    padding: var(--space-lg) var(--space-xl);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.alert-primary {
+    background-color: var(--color-gold-light);
+    color: var(--color-gold-dark);
+    border-left: 4px solid var(--color-gold);
+}
+
+.alert-success {
+    background-color: rgba(52, 199, 89, 0.12);
+    color: var(--color-success-dark);
+    border-left: 4px solid var(--color-success);
+}
+
+.alert-danger {
+    background-color: rgba(255, 59, 48, 0.12);
+    color: var(--color-danger-dark);
+    border-left: 4px solid var(--color-danger);
+}
+
+.alert-warning {
+    background-color: rgba(255, 149, 0, 0.12);
+    color: #CC7700;
+    border-left: 4px solid var(--color-warning);
+}
+
+.alert-info {
+    background-color: rgba(0, 122, 255, 0.12);
+    color: #0051D5;
+    border-left: 4px solid var(--color-info);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📊 8. BADGES & TAGS
+   ───────────────────────────────────────────────────────────────────────── */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 4px 10px;
+    border-radius: 40px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-primary {
+    background-color: var(--color-gold-light);
+    color: var(--color-gold-dark);
+}
+
+.badge-success {
+    background-color: rgba(52, 199, 89, 0.12);
+    color: var(--color-success-dark);
+}
+
+.badge-danger {
+    background-color: rgba(255, 59, 48, 0.12);
+    color: var(--color-danger-dark);
+}
+
+.badge-warning {
+    background-color: rgba(255, 149, 0, 0.12);
+    color: #CC7700;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📱 9. LAYOUT UTILITIES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.container {
+    max-width: var(--max-content-width);
+    margin: 0 auto;
+    padding: 0 var(--space-xl);
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.flex-start {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.gap-xs { gap: var(--space-xs); }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+.gap-xl { gap: var(--space-xl); }
+
+.grid {
+    display: grid;
+}
+
+.grid-cols-1 { grid-template-columns: 1fr; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🎬 10. ANIMATIONS & TRANSITIONS
+   ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+    0% { background-position: -500px 0; }
+    100% { background-position: 500px 0; }
+}
+
+/* Animation Classes */
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slideInDown {
+    animation: slideInDown 0.4s ease-out;
+}
+
+.animate-slideInUp {
+    animation: slideInUp 0.4s ease-out;
+}
+
+.animate-slideInRight {
+    animation: slideInRight 0.4s ease-out;
+}
+
+.animate-slideInLeft {
+    animation: slideInLeft 0.4s ease-out;
+}
+
+.animate-popIn {
+    animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🔥 11. SPECIAL COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Progress Bar */
+.progress {
+    height: 6px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--color-gold);
+    border-radius: 4px;
+    transition: var(--transition-base);
+}
+
+/* Divider */
+.divider {
+    height: 1px;
+    background-color: var(--bg-tertiary);
+    margin: var(--space-xl) 0;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    font-size: 14px;
+}
+
+.breadcrumb a {
+    color: var(--color-gold);
+}
+
+.breadcrumb span {
+    color: var(--text-tertiary);
+}
+
+/* Badge with circle */
+.badge-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--color-gold);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📱 12. RESPONSIVE DESIGN
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+    :root {
+        --spaceXl: 16px;
+        --space-2xl: 20px;
+    }
+    
+    .grid-cols-4 { grid-template-columns: repeat(3, 1fr); }
+    .grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 200px;
+    }
+    
+    .grid-cols-4,
+    .grid-cols-3,
+    .grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    h1, .h1 { font-size: 24px; }
+    h2, .h2 { font-size: 20px; }
+    h3, .h3 { font-size: 18px; }
+    
+    .container {
+        padding: 0 var(--space-lg);
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --sidebar-width: 0;
+        --space-xl: 12px;
+        --space-2xl: 16px;
+    }
+    
+    body {
+        font-size: 13px;
+    }
+    
+    .btn {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .card {
+        padding: var(--space-lg);
+    }
+    
+    h1, .h1 { font-size: 20px; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🔧 13. DARK MODE SPECIFIC
+   ───────────────────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+    background-color: var(--dark-bg-tertiary);
+    color: var(--dark-text-primary);
+    border-color: #333;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+    color: #999;
+}
+
+[data-theme="dark"] .form-control:focus {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px var(--color-gold-light);
+}
+
+[data-theme="dark"] .btn-secondary {
+    background-color: var(--dark-bg-tertiary);
+    color: var(--dark-text-primary);
+    border-color: #333;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   📊 14. UTILITY CLASSES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hidden { display: none !important; }
+.invisible { visibility: hidden; }
+.opacity-50 { opacity: 0.5; }
+.opacity-75 { opacity: 0.75; }
+
+.mt-0 { margin-top: 0; }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+
+.mb-0 { margin-bottom: 0; }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+
+.p-0 { padding: 0; }
+.p-sm { padding: var(--space-sm); }
+.p-md { padding: var(--space-md); }
+.p-lg { padding: var(--space-lg); }
+
+.rounded { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-full { border-radius: 9999px; }
+
+.shadow { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+
+.cursor-pointer { cursor: pointer; }
+.cursor-default { cursor: default; }
+
+.w-100 { width: 100%; }
+.h-100 { height: 100%; }
+
+.text-gold { color: var(--color-gold); }
+.text-danger { color: var(--color-danger); }
+.text-success { color: var(--color-success); }
+
+.bg-gold { background-color: var(--color-gold); }
+.bg-danger { background-color: var(--color-danger); }
+.bg-success { background-color: var(--color-success); }
+
+/**
+ * ✨ نهاية ملف master.css
+ * استخدم هذا الملف كمرجع موحد لجميع التنسيقات في المشروع
+ */

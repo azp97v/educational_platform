@@ -1,0 +1,507 @@
+/* ============================================
+   Theme Colors & Variables
+   ============================================ */
+:root {
+    --font-heading: "DIN Next LT Arabic", "DIN Next Arabic", "29LT Bukra", "Bukra", "Cairo", sans-serif;
+    --font-body: "Cairo", "IBM Plex Sans Arabic", "Tajawal", sans-serif;
+    --font-number: "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+
+    --accent-color: #C6A675;
+    --accent-hover: #997722;
+    --accent-dark: #997722;
+    --primary-start: #C6A675;
+    --primary-end: #997722;
+    --bg-color: #F4F6F8;
+    --bg-gradient-start: #F4F6F8;
+    --bg-gradient-end: #E9EDF2;
+    --glass-bg: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(34, 43, 61, 0.12);
+    --text-primary: #222B3D;
+    --text-secondary: #5E6675;
+    --error-color: #D64545;
+    --success-color: #229966;
+    --warning-color: #F2B705;
+    --shadow-sm: 0 1px 4px rgba(34, 43, 61, 0.04);
+    --shadow-md: 0 2px 10px rgba(34, 43, 61, 0.05);
+    --shadow-lg: 0 8px 20px rgba(34, 43, 61, 0.08);
+}
+
+/* ============================================
+   Global Styles
+   ============================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-body);
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    direction: rtl;
+}
+
+/* ============================================
+   Typography
+   ============================================ */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+h1 {
+    font-size: 3.5rem;
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+h2 {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+}
+
+h3 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.8;
+}
+
+[class^="ri-"],
+[class*=" ri-"] {
+    color: var(--accent-color);
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+.btn {
+    display: inline-block;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-family: var(--font-body);
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+    color: var(--text-primary);
+    border: 2px solid transparent;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-glass {
+    background: var(--glass-bg);
+    color: var(--accent-color);
+    border: 2px solid var(--accent-color);
+    backdrop-filter: blur(10px);
+}
+
+.btn-glass:hover {
+    background: rgba(198, 166, 117, 0.16);
+    transform: translateY(-2px);
+}
+
+.btn-full {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+}
+
+.btn-full:hover {
+    background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent-color) 100%);
+}
+
+/* ============================================
+   Cards
+   ============================================ */
+.card,
+.glass,
+.feature-card,
+.register-card,
+.login-card,
+.notification-request-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.card:hover,
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+    background: rgba(6, 51, 18, 0.35);
+}
+
+.feature-card {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.feature-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.register-card,
+.login-card {
+    max-width: 450px;
+    margin: 0 auto;
+    padding: 2.5rem;
+}
+
+/* ============================================
+   Forms
+   ============================================ */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--glass-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 3px rgba(198, 166, 117, 0.14);
+}
+
+.input-error {
+    border-color: var(--error-color) !important;
+    background: rgba(214, 69, 69, 0.08) !important;
+}
+
+.error-text {
+    color: var(--error-color);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+/* ============================================
+   Alerts
+   ============================================ */
+.alert {
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.alert-error {
+    background: var(--glass-bg);
+    border: 2px solid var(--error-color);
+    color: var(--error-color);
+}
+
+.alert-success {
+    background: var(--glass-bg);
+    border: 2px solid var(--success-color);
+    color: var(--success-color);
+}
+
+.alert-warning {
+    background: var(--glass-bg);
+    border: 2px solid var(--warning-color);
+    color: var(--warning-color);
+}
+
+.alert strong {
+    font-weight: 700;
+}
+
+.alert ul {
+    list-style: none;
+    margin: 0;
+}
+
+.alert li {
+    margin-bottom: 0.5rem;
+}
+
+.alert li:before {
+    content: "✗ ";
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-10px);
+    }
+    75% {
+        transform: translateX(10px);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.shake {
+    animation: shake 0.5s;
+}
+
+.slide-in {
+    animation: slideInRight 0.4s ease-out;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
+
+.pt-1 { padding-top: 0.5rem; }
+.pt-2 { padding-top: 1rem; }
+.pt-3 { padding-top: 1.5rem; }
+.pt-4 { padding-top: 2rem; }
+
+.pb-1 { padding-bottom: 0.5rem; }
+.pb-2 { padding-bottom: 1rem; }
+.pb-3 { padding-bottom: 1.5rem; }
+.pb-4 { padding-bottom: 2rem; }
+
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.gap-3 { gap: 1.5rem; }
+
+.grid {
+    display: grid;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.grid-3 {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.h-full {
+    height: 100%;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.opacity-75 {
+    opacity: 0.75;
+}
+
+.stat-number,
+.counter,
+.amount,
+.score,
+.points,
+.xp,
+[data-number],
+[data-numeric],
+.numeric {
+    font-family: var(--font-number);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.95rem;
+    }
+
+    .register-card,
+    .login-card {
+        padding: 1.5rem;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .grid-2,
+    .grid-3 {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    body {
+        font-size: 14px;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+
+    .form-control,
+    input,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+
