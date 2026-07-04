@@ -1443,6 +1443,18 @@
     window.addEventListener('popstate', function() {
         refreshNotifications();
     });
+
+    // Reverb WebSocket: instant bell refresh when a notification arrives
+    @auth
+    if (typeof window.Echo !== 'undefined') {
+        try {
+            window.Echo.private('user.{{ auth()->id() }}')
+                .listen('.notification.new', function() {
+                    refreshNotifications();
+                });
+        } catch (e) {}
+    }
+    @endauth
     @endif
 
     function toggleDark() {

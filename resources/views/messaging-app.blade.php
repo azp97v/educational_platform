@@ -15551,15 +15551,8 @@ mediaPreview: s.contentUrl || null,
 
 audioFile: null,
 
-editingStatusId: s.id, texts: this.getStatusTextLayers(s), activeTextIndex: -1,
-texts: (() => {
-    if (s.text_layers) {
-        try {
-            return typeof s.text_layers === 'string' ? JSON.parse(s.text_layers) : s.text_layers;
-        } catch(e) { return []; }
-    }
-    return [];
-})(),
+editingStatusId: s.id,
+texts: this.getStatusTextLayers(s),
 activeTextIndex: -1,
 };
 
