@@ -28,7 +28,7 @@ const AppSystem = {
     // 📋 Initialization
     init() {
         console.log('🚀 تهيئة نظام إجلال الموحد...');
-        this.initTheme();
+        ThemeManager.initTheme();
         this.initDOMReady();
         this.attachGlobalListeners();
         console.log('✅ تم التهيئة بنجاح!');

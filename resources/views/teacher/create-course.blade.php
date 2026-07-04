@@ -17,6 +17,7 @@
     })();
   </script>
   <style>
+    :root { --sidebar-w: 300px; --topbar-h: 70px; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {

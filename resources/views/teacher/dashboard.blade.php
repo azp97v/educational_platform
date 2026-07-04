@@ -1037,6 +1037,9 @@
       position: relative;
       transition: var(--transition);
       cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
     }
     .q-item::before {
       content: '';
