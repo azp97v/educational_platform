@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NewNotificationReceived;
 use App\Http\Controllers\Traits\MessagingPrivacyTrait;
 use App\Models\Message;
 use App\Models\User;
+use App\Notifications\AppNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -424,6 +426,18 @@ class StatusController extends Controller
             'updated_at' => now(),
         ]);
 
+        if ($owner->notify_message ?? true) {
+            $messagingRoute = $owner->role === 'teacher' ? route('teacher.messaging') : route('student.messaging');
+            $owner->notify(new AppNotification(
+                'رد على حالتك',
+                "{$user->name} رد على حالتك: {$content}",
+                $messagingRoute,
+                'message',
+                'ri-chat-quote-line'
+            ));
+            try { event(new NewNotificationReceived($owner->id, 'message')); } catch (\Throwable) {}
+        }
+
         return response()->json(['success' => true, 'data' => $this->messagePayload($message->fresh(['sender']), $user->id)]);
     }
 
@@ -459,6 +473,17 @@ class StatusController extends Controller
                 ['emoji' => $emoji, 'updated_at' => now(), 'created_at' => now()]
             );
             $liked = true;
+            if ($owner->notify_message ?? true) {
+                $messagingRoute = $owner->role === 'teacher' ? route('teacher.messaging') : route('student.messaging');
+                $owner->notify(new AppNotification(
+                    'تفاعل على حالتك',
+                    "{$user->name} تفاعل مع حالتك بـ {$emoji}",
+                    $messagingRoute,
+                    'message',
+                    'ri-heart-line'
+                ));
+                try { event(new NewNotificationReceived($owner->id, 'message')); } catch (\Throwable) {}
+            }
         }
 
         return response()->json(['success' => true, 'data' => ['status_id' => (int) $statusRow->id, 'emoji' => $emoji, 'liked' => $liked]]);

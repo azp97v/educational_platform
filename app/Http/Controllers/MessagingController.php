@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Events\NewNotificationReceived;
+use App\Models\BlockedContact;
 use App\Models\Message;
 use App\Models\User;
-use App\Models\BlockedContact;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Carbon;
 use App\Notifications\AppNotification;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cache;
 
 
 class MessagingController extends Controller
@@ -590,6 +591,9 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                     'message',
                     'ri-mail-open-line'
                 ));
+                try {
+                    event(new NewNotificationReceived($recipient->id, 'message'));
+                } catch (\Throwable) {}
             }
         } catch (\Exception $e) {
             \Log::error('Message send failed', [
