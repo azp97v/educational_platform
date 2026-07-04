@@ -48,6 +48,10 @@ class StatusController extends Controller
                 's.font_size',
                 's.bg_color',
                 's.filter_style',
+                's.media_pos_x',
+                's.media_pos_y',
+                's.media_scale',
+                's.media_rotate',
                 's.duration_hours',
                 's.expires_at',
                 's.created_at',
@@ -84,6 +88,10 @@ class StatusController extends Controller
                 'fontSize' => (int) ($s->font_size ?: 24),
                 'bgColor' => $s->bg_color ?: 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
                 'filterStyle' => $s->filter_style,
+                'mediaPosX' => isset($s->media_pos_x) ? (float) $s->media_pos_x : 50,
+                'mediaPosY' => isset($s->media_pos_y) ? (float) $s->media_pos_y : 50,
+                'mediaScale' => isset($s->media_scale) ? (float) $s->media_scale : 1,
+                'mediaRotate' => isset($s->media_rotate) ? (float) $s->media_rotate : 0,
                 'durationHours' => (int) ($s->duration_hours ?: 24),
                 'expiresAt' => Carbon::parse($s->expires_at)->toISOString(),
                 'createdAt' => Carbon::parse($s->created_at)->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
@@ -146,6 +154,10 @@ class StatusController extends Controller
             'filter_style' => ['nullable', 'string', 'max:40'],
             'duration_hours' => ['nullable', 'integer', 'in:24,72,168'],
             'media_duration_sec' => ['nullable', 'numeric', 'min:1', 'max:3600'],
+            'media_pos_x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'media_pos_y' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'media_scale' => ['nullable', 'numeric', 'min:0.1', 'max:10'],
+            'media_rotate' => ['nullable', 'numeric', 'min:-360', 'max:360'],
             'privacy_type' => ['nullable', 'in:all,contacts,selected,except'],
             'media' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv', 'extensions:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv'],
             'audio' => ['nullable', 'file', 'max:5120', 'mimes:mp3,wav,m4a,ogg,webm', 'extensions:mp3,wav,m4a,ogg,webm'],
@@ -204,6 +216,12 @@ class StatusController extends Controller
         ];
         if (\Illuminate\Support\Facades\Schema::hasColumn('user_statuses', 'media_duration_sec')) {
             $insertData['media_duration_sec'] = isset($data['media_duration_sec']) ? (float) $data['media_duration_sec'] : null;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('user_statuses', 'media_pos_x')) {
+            $insertData['media_pos_x'] = isset($data['media_pos_x']) ? (float) $data['media_pos_x'] : null;
+            $insertData['media_pos_y'] = isset($data['media_pos_y']) ? (float) $data['media_pos_y'] : null;
+            $insertData['media_scale'] = isset($data['media_scale']) ? (float) $data['media_scale'] : 1;
+            $insertData['media_rotate'] = isset($data['media_rotate']) ? (float) $data['media_rotate'] : 0;
         }
 
         $createdId = DB::table('user_statuses')->insertGetId($insertData);
@@ -322,6 +340,10 @@ class StatusController extends Controller
             'filter_style' => ['nullable', 'string', 'max:40'],
             'duration_hours' => ['nullable', 'integer', 'in:24,72,168'],
             'media_duration_sec' => ['nullable', 'numeric', 'min:1', 'max:3600'],
+            'media_pos_x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'media_pos_y' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'media_scale' => ['nullable', 'numeric', 'min:0.1', 'max:10'],
+            'media_rotate' => ['nullable', 'numeric', 'min:-360', 'max:360'],
             'privacy_type' => ['nullable', 'in:all,contacts,selected,except'],
             'media' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv', 'extensions:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv'],
             'audio' => ['nullable', 'file', 'max:5120', 'mimes:mp3,wav,m4a,ogg,webm', 'extensions:mp3,wav,m4a,ogg,webm'],
@@ -385,6 +407,12 @@ class StatusController extends Controller
         ];
         if (\Illuminate\Support\Facades\Schema::hasColumn('user_statuses', 'media_duration_sec')) {
             $updateData['media_duration_sec'] = isset($data['media_duration_sec']) ? (float) $data['media_duration_sec'] : null;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('user_statuses', 'media_pos_x')) {
+            $updateData['media_pos_x'] = isset($data['media_pos_x']) ? (float) $data['media_pos_x'] : null;
+            $updateData['media_pos_y'] = isset($data['media_pos_y']) ? (float) $data['media_pos_y'] : null;
+            $updateData['media_scale'] = isset($data['media_scale']) ? (float) $data['media_scale'] : 1;
+            $updateData['media_rotate'] = isset($data['media_rotate']) ? (float) $data['media_rotate'] : 0;
         }
 
         DB::table('user_statuses')->where('id', (int) $status)->update($updateData);
