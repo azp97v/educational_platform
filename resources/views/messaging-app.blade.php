@@ -1592,7 +1592,7 @@ key="mic-action"
 @click="handleStatusContentClick"
 @mousedown="startStatusLongPress" @mouseup="endStatusLongPress" @mouseleave="cancelStatusLongPress"
 @touchstart.prevent="startStatusLongPress" @touchend="endStatusLongPress" @touchmove.prevent="cancelStatusLongPress"
-:style="{background: statusViewerBackground(currentStatus)}">
+:style="{background: statusViewerBackground(currentStatus), filter: statusViewerFilter(currentStatus)}">
 
 <div class="status-viewer-media-backdrop" v-if="(currentStatus.content_url || currentStatus.contentUrl)" :style="{ backgroundImage: 'url(' + (currentStatus.contentUrl || ('/storage/' + currentStatus.content_url)) + ')' }"></div>
 
@@ -1604,17 +1604,25 @@ key="mic-action"
        class="status-viewer-text-layer"
        style="position:absolute; white-space:pre-wrap; text-align:center; z-index:10; font-weight:600; max-width:90%; word-break:break-word;"
        :style="{
-         fontFamily: layer.fontStyle || 'Tajawal',
-         fontSize: (layer.fontSize || 42)+'px',
-         color: (layer.textBgStyle==='neon') ? '#fff' : (layer.textColor || '#ffffff'),
+         fontFamily: layer.isSticker ? undefined : (layer.fontStyle || 'Tajawal'),
+         fontSize: layer.isSticker ? undefined : ((layer.fontSize || 42)+'px'),
+         color: layer.isSticker ? undefined : ((layer.textBgStyle==='neon') ? '#fff' : (layer.textColor || '#ffffff')),
          top: (layer.textPosY ?? 50)+'%',
          left: (layer.textPosX ?? 50)+'%',
          transform: 'translate(-50%,-50%) rotate('+(layer.rotate||0)+'deg) scale('+(layer.scale||1)+')',
-         textShadow: (layer.textBgStyle||'none')==='none' ? '0 2px 8px rgba(0,0,0,.7)' : ((layer.textBgStyle==='neon') ? '0 0 8px ' + (layer.textColor || '#ffffff') + ', 0 0 16px ' + (layer.textColor || '#ffffff') : 'none'),
-         background: (layer.textBgStyle==='solid') ? 'rgba(0,0,0,0.75)' : ((layer.textBgStyle==='translucent') ? 'rgba(0,0,0,0.38)' : 'transparent'),
-         padding: (layer.textBgStyle==='solid' || layer.textBgStyle==='translucent') ? '10px 20px' : '0',
-         borderRadius: (layer.textBgStyle==='solid' || layer.textBgStyle==='translucent') ? '12px' : '0'
-     }">@{{ layer.content }}</div>
+         textShadow: layer.isSticker ? 'none' : ((layer.textBgStyle||'none')==='none' ? '0 2px 8px rgba(0,0,0,.7)' : ((layer.textBgStyle==='neon') ? '0 0 8px ' + (layer.textColor || '#ffffff') + ', 0 0 16px ' + (layer.textColor || '#ffffff') : 'none')),
+         background: layer.isSticker ? 'transparent' : ((layer.textBgStyle==='solid') ? 'rgba(0,0,0,0.75)' : ((layer.textBgStyle==='translucent') ? 'rgba(0,0,0,0.38)' : 'transparent')),
+         padding: (!layer.isSticker && (layer.textBgStyle==='solid' || layer.textBgStyle==='translucent')) ? '10px 20px' : '0',
+         borderRadius: (!layer.isSticker && (layer.textBgStyle==='solid' || layer.textBgStyle==='translucent')) ? '12px' : '0'
+     }">
+    <template v-if="!layer.isSticker">
+      <span style="white-space:pre-wrap;">@{{ layer.content }}</span>
+    </template>
+    <template v-else>
+      <img v-if="!layer.isVideo" :src="layer.url" style="width:120px;height:auto;pointer-events:none;display:block;" />
+      <video v-else :src="layer.url" autoplay loop muted playsinline style="width:120px;height:auto;pointer-events:none;display:block;"></video>
+    </template>
+  </div>
 
 </div>
 
@@ -12233,6 +12241,16 @@ if (base.includes('gradient') && !base.includes('center/cover')) {
 
 return base;
 
+},
+
+statusViewerFilter(status) {
+    const map = {
+        warm: 'sepia(0.4) saturate(1.3) brightness(1.05)',
+        cool: 'hue-rotate(180deg) saturate(0.9)',
+        bw:   'grayscale(1)',
+        soft: 'brightness(1.1) saturate(0.8)',
+    };
+    return map[status?.filterStyle || status?.filter_style] || '';
 },
 
 onStatusVideoReady(e) {
