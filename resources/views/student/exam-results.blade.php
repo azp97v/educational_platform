@@ -17,8 +17,8 @@
       --light-gray: #999999;
       --success: #06a77d;
       --danger: #D32F2F;
-      --bg-dark: #0a0e27;
-      --bg-darker: #05071a;
+      --bg-dark: #050505;
+      --bg-darker: #0F0F10;
       --card-bg: rgba(255, 255, 255, 0.04);
       --card-hover: rgba(255, 255, 255, 0.08);
       --border-color: rgba(196, 150, 58, 0.25);
@@ -29,7 +29,7 @@
 
     html, body {
       font-family: 'Cairo', sans-serif;
-      background: linear-gradient(135deg, var(--bg-dark) 0%, #16213e 100%);
+      background: linear-gradient(135deg, var(--bg-dark) 0%, #191A1C 100%);
       color: white;
       min-height: 100vh;
       scroll-behavior: smooth;

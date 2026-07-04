@@ -99,7 +99,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
-Route::get('/u/{user}', [\App\Http\Controllers\MessagingController::class, 'publicProfileCard'])->name('profile.card');
+Route::get('/u/{user}', [\App\Http\Controllers\MessagingController::class, 'publicProfileCard'])->middleware('auth')->name('profile.card');
 
 Route::get('/landing', function () {
     return view('landing-new');

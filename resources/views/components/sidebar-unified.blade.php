@@ -559,7 +559,26 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
         }
     }
 
+    .hamburger-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.06);
+        color: var(--text-primary);
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+        flex-shrink: 0;
+    }
+    .hamburger-btn:hover { background: rgba(255,214,122,0.1); border-color: rgba(255,214,122,0.3); }
+
     @media (max-width: 768px) {
+        .hamburger-btn { display: flex; }
+
         .sidebar {
             position: fixed;
             transform: translateX(110%);

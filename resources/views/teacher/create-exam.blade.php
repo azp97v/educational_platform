@@ -766,15 +766,12 @@
     .logout-btn:hover { background: rgba(255,59,48,0.08); }
 
     @media (max-width: 1024px) {
-      .main { margin-right: 72px !important; }
+      .main { margin-right: 90px !important; }
     }
 
     @media (max-width: 768px) {
-      .form-row {
-        grid-template-columns: 1fr;
-      }
-      .sidebar { width: 100%; height: auto; position: relative; border-left: none; border-bottom: 1px solid rgba(0,0,0,0.04); }
       .main { margin-right: 0 !important; }
+      .form-row { grid-template-columns: 1fr; }
       .content { padding: 20px; }
     }
 
@@ -880,6 +877,9 @@
       <!-- TOPBAR -->
       <header class="topbar">
         <div class="topbar-left">
+          <button class="hamburger-btn" id="sidebarToggle" title="فتح القائمة">
+            <i class="ri-menu-line"></i>
+          </button>
           <button class="icon-btn" id="darkBtn" title="الوضع الليلي">
             <i class="ri-moon-line" id="darkIcon"></i>
           </button>

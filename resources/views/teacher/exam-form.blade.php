@@ -585,34 +585,61 @@
       }
     }
 
+    /* Hamburger button */
+    .hamburger-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-primary);
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .hamburger-btn:hover { background: rgba(255,214,122,0.1); border-color: rgba(255,214,122,0.3); }
+
+    /* Sidebar backdrop */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 199;
+      backdrop-filter: blur(2px);
+    }
+    .sidebar-backdrop.active { display: block; }
+
     @media (max-width: 1024px) {
-      .main { margin-right: 72px !important; }
+      .hamburger-btn { display: flex; }
+      .sidebar {
+        position: fixed !important;
+        transform: translateX(110%) !important;
+        width: var(--sidebar-w) !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        z-index: 200 !important;
+        border-radius: 0 !important;
+        padding: 28px 18px !important;
+        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+      }
+      .sidebar.sidebar-open { transform: translateX(0) !important; }
+      .main { margin-right: 0 !important; }
     }
 
     @media (max-width: 768px) {
-      .main {
-        margin-right: 0 !important;
-      }
-
-      .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        right: auto;
-      }
-
       .topbar { padding: 16px 20px; }
-
       .content { padding: 20px; }
-
       .form-card { padding: 20px; }
-
       .form-row { grid-template-columns: 1fr; }
-
       .page-header h1 { font-size: 28px; }
-
       .form-actions { flex-direction: column; }
-
       .btn { width: 100%; }
     }
 
@@ -630,9 +657,10 @@
 </head>
 <body>
   @include('components.alerts')
+  <div class="sidebar-backdrop" id="examSidebarBackdrop"></div>
   <div class="app">
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="examSidebar">
       <div class="sidebar-logo">
         <div class="logo-icon">
           @if(file_exists(public_path('images/logo/logo.png')))
@@ -683,6 +711,9 @@
       <!-- Topbar -->
       <div class="topbar">
         <div class="topbar-left">
+          <button class="hamburger-btn" id="examHamburger" title="فتح القائمة">
+            <i class="ri-menu-line"></i>
+          </button>
           <button class="icon-btn" id="themeToggle" title="تبديل الثيم">
             <i id="theme-icon" class="ri-moon-line"></i>
           </button>
@@ -893,6 +924,32 @@
       updateThemeIcon();
       bindSearchInput();
     });
+  </script>
+  <script>
+    (function() {
+      const sidebar = document.getElementById('examSidebar');
+      const hamburger = document.getElementById('examHamburger');
+      const backdrop = document.getElementById('examSidebarBackdrop');
+      function openSidebar() {
+        sidebar && sidebar.classList.add('sidebar-open');
+        backdrop && backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeSidebar() {
+        sidebar && sidebar.classList.remove('sidebar-open');
+        backdrop && backdrop.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+      hamburger && hamburger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        sidebar && sidebar.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+      });
+      backdrop && backdrop.addEventListener('click', closeSidebar);
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSidebar(); });
+      sidebar && sidebar.querySelectorAll('.nav-btn').forEach(function(btn) {
+        btn.addEventListener('click', closeSidebar);
+      });
+    })();
   </script>
 @include('components.notification-bell')
     @include('components.account-theme-foot')

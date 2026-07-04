@@ -277,15 +277,26 @@ class TeacherController extends Controller
 
     public function showExamForm(Request $request)
     {
-        $lessonId = $request->query('lesson');
-        $lesson = Lesson::findOrFail($lessonId);
-
-        if ($lesson->course->instructor_id !== Auth::id()) {
-            abort(403, 'Unauthorized');
+        // Support both ?lesson=X (specific lesson) and ?course=X (course-level entry)
+        if ($request->query('lesson')) {
+            $lesson = Lesson::findOrFail($request->query('lesson'));
+            if ($lesson->course->instructor_id !== Auth::id()) {
+                abort(403, 'Unauthorized');
+            }
+            $exam = null;
+            return view('teacher.exam-form', compact('lesson', 'exam'));
         }
 
-        $exam = null;
-        return view('teacher.exam-form', compact('lesson', 'exam'));
+        // Came from course page with ?course=X — show lesson picker for that course
+        $courseId = $request->query('course');
+        $user = Auth::user();
+        $lessons = Lesson::whereIn('course_id', $user->courses()->pluck('id'))
+            ->when($courseId, fn($q) => $q->where('course_id', $courseId))
+            ->with('course')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('teacher.create-exam', compact('lessons'));
     }
 
     public function editExam(Exam $exam)
