@@ -322,6 +322,8 @@ class StudentController extends Controller
         $completedExams = [];
         $allExams = [];
 
+        $endedExams = [];
+
         $allLessonIds = $enrolledCourses->flatMap->lessons->pluck('id')->unique()->values();
         if ($allLessonIds->isNotEmpty()) {
             $exams = Exam::whereIn('lesson_id', $allLessonIds)
@@ -342,9 +344,41 @@ class StudentController extends Controller
                 $availableExams[] = $examData;
                 $allExams[] = $examData;
             }
+
+            // الاختبارات المنتهية (expires_at في الماضي)
+            $expiredExams = Exam::whereIn('lesson_id', $allLessonIds)
+                ->published()
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<', now())
+                ->withCount('questions')
+                ->get();
+
+            $examIds = $expiredExams->pluck('id');
+            $attempts = \DB::table('exam_attempts')
+                ->whereIn('exam_id', $examIds)
+                ->where('user_id', $user->id)
+                ->whereNotNull('submitted_at')
+                ->orderByDesc('score')
+                ->get()
+                ->keyBy('exam_id');
+
+            foreach ($expiredExams as $exam) {
+                $attempt = $attempts->get($exam->id);
+                $endedExams[] = [
+                    'id'              => $exam->id,
+                    'name'            => $exam->name,
+                    'description'     => $exam->instructions ?? 'اختبار شامل في المادة',
+                    'questions_count' => $exam->questions_count,
+                    'expires_at'      => $exam->expires_at->format('Y-m-d'),
+                    'submitted'       => (bool) $attempt,
+                    'score'           => $attempt ? (int) $attempt->score : null,
+                    'percentage'      => $attempt ? (float) $attempt->percentage : null,
+                    'passed'          => $attempt ? (bool) $attempt->passed : false,
+                ];
+            }
         }
 
-        return view('student.exams', compact('availableExams', 'inProgressExams', 'completedExams', 'allExams'));
+        return view('student.exams', compact('availableExams', 'inProgressExams', 'completedExams', 'allExams', 'endedExams'));
     }
 
     /**

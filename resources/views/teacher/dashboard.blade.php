@@ -1533,8 +1533,14 @@
             <div class="item-sub">تابع الدردشة مع الطلاب مباشرة.</div>
             <div class="item-foot"><span class="item-stat">سريع</span><span class="item-stat-alt">الوصول للمحادثات</span></div>
           </a>
-          <a href="{{ route('teacher.questions.manage') }}" class="card item-card glow-near" style="text-decoration:none;color:inherit;">
+          <a href="{{ route('teacher.messaging') }}?section=contacts" class="card item-card glow-near" style="text-decoration:none;color:inherit;">
             <div class="item-icon-box"><i class="ri-contacts-book-2-line"></i></div>
+            <div class="item-title">جهات الاتصال</div>
+            <div class="item-sub">اعرض قائمة طلابك ومعلومات الاتصال بهم.</div>
+            <div class="item-foot"><span class="item-stat">دفتر</span><span class="item-stat-alt">جهات الاتصال</span></div>
+          </a>
+          <a href="{{ route('teacher.questions.manage') }}" class="card item-card glow-near" style="text-decoration:none;color:inherit;">
+            <div class="item-icon-box"><i class="ri-question-answer-line"></i></div>
             <div class="item-title">الأسئلة والاستفسارات</div>
             <div class="item-sub">اطلع على كل الأسئلة المعلقة وأجب عليها.</div>
             <div class="item-foot"><span class="item-stat">{{ $pendingQuestions + $pendingInquiries }}</span><span class="item-stat-alt">منتظر الرد</span></div>

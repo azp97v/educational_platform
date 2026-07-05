@@ -1730,7 +1730,7 @@
       <div class="info-item"><i class="ri-time-line"></i> <span id="viewTime">0:00</span></div>
       <div class="info-item"><i class="ri-calendar-line"></i> <?php echo e($lesson->created_at ? $lesson->created_at->format('d M Y') : '---'); ?></div>
       <div class="info-item"><i class="ri-eye-line"></i> <span id="viewCount">128</span> مشاهدة</div>
-      <div class="info-item"><i class="ri-star-fill" style="color: var(--gold, #FFD700);"></i> <span id="rating">4.8</span>/5</div>
+      <div class="info-item"><i class="ri-star-fill" style="color: var(--gold, #FFD700);"></i> <span id="lessonAverageRating">-</span>/5</div>
     </div>
 
     <!-- Lesson Description -->
@@ -1776,6 +1776,28 @@
     <div class="modal-footer">
       <button class="btn-cancel" id="closeNoteModalBtn2">إلغاء</button>
       <button class="btn-submit" id="submitNoteBtn"><i class="ri-check-line"></i> حفظ الملاحظة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Note Modal -->
+<div class="modal-overlay" id="editNoteModal">
+  <div class="modal-dialog">
+    <button class="modal-close" onclick="closeEditNoteModal()"><i class="ri-close-line"></i></button>
+    <div class="modal-header">
+      <div class="modal-header-icon"><i class="ri-edit-2-fill"></i></div>
+      <h2>تعديل الملاحظة</h2>
+    </div>
+    <div class="modal-content">
+      <div class="form-group">
+        <label for="editNoteText">تعديل نص الملاحظة:</label>
+        <textarea id="editNoteText" placeholder="اكتب ملاحظتك..." maxlength="500"></textarea>
+        <small class="form-group-hint" style="font-size:0.8rem;">الحد الأقصى 500 حرف</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEditNoteModal()">إلغاء</button>
+      <button class="btn-submit" onclick="saveEditNote()"><i class="ri-check-line"></i> حفظ التعديل</button>
     </div>
   </div>
 </div>
@@ -1842,7 +1864,6 @@ const playback = {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadUserNotes();
-  displayNotes();
   loadBookmarkStatus();
   loadSavedRating();
 
@@ -1886,16 +1907,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('closeQuestionModalBtn2').addEventListener('click', closeQuestionModal);
   document.getElementById('submitQuestionBtn').addEventListener('click', submitQuestion);
 
-  // Note deletion via event delegation (for dynamically generated delete buttons)
+  // Note actions via event delegation
   document.getElementById('notesList').addEventListener('click', (e) => {
-    const btn = e.target.closest('.notes-delete');
-    if (btn && btn.dataset.noteIndex !== undefined) {
-      deleteNote(parseInt(btn.dataset.noteIndex, 10));
-    }
+    const del  = e.target.closest('.notes-delete');
+    const edit = e.target.closest('.notes-edit');
+    if (del  && del.dataset.noteIndex  !== undefined) deleteNote(parseInt(del.dataset.noteIndex, 10));
+    if (edit && edit.dataset.noteIndex !== undefined) openEditNote(parseInt(edit.dataset.noteIndex, 10));
   });
 
   document.getElementById('noteModal').addEventListener('click', (e) => {
     if(e.target.id === 'noteModal') closeNoteModal();
+  });
+
+  document.getElementById('editNoteModal').addEventListener('click', (e) => {
+    if(e.target.id === 'editNoteModal') closeEditNoteModal();
   });
 
   document.getElementById('questionModal').addEventListener('click', (e) => {
@@ -1905,6 +1930,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') {
       closeNoteModal();
+      closeEditNoteModal();
       closeQuestionModal();
     }
   });
@@ -2370,9 +2396,21 @@ function addNote() {
   openNoteModal();
 }
 
-function loadUserNotes() {
-  const saved = localStorage.getItem('lesson_' + LESSON_ID + '_notes');
-  if(saved) userNotes = JSON.parse(saved);
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+async function loadUserNotes() {
+  try {
+    const res = await fetch(`/lesson/${LESSON_ID}/notes`, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    userNotes = (data.notes || []).map(n => ({
+      id: n.id, text: n.text,
+      time: new Date(n.created_at).toLocaleString('ar-SA'),
+    }));
+  } catch (_) {
+    const saved = localStorage.getItem('lesson_' + LESSON_ID + '_notes');
+    if (saved) try { userNotes = JSON.parse(saved); } catch (_) {}
+  }
+  displayNotes();
 }
 
 function displayNotes() {
@@ -2383,17 +2421,72 @@ function displayNotes() {
     list.innerHTML = userNotes.map((n, i) => `
       <div class="notes-item">
         <div class="notes-time">${n.time}</div>
-        <div class="notes-text">${n.text}</div>
-        <button class="notes-delete" data-note-index="${i}">حذف</button>
+        <div class="notes-text">${escapeHtml(n.text)}</div>
+        <div style="display:flex;gap:0.4rem;margin-top:0.4rem;">
+          <button class="notes-edit"  data-note-index="${i}" data-note-id="${n.id || ''}" style="font-size:0.75rem;padding:0.35rem 0.7rem;background:var(--gold,#c6a675);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">تعديل</button>
+          <button class="notes-delete" data-note-index="${i}" data-note-id="${n.id || ''}" style="font-size:0.75rem;padding:0.35rem 0.7rem;background:var(--danger,#c7272a);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">حذف</button>
+        </div>
       </div>
     `).join('');
   }
 }
 
-function deleteNote(i) {
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function deleteNote(i) {
+  const note = userNotes[i];
+  if (note?.id) {
+    try {
+      await fetch(`/lesson/${LESSON_ID}/notes/${note.id}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+      });
+    } catch (_) {}
+  }
   userNotes.splice(i, 1);
-  localStorage.setItem('lesson_' + LESSON_ID + '_notes', JSON.stringify(userNotes));
   displayNotes();
+}
+
+let _editingNoteIndex = null;
+
+function openEditNote(i) {
+  _editingNoteIndex = i;
+  document.getElementById('editNoteText').value = userNotes[i]?.text || '';
+  document.getElementById('editNoteModal').classList.add('active');
+  document.getElementById('editNoteText').focus();
+}
+
+function closeEditNoteModal() {
+  document.getElementById('editNoteModal').classList.remove('active');
+  document.getElementById('editNoteText').value = '';
+  _editingNoteIndex = null;
+}
+
+async function saveEditNote() {
+  const i    = _editingNoteIndex;
+  const note = userNotes[i];
+  const text = document.getElementById('editNoteText').value.trim();
+  if (!text || text.length < 2) {
+    showNotification('يرجى كتابة ملاحظة أوضح (حرفان على الأقل).', 'error');
+    return;
+  }
+  if (note?.id) {
+    try {
+      const res = await fetch(`/lesson/${LESSON_ID}/notes/${note.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error('');
+    } catch (_) {}
+  }
+  userNotes[i].text = text;
+  displayNotes();
+  closeEditNoteModal();
+  showNotification('تم تحديث الملاحظة بنجاح.', 'success');
 }
 
 function toggleBookmark() {
@@ -2426,32 +2519,45 @@ function askQuestion() {
   openQuestionModal();
 }
 
-function setRating(rating) {
+function applyRatingUI(rating) {
   currentRating = rating;
   document.querySelectorAll('#starRating .star').forEach((s, i) => {
-    if(i < rating) s.classList.add('active');
+    if (i < rating) s.classList.add('active');
     else s.classList.remove('active');
   });
   const labels = ['ضعيف', 'مقبول', 'جيد', 'رائع', 'ممتاز'];
-  document.getElementById('ratingLabel').textContent = labels[rating - 1];
-  localStorage.setItem('lesson_' + LESSON_ID + '_rating', rating);
-  showNotification('تم تحديث تقييمك بنجاح.', 'success');
+  const lbl = document.getElementById('ratingLabel');
+  if (lbl) lbl.textContent = labels[rating - 1];
 }
 
-function loadSavedRating() {
-  const savedRating = Number(localStorage.getItem('lesson_' + LESSON_ID + '_rating') || 0);
-  if (!Number.isFinite(savedRating) || savedRating < 1 || savedRating > 5) {
-    return;
+async function setRating(rating) {
+  applyRatingUI(rating);
+  try {
+    const res = await fetch(`/lesson/${LESSON_ID}/rating`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+      body: JSON.stringify({ rating }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error('');
+    const avgEl = document.getElementById('lessonAverageRating');
+    if (avgEl && data.average) avgEl.textContent = data.average;
+    showNotification('تم تحديث تقييمك بنجاح.', 'success');
+  } catch (_) {
+    showNotification('تم حفظ التقييم محلياً.', 'info');
   }
-  currentRating = savedRating;
-  document.querySelectorAll('#starRating .star').forEach((s, i) => {
-    if (i < savedRating) s.classList.add('active');
-    else s.classList.remove('active');
-  });
-  const labels = ['ضعيف', 'مقبول', 'جيد', 'رائع', 'ممتاز'];
-  const ratingLabel = document.getElementById('ratingLabel');
-  if (ratingLabel) {
-    ratingLabel.textContent = labels[savedRating - 1];
+}
+
+async function loadSavedRating() {
+  try {
+    const res = await fetch(`/lesson/${LESSON_ID}/rating`, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (data.my_rating) applyRatingUI(data.my_rating);
+    const avgEl = document.getElementById('lessonAverageRating');
+    if (avgEl && data.average) avgEl.textContent = data.average;
+  } catch (_) {
+    const saved = Number(localStorage.getItem('lesson_' + LESSON_ID + '_rating') || 0);
+    if (saved >= 1 && saved <= 5) applyRatingUI(saved);
   }
 }
 
@@ -2482,51 +2588,30 @@ function closeNoteModal() {
   document.getElementById('noteText').value = '';
 }
 
-function submitNote() {
+async function submitNote() {
   const text = document.getElementById('noteText').value.trim();
-  if(!text) {
-    showNotification('الرجاء كتابة ملاحظة.', 'error');
-    return;
-  }
-  if (text.length < 2) {
+  if (!text || text.length < 2) {
     showNotification('يرجى كتابة ملاحظة أوضح (حرفان على الأقل).', 'error');
     return;
   }
-
-  const noteEntry = { text: text, time: new Date().toLocaleString('ar-SA') };
-  userNotes.push(noteEntry);
-  localStorage.setItem('lesson_' + LESSON_ID + '_notes', JSON.stringify(userNotes));
-  displayNotes();
-
-  fetch(INQUIRY_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-    },
-    body: JSON.stringify({
-      lesson_id: LESSON_ID,
-      inquiry_type: 'note',
-      question_text: text
-    })
-  })
-  .then(async (response) => {
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.success) {
-      const firstValidationError = data?.errors ? Object.values(data.errors)[0]?.[0] : null;
-      throw new Error(firstValidationError || data.message || 'تعذر إرسال الملاحظة.');
-    }
-    return data;
-  })
-  .then(data => {
+  try {
+    const res = await fetch(`/lesson/${LESSON_ID}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'تعذر حفظ الملاحظة.');
+    userNotes.unshift({
+      id: data.note.id, text: data.note.text,
+      time: new Date(data.note.created_at).toLocaleString('ar-SA'),
+    });
+    displayNotes();
     closeNoteModal();
     showNotification('تمت إضافة الملاحظة بنجاح.', 'success');
-  })
-  .catch(error => {
-    console.error('Note submit error:', error);
-    closeNoteModal();
-    showNotification(error.message || 'تعذر إرسال الملاحظة الآن.', 'error');
-  });
+  } catch (e) {
+    showNotification(e.message || 'تعذر إرسال الملاحظة الآن.', 'error');
+  }
 }
 
 function openQuestionModal() {

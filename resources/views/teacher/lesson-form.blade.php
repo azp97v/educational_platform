@@ -1780,26 +1780,39 @@
     }
 
     function extractDurationFromFile(file) {
+      // Warn for very large files — reading into memory may freeze the browser
+      if (file.size > 200 * 1024 * 1024) {
+        return Promise.reject(new Error('الملف كبير جداً للقراءة تلقائياً، أدخل المدة يدوياً'));
+      }
       return new Promise((resolve, reject) => {
-        const video = document.createElement(file.type.startsWith('audio') ? 'audio' : 'video');
-        const reader = new FileReader();
+        const isAudio = file.type.startsWith('audio');
+        const media   = document.createElement(isAudio ? 'audio' : 'video');
+        const reader  = new FileReader();
+        let settled   = false;
 
-        reader.onload = () => {
-          video.onloadedmetadata = () => {
-            const duration = Math.round(video.duration); // in seconds
-            const formatted = formatDurationSeconds(duration);
-            resolve(formatted);
-          };
+        // 30-second timeout guard
+        const timeout = setTimeout(() => {
+          if (!settled) { settled = true; reject(new Error('استغرق تحليل الملف وقتاً طويلاً')); }
+        }, 30000);
 
-          video.onerror = () => {
-            reject(new Error('فشل في معالجة الملف'));
-          };
-
-          video.src = reader.result;
+        media.onloadedmetadata = () => {
+          clearTimeout(timeout);
+          if (settled) return;
+          settled = true;
+          const secs = Math.round(media.duration);
+          if (!isFinite(secs) || secs <= 0) return reject(new Error('مدة غير صالحة'));
+          resolve(formatDurationSeconds(secs));
         };
 
+        media.onerror = () => {
+          clearTimeout(timeout);
+          if (!settled) { settled = true; reject(new Error('الكودك غير مدعوم في المتصفح، أدخل المدة يدوياً')); }
+        };
+
+        reader.onload = () => { media.src = reader.result; };
         reader.onerror = () => {
-          reject(new Error('فشل في قراءة الملف'));
+          clearTimeout(timeout);
+          if (!settled) { settled = true; reject(new Error('فشل في قراءة الملف')); }
         };
 
         reader.readAsDataURL(file);

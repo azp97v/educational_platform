@@ -83,7 +83,12 @@ class GenerateCertificatePdfJob implements ShouldQueue
 
     private function generatePreset(PdfGeneration $gen, string $pdfTempDir, string $pdfStoreDir): void
     {
-        $student     = CertificateStudent::findOrFail($gen->student_id);
+        $student = CertificateStudent::find($gen->student_id);
+        if (!$student) {
+            throw new \RuntimeException('CertificateStudent not found: ' . $gen->student_id);
+        }
+        $teacher     = \App\Models\User::find($gen->user_id);
+        $teacherName = $teacher?->name ?? 'المعهد';
         $templateNum = $gen->template_num;
         $imageName   = 'qw' . $templateNum . '.jpeg';
         $imagePath   = public_path('image/' . $imageName);
@@ -95,6 +100,7 @@ class GenerateCertificatePdfJob implements ShouldQueue
 
         $html = view('teacher.certificates.pdf.download', [
             'student'         => $student,
+            'teacherName'     => $teacherName,
             'backgroundImage' => $backgroundImageForMpdf,
         ])->render();
 

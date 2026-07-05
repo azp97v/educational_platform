@@ -1004,9 +1004,11 @@ class="reaction-chip" :class="{ mine: r.myReaction }"
 
 style="min-width:110px;max-width:220px;border:1px solid var(--soft-2);border-radius:10px;padding:7px;">
 
-<div style="display:flex;justify-content:space-between;gap:6px;align-items:center;">
+<div style="display:flex;justify-content:space-between;gap:4px;align-items:center;">
 
-<span style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@{{ att.name }}</span>
+<span style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">@{{ att.name }}</span>
+
+<button v-if="att.editable && !att.uploading" @click="att.file.type.startsWith('video/') ? openVideoEditor(att.file) : openImageEditor(att.file)" style="border:none;background:transparent;color:var(--gold);cursor:pointer;font-size:14px;" title="تعديل"><i class="ri-edit-line"></i></button>
 
 <button @click="removeAttachment(i)" style="border:none;background:transparent;color:#ff9aa5;cursor:pointer;"><i class="ri-close-circle-line"></i></button>
 
@@ -1946,10 +1948,12 @@ key="mic-action"
 <button class="ve2-play-btn" @click="toggleVePlayback">
 <i :class="veIsPlaying ? 'ri-pause-fill' : 'ri-play-fill'"></i>
 </button>
-<span class="ve2-time">@{{ formatDuration(veCurrentTime || 0) }} / @{{ formatDuration(videoEditorDuration || 0) }}</span>
-<button class="ve2-play-btn" @click="veFullscreen" v-if="false">
-<i class="ri-fullscreen-line"></i>
+<button class="ve2-play-btn" @click="videoEditorMuted = !videoEditorMuted"
+        :title="videoEditorMuted ? 'تشغيل الصوت' : 'كتم الصوت'"
+        :style="{color: videoEditorMuted ? 'var(--danger,#e53)' : 'inherit'}">
+<i :class="videoEditorMuted ? 'ri-volume-mute-fill' : 'ri-volume-up-line'"></i>
 </button>
+<span class="ve2-time">@{{ formatDuration(veCurrentTime || 0) }} / @{{ formatDuration(videoEditorDuration || 0) }}</span>
 </div>
 </div>
 
@@ -2011,6 +2015,14 @@ class="ve2-quality-card" :class="{active: videoEditorQuality===q.val}"
 <div class="ve2-size-estimate">
 الحجم التقريبي: <strong style="color:var(--gold)">@{{ estimatedVideoSize }}</strong>
 </div>
+</div>
+
+<!-- Mute indicator + iOS warning -->
+<div v-if="videoEditorMuted" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--danger,#e53);padding:4px 10px;background:rgba(238,85,51,0.08);border-radius:8px;margin-bottom:4px;">
+  <i class="ri-volume-mute-fill"></i> سيتم حذف الصوت من الفيديو المُخرَج
+</div>
+<div v-if="!$data._mediaRecorderSupported" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gold);padding:6px 10px;background:var(--gold-soft,rgba(196,150,58,0.1));border-radius:8px;margin-bottom:4px;">
+  <i class="ri-information-line"></i> متصفحك لا يدعم المعالجة — سيُرسَل الفيديو الأصلي
 </div>
 
 <!-- Progress bar (when processing) -->
@@ -5077,6 +5089,8 @@ videoEditorDuration: 0,
 videoEditorStart: 0,
 videoEditorEnd: 0,
 videoEditorQuality: '720p',
+videoEditorMuted: false,
+_mediaRecorderSupported: !!(window.MediaRecorder && HTMLCanvasElement.prototype.captureStream),
 videoEditorProcessing: false,
 videoEditorProgress: 0,
 videoEditorPreviewUrl: null,
@@ -8711,32 +8725,50 @@ const mt = f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ?
 this.sendTypingState(true, mt);
 }
 
-files.forEach(file => {
+const mediaFiles = files.filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+const otherFiles = files.filter(f => !f.type.startsWith('image/') && !f.type.startsWith('video/'));
 
+// Non-media files: add directly
+otherFiles.forEach(file => {
 if (file.size > 512 * 1024 * 1024) {
-
 this.showToast('الملف كبير جداً (الحد الأقصى 512 MB)', 'error'); return;
-
-}
-
-// Open media editor for video and image files
-if (file.type.startsWith('video/')) {
-this.openVideoEditor(file);
-return;
-}
-if (file.type.startsWith('image/')) {
-this.openImageEditor(file);
-return;
 }
 this.addPendingAttachment(file);
-
 });
+
+if (mediaFiles.length === 0) {
+e.target.value = ''; return;
+}
+
+// Single media file: open editor as before
+if (mediaFiles.length === 1) {
+const file = mediaFiles[0];
+if (file.size > 512 * 1024 * 1024) {
+this.showToast('الملف كبير جداً (الحد الأقصى 512 MB)', 'error');
+} else if (file.type.startsWith('video/')) {
+this.openVideoEditor(file);
+} else {
+this.openImageEditor(file);
+}
+e.target.value = ''; return;
+}
+
+// Multiple media files: add all directly with edit button available per attachment
+mediaFiles.forEach(file => {
+if (file.size > 512 * 1024 * 1024) {
+this.showToast(`الملف "${file.name}" كبير جداً (512 MB كحد أقصى)`, 'error'); return;
+}
+this.addPendingAttachment(file, true);
+});
+if (mediaFiles.length > 1) {
+this.showToast(`تم إضافة ${mediaFiles.length} ملفات — اضغط ✏️ لتعديل أي منها`, 'info');
+}
 
 e.target.value = '';
 
 },
 
-addPendingAttachment(file) {
+addPendingAttachment(file, editable = false) {
 
 var pt = this.getMessageType({ attachmentMime: file.type, attachmentName: file.name });
 
@@ -8757,6 +8789,8 @@ previewUrl: (previewType === 'image' || previewType === 'video') ? URL.createObj
 progress: 0,
 
 uploading: false,
+
+editable: editable && (file.type.startsWith('image/') || file.type.startsWith('video/')),
 
 });
 
@@ -10902,7 +10936,9 @@ this.stickerImageChoice = 'removed';
 
 try {
 const { removeBackground } = await import('{{ asset('js/background-removal/background-removal.js') }}');
-const blob = await removeBackground(file);
+const blob = await removeBackground(file, {
+    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.4.5/dist/',
+});
 this.stickerImageBlob = blob;
 this.stickerImagePreviewUrl = URL.createObjectURL(blob);
 } catch (err) {
@@ -16117,7 +16153,8 @@ this.videoEditorFile = file; this.videoEditorUrl = URL.createObjectURL(file);
 
 this.videoEditorOpen = true; this.videoEditorStart = 0; this.videoEditorEnd = 0;
 
-this.videoEditorQuality = '720p'; this.videoEditorProgress = 0; this.videoEditorProcessing = false;
+this.videoEditorQuality = '720p'; this.videoEditorMuted = false;
+this.videoEditorProgress = 0; this.videoEditorProcessing = false;
 
 },
 
@@ -16213,67 +16250,102 @@ async processAndSendVideo() {
 
 if (!this.videoEditorFile) return;
 
+// iOS / Safari fallback — no captureStream or MediaRecorder
+if (!this._mediaRecorderSupported) {
+    const rawFile = this.videoEditorFile;
+    this.closeVideoEditor();
+    this.addPendingAttachment(rawFile);
+    this.showToast('متصفحك لا يدعم المعالجة — تم إرفاق الفيديو الأصلي', 'info');
+    return;
+}
+
 this.videoEditorProcessing = true; this.videoEditorProgress = 0;
 
-const resMap = { '360p': { w: 640, h: 360 }, '480p': { w: 854, h: 480 }, '720p': { w: 1280, h: 720 }, '1080p': { w: 1920, h: 1080 } };
-const bitrateMap = { '360p': 500000, '480p': 1000000, '720p': 2500000, '1080p': 5000000 };
-const targetRes = resMap[this.videoEditorQuality] || resMap['720p'];
+const resMap    = { '360p':{w:640,h:360}, '480p':{w:854,h:480}, '720p':{w:1280,h:720}, '1080p':{w:1920,h:1080} };
+const bitrateMap = { '360p':500000, '480p':1000000, '720p':2500000, '1080p':5000000 };
+const targetRes  = resMap[this.videoEditorQuality] || resMap['720p'];
 const targetBitrate = bitrateMap[this.videoEditorQuality] || 2500000;
+const muteOutput = this.videoEditorMuted;
 
 const startTime = this.videoEditorStart || 0;
-const endTime = this.videoEditorEnd || 0;
-const hasTrim = endTime > 0 && endTime > startTime;
-const totalDuration = hasTrim ? (endTime - startTime) : 0;
+const endTime   = this.videoEditorEnd   || 0;
+const hasTrim   = endTime > startTime && endTime > 0;
 
 try {
 
+// ── Load video element ──────────────────────────────────
 const video = document.createElement('video');
-video.src = URL.createObjectURL(this.videoEditorFile);
-video.muted = false;
-video.currentTime = startTime || 0;
+video.src     = URL.createObjectURL(this.videoEditorFile);
+video.muted   = true;   // muted so autoplay is allowed; audio piped via AudioContext
 video.preload = 'auto';
+video.crossOrigin = 'anonymous';
 
 await new Promise((resolve, reject) => {
-    video.onloadedmetadata = () => {
-        if (hasTrim && !endTime) this.videoEditorEnd = video.duration;
-        resolve();
-    };
+    video.onloadedmetadata = resolve;
     video.onerror = reject;
     video.load();
 });
 
-const origW = video.videoWidth || targetRes.w;
-const origH = video.videoHeight || targetRes.h;
-const scale = Math.min(targetRes.w / origW, targetRes.h / origH, 1);
-const cw = Math.round(origW * scale);
-const ch = Math.round(origH * scale);
+// Seek to startTime and wait for seeked event before recording
+if (startTime > 0) {
+    await new Promise(resolve => {
+        video.onseeked = resolve;
+        video.currentTime = startTime;
+    });
+}
 
+const duration    = hasTrim ? (endTime - startTime) : video.duration;
+const origW       = video.videoWidth  || targetRes.w;
+const origH       = video.videoHeight || targetRes.h;
+const scale       = Math.min(targetRes.w / origW, targetRes.h / origH, 1);
+// Always use even dimensions — required by most video codecs
+const cw = (Math.max(2, Math.round(origW * scale))) & ~1;
+const ch = (Math.max(2, Math.round(origH * scale))) & ~1;
+
+// ── Canvas setup ────────────────────────────────────────
 const canvas = document.createElement('canvas');
-canvas.width = cw;
+canvas.width  = cw;
 canvas.height = ch;
 const ctx = canvas.getContext('2d');
 
 const videoStream = canvas.captureStream(30);
-let combinedStream = videoStream;
 
-try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioCtx.createMediaElementSource(video);
-    const dest = audioCtx.createMediaStreamDestination();
-    source.connect(dest);
-    if (dest.stream.getAudioTracks().length) {
-        videoStream.addTrack(dest.stream.getAudioTracks()[0]);
-    }
-    combinedStream = videoStream;
-} catch (_) {}
+// ── Audio wiring ─────────────────────────────────────────
+if (!muteOutput) {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+            const audioCtx = new AudioCtx();
+            const source   = audioCtx.createMediaElementSource(video);
+            const dest     = audioCtx.createMediaStreamDestination();
+            source.connect(dest);
+            source.connect(audioCtx.destination); // also play through speakers during preview
+            const audioTracks = dest.stream.getAudioTracks();
+            if (audioTracks.length) videoStream.addTrack(audioTracks[0]);
+        }
+    } catch (_) { /* audio wiring failed — continue video-only */ }
+}
 
-const recorder = new MediaRecorder(combinedStream, {
-    mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? 'video/webm;codecs=vp8,opus' : 'video/webm;codecs=vp8',
+// ── Recorder ────────────────────────────────────────────
+const mimeTypes = [
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8',
+    'video/webm',
+];
+const mimeType = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+const recorder = new MediaRecorder(videoStream, {
+    ...(mimeType ? { mimeType } : {}),
     videoBitsPerSecond: targetBitrate,
 });
 
 const chunks = [];
 recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+// ── Frame loop ───────────────────────────────────────────
+const fps        = 30;
+const totalFrames = Math.max(1, Math.ceil(duration * fps));
 
 const processed = await new Promise((resolve, reject) => {
     recorder.onstop = () => {
@@ -16281,35 +16353,38 @@ const processed = await new Promise((resolve, reject) => {
         resolve(new File([blob], 'video_' + Date.now() + '.webm', { type: 'video/webm' }));
     };
     recorder.onerror = reject;
-
     recorder.start();
 
-    const fps = 30;
-    const frameMs = Math.round(1000 / fps);
-    const totalFrames = hasTrim ? Math.ceil(totalDuration * fps) : Math.ceil(video.duration * fps);
     let frameCount = 0;
-    let stopped = false;
-    let timer = null;
+    let stopped    = false;
+    let animId     = null;
 
     const drawFrame = () => {
         if (stopped) return;
-        if (frameCount >= totalFrames || (hasTrim && video.currentTime >= endTime && frameCount > 0)) {
-            stopped = true;
-            clearInterval(timer);
-            recorder.stop();
-            video.pause();
-            return;
-        }
+        const elapsed   = video.currentTime - startTime;
+        const progress  = Math.min(elapsed / duration, 1);
+        this.videoEditorProgress = Math.round(progress * 99);
 
         ctx.drawImage(video, 0, 0, cw, ch);
         frameCount++;
-        this.videoEditorProgress = Math.min(99, Math.round((frameCount / totalFrames) * 100));
+
+        const reachedEnd = hasTrim
+            ? video.currentTime >= endTime - 0.05
+            : progress >= 0.999;
+
+        if (reachedEnd || frameCount >= totalFrames + 5) {
+            stopped = true;
+            cancelAnimationFrame(animId);
+            recorder.stop();
+            video.pause();
+        } else {
+            animId = requestAnimationFrame(drawFrame);
+        }
     };
 
-    video.play();
-    video.addEventListener('playing', () => {
-        timer = setInterval(drawFrame, frameMs);
-    }, { once: true });
+    video.play().then(() => {
+        animId = requestAnimationFrame(drawFrame);
+    }).catch(reject);
 });
 
 this.videoEditorProgress = 100;
@@ -16317,9 +16392,8 @@ this.videoEditorProcessing = false;
 
 const previewUrl = URL.createObjectURL(processed);
 this.videoEditorPreviewFile = processed;
-this.videoEditorPreviewUrl = previewUrl;
+this.videoEditorPreviewUrl  = previewUrl;
 this.videoEditorPreviewOpen = true;
-
 this.showToast('تمت المعالجة — راجع النتيجة', 'success');
 
 } catch(err) {
@@ -17041,6 +17115,14 @@ this.isDesktop = window.innerWidth > 1080;
 window.addEventListener('resize', this.resizeHandler);
 
 document.documentElement.style.setProperty('--sidebar-width', `${this.sidebarWidth}px`);
+
+// Handle ?section=contacts from dashboard shortcut
+const _urlSection = new URLSearchParams(window.location.search).get('section');
+if (_urlSection === 'contacts') {
+    this.showSidebar = true;
+    this.railFilter = 'private';
+    history.replaceState({}, '', window.location.pathname);
+}
 
 const feed = this.$refs.messagesContainer;
 

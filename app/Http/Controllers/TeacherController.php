@@ -462,7 +462,7 @@ class TeacherController extends Controller
             'audio_file' => 'nullable', // Don't validate as file - will be uploaded via AJAX
             'audio_file_path' => 'nullable|string', // Path from AJAX upload
             'content' => 'nullable|string',
-            'duration' => 'nullable|string|regex:/^(\d{1,3}:\d{2})?$/',
+            'duration' => 'nullable|string|regex:/^(\d{1,3}:\d{2}(:\d{2})?)?$/',
             'lesson_type' => 'required|in:video-upload,audio-upload,youtube,other-content',
             'order' => 'required|integer|min:1',
         ]);
@@ -539,7 +539,7 @@ class TeacherController extends Controller
             'audio_file' => 'nullable', // Don't validate as file - will be uploaded via AJAX
             'audio_file_path' => 'nullable|string', // Path from AJAX upload
             'content' => 'nullable|string',
-            'duration' => 'nullable|string|regex:/^(\d{1,3}:\d{2})?$/',
+            'duration' => 'nullable|string|regex:/^(\d{1,3}:\d{2}(:\d{2})?)?$/',
             'lesson_type' => 'required|in:video-upload,audio-upload,youtube,other-content',
             'order' => 'required|integer|min:1',
         ]);
@@ -1628,197 +1628,118 @@ class TeacherController extends Controller
     }
 
     /**
-     * Try to extract duration using youtube-dl command
+     * Try yt-dlp binary (fastest, most accurate)
      */
     private function extractYouTubeDurationWithYoutubeDl($videoId)
     {
+        $candidates = ['/usr/local/bin/yt-dlp', '/usr/bin/yt-dlp', 'yt-dlp', 'youtube-dl'];
+        $command    = null;
+        foreach ($candidates as $bin) {
+            $test = shell_exec("which {$bin} 2>/dev/null || command -v {$bin} 2>/dev/null");
+            if (!empty(trim($test ?? ''))) { $command = $bin; break; }
+        }
+        if (!$command) return null;
+
         try {
-            // Check if youtube-dl or yt-dlp is installed
-            $command = $this->getYoutubeDlCommand();
-            if (!$command) {
-                return null;
-            }
-
-            $url = "https://www.youtube.com/watch?v={$videoId}";
+            $url    = 'https://www.youtube.com/watch?v=' . escapeshellarg($videoId);
             $output = [];
-            $returnVar = 0;
-
-            exec("{$command} --dump-json -q " . escapeshellarg($url), $output, $returnVar);
-
-            if ($returnVar === 0 && !empty($output)) {
-                $json = json_decode(implode('', $output), true);
-                if (isset($json['duration']) && is_numeric($json['duration'])) {
-                    return (int)$json['duration']; // Return duration in seconds
-                }
+            $ret    = 0;
+            exec("{$command} --no-warnings --print duration_string -x --skip-download " . escapeshellarg("https://www.youtube.com/watch?v={$videoId}") . " 2>/dev/null", $output, $ret);
+            if ($ret === 0 && !empty($output)) {
+                // duration_string returns HH:MM:SS or MM:SS
+                $parts = explode(':', trim(implode('', $output)));
+                if (count($parts) === 3) return ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
+                if (count($parts) === 2) return ((int)$parts[0] * 60) + (int)$parts[1];
             }
-        } catch (\Exception $e) {
-            // Silently fail and try next method
-        }
+            // Fallback: dump-json
+            $output2 = [];
+            exec("{$command} --no-warnings --dump-json " . escapeshellarg("https://www.youtube.com/watch?v={$videoId}") . " 2>/dev/null", $output2, $ret);
+            if ($ret === 0 && !empty($output2)) {
+                $json = json_decode(implode('', $output2), true);
+                if (isset($json['duration']) && is_numeric($json['duration'])) return (int)$json['duration'];
+            }
+        } catch (\Exception $e) {}
 
         return null;
     }
 
     /**
-     * Get the correct youtube-dl command
-     */
-    private function getYoutubeDlCommand()
-    {
-        // Determine command based on OS
-        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
-
-        if ($isWindows) {
-            // Try yt-dlp first on Windows
-            $output1 = shell_exec('where yt-dlp 2>nul');
-            if (!empty($output1)) {
-                return 'yt-dlp';
-            }
-
-            // Try youtube-dl on Windows
-            $output2 = shell_exec('where youtube-dl 2>nul');
-            if (!empty($output2)) {
-                return 'youtube-dl';
-            }
-        } else {
-            // Try yt-dlp first on Linux/Mac
-            $output1 = shell_exec('which yt-dlp 2>/dev/null');
-            if (!empty($output1)) {
-                return 'yt-dlp';
-            }
-
-            // Try youtube-dl on Linux/Mac
-            $output2 = shell_exec('which youtube-dl 2>/dev/null');
-            if (!empty($output2)) {
-                return 'youtube-dl';
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Try to extract duration via APIs
+     * Try YouTube Innertube API with multiple client configs (no API key needed)
      */
     private function extractYouTubeDurationViaAPI($videoId)
     {
-        try {
-            // Try YouTube innertube API (most reliable without API key)
-            $duration = $this->extractDurationViaInnertube($videoId);
-            if ($duration !== null) {
-                return $duration;
-            }
+        // ANDROID client is less restricted than WEB client
+        $clients = [
+            [
+                'clientName'       => 'ANDROID',
+                'clientVersion'    => '19.09.37',
+                'androidSdkVersion'=> 30,
+                'userAgent'        => 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
+            ],
+            [
+                'clientName'    => 'TVHTML5',
+                'clientVersion' => '7.20220325',
+                'clientScreen'  => 'WATCH',
+                'userAgent'     => 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1',
+            ],
+        ];
 
-            // Fallback to oEmbed API
-            $duration = $this->extractDurationViaOEmbed($videoId);
-            if ($duration !== null) {
-                return $duration;
-            }
-
-            // Last resort: return a default duration (15 minutes = 900 seconds as estimate)
-            return 900;
-
-        } catch (\Exception $e) {
-            // Silently fail and return default
-            return 900;
+        foreach ($clients as $client) {
+            $seconds = $this->callInnertube($videoId, $client);
+            if ($seconds !== null) return $seconds;
         }
+
+        return null;
+    }
+
+    private function callInnertube($videoId, array $client)
+    {
+        try {
+            $postData = json_encode([
+                'videoId' => $videoId,
+                'context' => ['client' => $client],
+            ]);
+            $userAgent = $client['userAgent'] ?? 'Mozilla/5.0';
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL            => 'https://www.youtube.com/youtubei/v1/player',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 12,
+                CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $postData,
+                CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_USERAGENT      => $userAgent,
+            ]);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                $len  = $data['videoDetails']['lengthSeconds'] ?? null;
+                if ($len !== null && is_numeric($len) && (int)$len > 0) return (int)$len;
+            }
+        } catch (\Exception $e) {}
+
+        return null;
     }
 
     /**
-     * Format duration from seconds to MM:SS format
+     * Format duration from seconds to MM:SS or H:MM:SS
      */
     private function formatDuration($seconds)
     {
         $seconds = intval($seconds);
-        $minutes = intdiv($seconds, 60);
-        $secs = $seconds % 60;
+        $h       = intdiv($seconds, 3600);
+        $m       = intdiv($seconds % 3600, 60);
+        $s       = $seconds % 60;
 
-        return sprintf('%d:%02d', $minutes, $secs);
-    }
-
-    /**
-     * Extract duration via YouTube innertube API (most reliable, no key needed)
-     */
-    private function extractDurationViaInnertube($videoId)
-    {
-        try {
-            $ch = curl_init();
-            $url = "https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO90d0o_cimZSvsC8m5HTLKLm-a53LsNw";
-
-            $postData = json_encode([
-                "videoId" => $videoId,
-                "context" => [
-                    "client" => [
-                        "clientName" => "WEB",
-                        "clientVersion" => "2.20220801.00.00"
-                    ]
-                ]
-            ]);
-
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10,
-                CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => $postData,
-                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            ]);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode === 200 && $response) {
-                $data = json_decode($response, true);
-
-                // Try to extract duration from videoDetails
-                if (isset($data['videoDetails']['lengthSeconds']) && is_numeric($data['videoDetails']['lengthSeconds'])) {
-                    $seconds = intval($data['videoDetails']['lengthSeconds']);
-                    return $seconds; // Return duration in seconds
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently fail and try next method
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract duration via oEmbed API (fallback)
-     */
-    private function extractDurationViaOEmbed($videoId)
-    {
-        try {
-            // Use YouTube's official oEmbed endpoint
-            $url = "https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={$videoId}&format=json";
-
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10,
-                CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            ]);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            // oEmbed API doesn't return duration directly, but validates video exists
-            if ($httpCode === 200 && $response) {
-                $data = json_decode($response, true);
-                // Video exists and is accessible - return reasonable estimate in seconds
-                return 600; // 10 minutes (600 seconds) default for valid videos
-            }
-        } catch (\Exception $e) {
-            // Silently fail
-        }
-
-        return null;
+        return $h > 0
+            ? sprintf('%d:%02d:%02d', $h, $m, $s)
+            : sprintf('%d:%02d', $m, $s);
     }
 
     /**
