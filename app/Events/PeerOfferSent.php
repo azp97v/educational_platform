@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 
 namespace App\Events;
 
 use App\Models\Call;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -13,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
  * عرض WebRTC عام بين أي طرفين داخل مكالمة جماعية (مطلوب عند انضمام مشارك جديد
  * فينشئ كل مشارك موجود اتصالاً مستقلاً موجّهاً للمنضم الجديد).
  */
-class PeerOfferSent implements ShouldBroadcast
+class PeerOfferSent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

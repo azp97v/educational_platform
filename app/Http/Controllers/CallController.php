@@ -52,6 +52,15 @@ class CallController extends Controller
         $recipients = User::whereIn('id', $participantIds)->get();
         foreach ($recipients as $recipient) {
             abort_unless($this->userCanMessage($caller, $recipient), 403, 'لا يمكنك الاتصال بـ ' . $recipient->name);
+
+            // Reject if recipient is already in an active call
+            $busy = CallParticipant::where('user_id', $recipient->id)
+                ->whereIn('status', ['joined', 'ringing'])
+                ->whereHas('call', fn ($q) => $q->whereIn('status', ['ringing', 'accepted']))
+                ->exists();
+            if ($busy) {
+                return response()->json(['success' => false, 'busy' => true, 'error' => $recipient->name . ' في مكالمة أخرى حالياً'], 200);
+            }
         }
 
         $call = Call::create([

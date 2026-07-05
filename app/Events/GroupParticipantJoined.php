@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Events;
 
@@ -6,7 +6,7 @@ use App\Models\Call;
 use App\Models\User;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -14,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
  * يُبَث لكل المشاركين الحاليين في المكالمة الجماعية عند انضمام مشارك جديد،
  * بحيث ينشئ كل واحد منهم اتصال WebRTC جديد (mesh) موجّه للمنضم الجديد.
  */
-class GroupParticipantJoined implements ShouldBroadcast
+class GroupParticipantJoined implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
