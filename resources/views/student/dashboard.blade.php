@@ -83,7 +83,6 @@
       gap: 0;
       height: 100vh;
       position: relative;
-      z-index: 1;
     }
 
     /* ===== SIDEBAR ===== */
