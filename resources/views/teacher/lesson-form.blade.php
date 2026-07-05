@@ -15,7 +15,7 @@
 
     body { font-family: 'Tajawal', sans-serif; background: radial-gradient(circle at top left, rgba(255,214,122,0.16), transparent 22%), linear-gradient(180deg, var(--theme-page-bg) 0%, var(--theme-surface) 40%, var(--theme-page-bg) 100%); color: var(--text-primary); min-height: 100vh; transition: background 0.3s, color 0.3s; position: relative; overflow-x: hidden; }
     body::before { content: ''; position: fixed; top: 16px; left: 16px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(255,214,122,0.24), transparent 55%); filter: blur(72px); z-index: 0; pointer-events: none; }
-    .app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+    .app { display: flex; min-height: 100vh; position: relative; }
 
     .sidebar {
       width: var(--sidebar-w);

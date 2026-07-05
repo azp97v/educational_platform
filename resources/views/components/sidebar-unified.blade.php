@@ -508,9 +508,7 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 199;
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
+        z-index: 9998;
     }
     .sidebar-backdrop.active {
         display: block;
@@ -582,14 +580,16 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
         .sidebar {
             position: fixed;
             transform: translateX(110%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            visibility: hidden;
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
             width: 260px;
             max-width: 80vw;
             right: 0;
             top: 0;
             bottom: 0;
             height: 100vh;
-            z-index: 200;
+            z-index: 9999;
             border-left: none;
             border-radius: 0;
             padding: 24px 16px;
@@ -597,6 +597,8 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
 
         .sidebar.sidebar-open {
             transform: translateX(0);
+            visibility: visible;
+            pointer-events: auto;
         }
 
         /* Restore full sidebar content when open on mobile */
