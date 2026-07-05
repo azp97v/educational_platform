@@ -113,8 +113,19 @@ class MessagingSettingsController extends Controller
         }
 
         $taken = User::where('username', $username)->where('id', '!=', $user->id)->exists();
+        if ($taken) {
+            return response()->json(['success' => true, 'available' => false, 'reason' => 'هذا الاسم مستخدم بالفعل']);
+        }
 
-        return response()->json(['success' => true, 'available' => !$taken, 'reason' => $taken ? 'هذا الاسم مستخدم بالفعل' : null]);
+        if ($username !== $user->username && $user->username && $user->username_changed_at) {
+            $nextAllowed = $user->username_changed_at->copy()->addDays(self::USERNAME_COOLDOWN_DAYS);
+            if (now()->lt($nextAllowed)) {
+                $daysLeft = (int) ceil(now()->diffInRealSeconds($nextAllowed) / 86400);
+                return response()->json(['success' => true, 'available' => false, 'reason' => "لا يمكن التغيير الآن — متبقٍ {$daysLeft} يوم حتى انتهاء فترة الانتظار (30 يوم)"]);
+            }
+        }
+
+        return response()->json(['success' => true, 'available' => true, 'reason' => null]);
     }
 
     public function checkPhoneAvailability(Request $request)

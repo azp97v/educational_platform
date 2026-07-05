@@ -433,8 +433,9 @@
       <div class="form-row full">
         <div class="form-group">
           <label for="username"><i class="ri-at-line"></i> اسم المستخدم</label>
-          <input type="text" id="username" name="username" value="{{ old('username') }}" @error('username') class="bad" @enderror placeholder="مثال: ahmed_2024" required minlength="3" maxlength="50" pattern="[a-zA-Z0-9_.]+">
-          <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px;">يُستخدم للوصول إليك في تطبيق المراسلة. يجب أن يكون فريداً.</small>
+          <input type="text" id="username" name="username" value="{{ old('username') }}" @error('username') class="bad" @enderror placeholder="مثال: ahmed_2024" minlength="3" maxlength="50" autocomplete="username" oninput="checkUsernameReg(this.value)">
+          <div id="username-hint" style="font-size:11px;margin-top:4px;color:var(--text-muted,#999);">حروف إنجليزية وأرقام وشرطة سفلية فقط، 3 أحرف على الأقل</div>
+          <div id="username-status" style="font-size:12px;margin-top:4px;display:none;"></div>
           @error('username') <div class="msg"><i class="ri-alert-line"></i>{{ $message }}</div> @enderror
         </div>
       </div>
@@ -450,13 +451,16 @@
       <div class="form-row">
         <div class="form-group">
           <label for="password"><i class="ri-lock-line"></i> كلمة المرور</label>
-          <input type="password" id="password" name="password" @error('password') class="bad" @enderror placeholder="كلمة مرور قوية" minlength="8" required>
+          <input type="password" id="password" name="password" @error('password') class="bad" @enderror placeholder="8 أحرف على الأقل" minlength="8" required oninput="checkPassStrength(this.value)">
+          <div id="pass-strength-bar" style="height:4px;border-radius:4px;margin-top:6px;transition:width .3s,background .3s;width:0;background:#e53;"></div>
+          <div id="pass-strength-label" style="font-size:11px;margin-top:4px;color:var(--text-muted,#999);">يجب: 8+ أحرف، حرف كبير، حرف صغير، رقم</div>
           @error('password') <div class="msg"><i class="ri-alert-line"></i>{{ $message }}</div> @enderror
         </div>
 
         <div class="form-group">
           <label for="password_confirmation"><i class="ri-lock-check-line"></i> تأكيد كلمة المرور</label>
-          <input type="password" id="password_confirmation" name="password_confirmation" @error('password_confirmation') class="bad" @enderror placeholder="أعد الإدخال" minlength="8" required>
+          <input type="password" id="password_confirmation" name="password_confirmation" @error('password_confirmation') class="bad" @enderror placeholder="أعد الإدخال" minlength="8" required oninput="checkPassMatch()">
+          <div id="pass-match-label" style="font-size:11px;margin-top:4px;display:none;"></div>
           @error('password_confirmation') <div class="msg"><i class="ri-alert-line"></i>{{ $message }}</div> @enderror
         </div>
       </div>
@@ -476,6 +480,77 @@
       </a>
     </div>
   </div>
+
+  <script>
+  // ── Username real-time check ──────────────────────────────────
+  let _unTimer = null;
+  function checkUsernameReg(val) {
+    const el  = document.getElementById('username');
+    const st  = document.getElementById('username-status');
+    const hint = document.getElementById('username-hint');
+    val = val.trim();
+
+    if (!val) { el.classList.remove('bad'); st.style.display='none'; hint.style.display='block'; return; }
+
+    if (!/^[A-Za-z0-9_]{3,50}$/.test(val)) {
+      el.classList.add('bad');
+      st.style.display='block'; hint.style.display='none';
+      st.style.color='var(--theme-danger,#e53)';
+      st.textContent = val.length < 3 ? '3 أحرف على الأقل' : 'حروف إنجليزية وأرقام وشرطة سفلية فقط';
+      return;
+    }
+
+    hint.style.display='none'; st.style.display='block';
+    st.style.color='var(--text-muted,#999)';
+    st.textContent = '...يتحقق';
+    el.classList.remove('bad');
+
+    clearTimeout(_unTimer);
+    _unTimer = setTimeout(async () => {
+      try {
+        const res = await fetch('/admin/check-username?username=' + encodeURIComponent(val), {headers:{'Accept':'application/json'}});
+        const d   = await res.json();
+        if (d.available) {
+          st.style.color='#2ecc71'; st.textContent='✓ متاح';
+        } else {
+          st.style.color='var(--theme-danger,#e53)'; st.textContent = '✗ ' + (d.reason || 'غير متاح');
+          el.classList.add('bad');
+        }
+      } catch (_) { st.style.display='none'; hint.style.display='block'; }
+    }, 500);
+  }
+
+  // ── Password strength ─────────────────────────────────────────
+  function checkPassStrength(val) {
+    const bar   = document.getElementById('pass-strength-bar');
+    const label = document.getElementById('pass-strength-label');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[a-z]/.test(val)) score++;
+    if (/\d/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const pct   = ['0%','25%','50%','75%','100%'][score];
+    const color = ['#e53','#e53','#f90','#2ecc71','#27ae60'][score];
+    const text  = ['','ضعيفة','متوسطة','جيدة','قوية جداً'][score] || 'قوية جداً';
+    bar.style.width = pct; bar.style.background = color;
+    label.textContent = score >= 4 ? '✓ ' + text : 'يجب: 8+ أحرف، حرف كبير، حرف صغير، رقم — ' + (text || 'ضعيفة');
+    label.style.color = color;
+    checkPassMatch();
+  }
+
+  // ── Password match ────────────────────────────────────────────
+  function checkPassMatch() {
+    const p1  = document.getElementById('password').value;
+    const p2  = document.getElementById('password_confirmation').value;
+    const lbl = document.getElementById('pass-match-label');
+    if (!p2) { lbl.style.display='none'; return; }
+    lbl.style.display='block';
+    if (p1 === p2) { lbl.style.color='#2ecc71'; lbl.textContent='✓ كلمتا المرور متطابقتان'; }
+    else           { lbl.style.color='var(--theme-danger,#e53)'; lbl.textContent='✗ كلمتا المرور غير متطابقتين'; }
+  }
+  </script>
 
   @include('components.account-theme-foot')
 </body>

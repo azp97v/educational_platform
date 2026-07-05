@@ -36,12 +36,25 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'username' => ['nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9_]+$/', 'unique:users,username,' . $user->id],
+            'username' => ['nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9_]+$/', 'unique:users,username,' . $user->id],
             'email' => 'required|email|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'bio' => 'nullable|string|max:500',
             'avatar_url' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // فحص cooldown تغيير اسم المستخدم
+        $newUsername = $validated['username'] ?? null;
+        if ($newUsername && $newUsername !== $user->username) {
+            if ($user->username && $user->username_changed_at) {
+                $nextAllowed = $user->username_changed_at->copy()->addDays(30);
+                if (now()->lt($nextAllowed)) {
+                    $daysLeft = (int) ceil(now()->diffInRealSeconds($nextAllowed) / 86400);
+                    return back()->withErrors(['username' => "يمكنك تغيير اسم المستخدم بعد {$daysLeft} يوماً من آخر تغيير."]);
+                }
+            }
+            $validated['username_changed_at'] = now();
+        }
 
         // معالجة الصورة الشخصية
         if ($request->hasFile('avatar_url')) {
@@ -67,10 +80,22 @@ class ProfileController extends Controller
     public function checkUsername(Request $request)
     {
         $username = trim($request->query('username', ''));
-        $exists = User::where('username', $username)
-            ->where('id', '!=', auth()->id())
-            ->exists();
-        return response()->json(['available' => !$exists]);
+        $user = Auth::user();
+
+        if (!preg_match('/^[A-Za-z0-9_]{3,50}$/', $username)) {
+            return response()->json(['available' => false, 'reason' => 'يجب أن يكون 3 أحرف على الأقل، وحروف/أرقام/شرطة سفلية فقط']);
+        }
+
+        if ($username !== $user->username && $user->username && $user->username_changed_at) {
+            $nextAllowed = $user->username_changed_at->copy()->addDays(30);
+            if (now()->lt($nextAllowed)) {
+                $daysLeft = (int) ceil(now()->diffInRealSeconds($nextAllowed) / 86400);
+                return response()->json(['available' => false, 'reason' => "لا يمكن التغيير الآن — متبقٍ {$daysLeft} يوم"]);
+            }
+        }
+
+        $exists = User::where('username', $username)->where('id', '!=', $user->id)->exists();
+        return response()->json(['available' => !$exists, 'reason' => $exists ? 'هذا الاسم مستخدم بالفعل' : null]);
     }
 
     /**
@@ -88,7 +113,11 @@ class ProfileController extends Controller
     {
         $validated = $request->validate([
             'current_password' => 'required',
-            'password' => 'required|min:6|confirmed',
+            'password' => ['required', 'confirmed', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'],
+        ], [
+            'password.min' => 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+            'password.regex' => 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم على الأقل',
+            'password.confirmed' => 'كلمتا المرور غير متطابقتين',
         ]);
 
         // التحقق من كلمة المرور الحالية

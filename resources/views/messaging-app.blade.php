@@ -10937,7 +10937,7 @@ this.stickerImageChoice = 'removed';
 try {
 const { removeBackground } = await import('{{ asset('js/background-removal/background-removal.js') }}');
 const blob = await removeBackground(file, {
-    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.4.5/dist/',
+    publicPath: 'https://staticimgly.com/@imgly/background-removal-data/1.6.0/dist/',
 });
 this.stickerImageBlob = blob;
 this.stickerImagePreviewUrl = URL.createObjectURL(blob);
@@ -13124,11 +13124,11 @@ openMyProfile() {
 
 const saved = safeLocalJson('messaging_my_profile', {});
 this.myProfileEditName = saved.name || this.userName || 'User';
-this.myProfileEditUsername = saved.username || '';
+this.myProfileEditUsername = saved.username || this.settingsAccount?.username || '';
 this.myProfileEditPhone = saved.phone || this.currentUserPhone || '';
 this.myProfileEditBio = saved.bio || '';
 this.myProfileBirthDate = saved.birthDate || '';
-this.myProfileAvatar = saved.avatar || null;
+this.myProfileAvatar = saved.avatar || this.normalizeAvatarUrl(this.currentUserAvatar) || null;
 this.myProfileBannerScale = 1;
 this.myProfileOpen = true;
 this.accountDrawerOpen = false;
