@@ -241,6 +241,22 @@
         @supports (scrollbar-width: thin) {
             .feed { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--gold) 20%, transparent) transparent; }
         }
+        /* Typing bubble at bottom of chat */
+        .chat-typing-bubble {
+            display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+            align-self: flex-start; max-width: 200px;
+        }
+        .ctb-avatar { border-radius: 50%; overflow: hidden; background: var(--panel-2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text); }
+        .ctb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .ctb-content { background: var(--panel); border-radius: 16px 16px 16px 4px; padding: 8px 12px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+        .ctb-label { font-size: 11px; color: var(--gold); font-weight: 600; line-height: 1; }
+        .ctb-dots { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+        .ctb-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; animation: typing-bounce 1.2s infinite; }
+        .ctb-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .ctb-dots span:nth-child(3) { animation-delay: 0.4s; }
+        .typing-slide-enter-active, .typing-slide-leave-active { transition: opacity 0.25s, transform 0.25s; }
+        .typing-slide-enter-from, .typing-slide-leave-to { opacity: 0; transform: translateY(8px); }
+
         .day {
             margin: 6px auto; border-radius: 999px; border: 1px solid var(--soft);
             background: var(--panel-2); color: var(--muted); font-size: 12px; padding: 5px 12px;
