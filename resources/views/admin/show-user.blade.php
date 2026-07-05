@@ -20,9 +20,9 @@
 <section class="admin-card" style="margin-bottom:20px;">
     <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.08);">
         @if($user->avatar_url)
-            <img src="{{ asset('storage/' . $user->avatar_url) }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(108,99,255,.4);">
+            <img src="{{ asset('storage/' . $user->avatar_url) }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(198,166,117,.5);">
         @else
-            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;flex-shrink:0;">{{ mb_substr($user->name,0,1) }}</div>
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#C6A675,#8D7252);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;flex-shrink:0;">{{ mb_substr($user->name,0,1) }}</div>
         @endif
         <div style="flex:1;">
             <div style="font-size:20px;font-weight:800;margin-bottom:4px;">{{ $user->name }}</div>
@@ -33,10 +33,10 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             @php
-                $roleColors = ['admin'=>'#7c3aed','teacher'=>'#059669','student'=>'#2563eb'];
+                $roleColors = ['admin'=>'#C6A675','teacher'=>'#059669','student'=>'#8D7252'];
                 $roleLabels = ['admin'=>'مشرف','teacher'=>'معلم','student'=>'طالب'];
             @endphp
-            <span style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:{{ ($roleColors[$user->role]??'#6c63ff') }}33;color:{{ $roleColors[$user->role]??'#a78bfa' }};">
+            <span style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:{{ ($roleColors[$user->role]??'#C6A675') }}33;color:{{ $roleColors[$user->role]??'#C6A675' }};">
                 {{ $roleLabels[$user->role] ?? $user->role }}
             </span>
             @php
@@ -49,8 +49,8 @@
 
     {{-- Stats row --}}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:14px;margin-bottom:24px;">
-        <div style="background:rgba(108,99,255,.08);border-radius:10px;padding:14px;text-align:center;">
-            <div style="font-size:22px;font-weight:800;color:#a78bfa;">{{ $enrollmentCount }}</div>
+        <div style="background:rgba(198,166,117,.08);border-radius:10px;padding:14px;text-align:center;">
+            <div style="font-size:22px;font-weight:800;color:#C6A675;">{{ $enrollmentCount }}</div>
             <div style="font-size:11px;opacity:.6;margin-top:4px;">مسارات مسجّل</div>
         </div>
         <div style="background:rgba(34,197,94,.08);border-radius:10px;padding:14px;text-align:center;">

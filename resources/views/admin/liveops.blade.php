@@ -8,14 +8,14 @@
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
     <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse-live 1.4s ease-in-out infinite;"></span>
     <span style="font-size:12px;color:var(--text-muted);">مباشر — آخر تحديث: <span id="last-refresh">الآن</span></span>
-    <span style="margin-right:auto;font-size:12px;color:var(--text-muted);">التحديث التالي بعد <span id="countdown" style="font-weight:700;color:#6c63ff;">60</span> ثانية</span>
+    <span style="margin-right:auto;font-size:12px;color:var(--text-muted);">التحديث التالي بعد <span id="countdown" style="font-weight:700;color:#C6A675;">60</span> ثانية</span>
 </div>
 
 {{-- KPI Row --}}
 <section class="admin-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;">
     <article class="metric">
-        <div class="k"><i class="ri-user-line" style="color:#6c63ff;margin-left:4px;"></i>مستخدمون نشطون</div>
-        <div class="v" style="color:#6c63ff;">{{ $ops['online_users'] }}</div>
+        <div class="k"><i class="ri-user-line" style="color:#C6A675;margin-left:4px;"></i>مستخدمون نشطون</div>
+        <div class="v" style="color:#C6A675;">{{ $ops['online_users'] }}</div>
     </article>
     <article class="metric">
         <div class="k"><i class="ri-user-received-line" style="color:#f59e0b;margin-left:4px;"></i>طلبات معلّقة</div>
@@ -45,7 +45,7 @@
                 @php
                     $colors = ['warning'=>['bg'=>'rgba(245,158,11,0.1)','border'=>'rgba(245,158,11,0.3)','text'=>'#f59e0b','icon'=>'ri-error-warning-line'],
                                'error'  =>['bg'=>'rgba(239,68,68,0.1)', 'border'=>'rgba(239,68,68,0.3)', 'text'=>'#ef4444','icon'=>'ri-close-circle-line'],
-                               'info'   =>['bg'=>'rgba(108,99,255,0.1)','border'=>'rgba(108,99,255,0.3)','text'=>'#6c63ff','icon'=>'ri-information-line']];
+                               'info'   =>['bg'=>'rgba(198,166,117,0.1)','border'=>'rgba(198,166,117,0.3)','text'=>'#C6A675','icon'=>'ri-information-line']];
                     $c = $colors[$alert['level']] ?? $colors['info'];
                 @endphp
                 <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:{{ $c['bg'] }};border:1px solid {{ $c['border'] }};font-size:13px;color:{{ $c['text'] }};">
@@ -64,7 +64,7 @@
     <section class="admin-card" style="padding:0;overflow:hidden;">
         <div style="padding:14px 18px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
             <h2 style="margin:0;font-size:14px;"><i class="ri-user-add-line" style="color:#10b981;margin-left:6px;"></i>آخر المسجّلين</h2>
-            <a href="{{ route('admin.index') }}" style="font-size:11px;color:#6c63ff;text-decoration:none;">عرض الكل</a>
+            <a href="{{ route('admin.index') }}" style="font-size:11px;color:#C6A675;text-decoration:none;">عرض الكل</a>
         </div>
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
@@ -83,7 +83,7 @@
                             <div style="font-size:11px;color:var(--text-muted);">{{ $u->email }}</div>
                         </td>
                         <td style="padding:8px 14px;text-align:center;">
-                            @php $rc=['student'=>['#6c63ff','الطالب'],'teacher'=>['#10b981','المعلم'],'admin'=>['#f59e0b','المشرف']][$u->role] ?? ['#9ca3af',$u->role] @endphp
+                            @php $rc=['student'=>['#C6A675','الطالب'],'teacher'=>['#10b981','المعلم'],'admin'=>['#f59e0b','المشرف']][$u->role] ?? ['#9ca3af',$u->role] @endphp
                             <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:{{ $rc[0] }}22;color:{{ $rc[0] }};font-weight:700;">{{ $rc[1] }}</span>
                         </td>
                         <td style="padding:8px 14px;text-align:center;font-size:11px;color:var(--text-muted);">{{ $u->created_at?->diffForHumans() }}</td>
@@ -100,7 +100,7 @@
     <section class="admin-card" style="padding:0;overflow:hidden;">
         <div style="padding:14px 18px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
             <h2 style="margin:0;font-size:14px;"><i class="ri-user-received-line" style="color:#f59e0b;margin-left:6px;"></i>طلبات الالتحاق المعلّقة</h2>
-            <a href="{{ route('admin.enrollments') }}" style="font-size:11px;color:#6c63ff;text-decoration:none;">إدارة الكل</a>
+            <a href="{{ route('admin.enrollments') }}" style="font-size:11px;color:#C6A675;text-decoration:none;">إدارة الكل</a>
         </div>
         <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">

@@ -55,7 +55,7 @@
                 <div style="display:flex;align-items:center;gap:10px;padding-top:24px;">
                     <input type="checkbox" name="is_active" value="1" id="is_active"
                         {{ old('is_active', $announcement?->is_active ?? true) ? 'checked' : '' }}
-                        style="accent-color:#6c63ff;width:16px;height:16px;">
+                        style="accent-color:#C6A675;width:16px;height:16px;">
                     <label for="is_active" style="font-weight:600;cursor:pointer;">نشر الإعلان فوراً</label>
                 </div>
             </div>
