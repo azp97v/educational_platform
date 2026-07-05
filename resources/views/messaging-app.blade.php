@@ -3998,6 +3998,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 
 <div class="call-status">
 <span v-if="callState === 'calling'">@{{ getCallStatusText() }}</span>
+<span v-else-if="callState === 'in-call' && callConnectionWarning" style="color:#f59e0b;animation:pulse 1s infinite;">يعيد الاتصال...</span>
 <span v-else-if="callState === 'in-call'">@{{ formatCallElapsed() }}</span>
 </div>
 
@@ -4083,7 +4084,6 @@ window.Echo = new Echo.default({
     key: @json(config('broadcasting.connections.reverb.key')),
     wsHost: @json(parse_url(config('app.url'), PHP_URL_HOST)),
     wsPort: 443,
-    wssPort: 443,
     forceTLS: true,
     enabledTransports: ['wss'],
     authEndpoint: '/broadcasting/auth',
@@ -4904,6 +4904,7 @@ callDirection: null, // 'outgoing' | 'incoming' — tracked separately from call
 callIsRinging: false,
 callTimeoutTimer: null,
 callMinimized: false,
+callConnectionWarning: false,
 callEndedSummary: null,
 speakingUserId: null,
 speakingAnalysers: {},
@@ -14045,7 +14046,21 @@ return icon + ' ' + (this.callIsRinging ? 'يرن...' : 'جاري الاتصال
 // Calls
 
 rtcIceServers() {
-return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+return {
+iceServers: [
+{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+{
+urls: [
+'turn:openrelay.metered.ca:80',
+'turn:openrelay.metered.ca:443',
+'turn:openrelay.metered.ca:443?transport=tcp',
+'turns:openrelay.metered.ca:443',
+],
+username: 'openrelayproject',
+credential: 'openrelayproject',
+},
+],
+};
 },
 
 callRouteFor(template, callId) {
@@ -14054,15 +14069,22 @@ return template ? template.replace('__CALL_ID__', callId) : null;
 
 async postCallAction(url, body) {
 if (!url) return null;
+try {
 const resp = await fetch(url, {
 method: 'POST',
 headers: {
 'Content-Type': 'application/json',
-'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+'Accept': 'application/json',
+'X-CSRF-TOKEN': this.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
 },
 body: JSON.stringify(body || {}),
 });
+if (!resp.ok) console.error('[Call]', url, '→ HTTP', resp.status);
 return resp.json().catch(() => null);
+} catch (e) {
+console.error('[Call]', url, '→ network error', e);
+return null;
+}
 },
 
 getPeerEntry(userId) {
@@ -14094,6 +14116,35 @@ this.postCallAction(this.callRouteFor(this.callsIceRouteTemplate, this.currentCa
 to_user_id: remoteUserId,
 candidate: event.candidate.toJSON(),
 });
+}
+};
+pc.oniceconnectionstatechange = () => {
+const s = pc.iceConnectionState;
+if (s === 'failed') {
+pc.restartIce();
+}
+if (s === 'disconnected') {
+this.callConnectionWarning = true;
+}
+if (s === 'connected' || s === 'completed') {
+this.callConnectionWarning = false;
+}
+};
+pc.onconnectionstatechange = () => {
+const s = pc.connectionState;
+if (s === 'connected') {
+this.callConnectionWarning = false;
+if (this.callState !== 'in-call') {
+this.callState = 'in-call';
+this.callStartedAt = this.callStartedAt || Date.now();
+}
+}
+if (s === 'failed') {
+this.showToast('فشل الاتصال — تحقق من شبكتك وحاول مجدداً', 'error');
+this.endCall();
+}
+if (s === 'disconnected') {
+this.callConnectionWarning = true;
 }
 };
 pc.ontrack = (event) => {
@@ -14449,6 +14500,7 @@ this.callParticipants = [];
 this.isGroupCall = false;
 this.showAddParticipant = false;
 this.callMinimized = false;
+this.callConnectionWarning = false;
 this.pipPos = { bottom: 100, left: 16 };
 },
 
