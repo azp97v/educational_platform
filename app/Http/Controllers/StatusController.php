@@ -238,11 +238,19 @@ class StatusController extends Controller
         }
 
         if ((int) $statusRow->user_id !== (int) $user->id) {
+            $isNewViewer = !DB::table('status_viewers')
+                ->where('status_id', (int) $status)
+                ->where('viewer_id', $user->id)
+                ->exists();
+
             DB::table('status_viewers')->updateOrInsert(
                 ['status_id' => (int) $status, 'viewer_id' => $user->id],
                 ['viewed_at' => now()]
             );
-            DB::table('user_statuses')->where('id', (int) $status)->increment('views_count');
+
+            if ($isNewViewer) {
+                DB::table('user_statuses')->where('id', (int) $status)->increment('views_count');
+            }
         }
 
         return response()->json(['success' => true]);

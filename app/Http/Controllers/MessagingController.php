@@ -1563,6 +1563,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $data = $request->validate([
             'recipient_id' => ['required', 'integer', 'exists:users,id'],
             'is_typing' => ['required', 'boolean'],
+            'media_type' => ['nullable', 'string', 'in:image,video,audio,file'],
         ]);
 
         $recipient = User::findOrFail((int) $data['recipient_id']);
@@ -1570,12 +1571,21 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
         }
 
+        $mediaType = $data['media_type'] ?? null;
         $key = 'messaging-typing-' . $recipient->id . '-' . $user->id;
         if ((bool) $data['is_typing']) {
-            Cache::put($key, true, now()->addSeconds(8));
+            Cache::put($key, $mediaType ?: true, now()->addSeconds(8));
         } else {
             Cache::forget($key);
         }
+
+        // Instant real-time broadcast (bypasses queue)
+        broadcast(new \App\Events\UserTyping(
+            (int) $user->id,
+            (int) $recipient->id,
+            (bool) $data['is_typing'],
+            $mediaType
+        ));
 
         return response()->json(['success' => true]);
     }

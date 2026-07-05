@@ -471,7 +471,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 <div class="c-name">@{{ contact.name }} <span v-if="settingsChats.showFolderTags && getContactFolderTag(contact.id)" class="folder-tag-badge">@{{ getContactFolderTag(contact.id) }}</span> <span v-if="blockedByContact[String(contact.id)]" class="contact-blocked-badge">محظور @{{ formatBlockedTime(blockedByContact[String(contact.id)]) }}</span></div>
 
 <div class="c-prev" v-if="!contact.isTyping"><svg class="contact-status-reply-indicator" v-if="contact.lastMessageStatusRefId" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="3.5" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><path d="M14 8.5L18 12L14 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12H11.5C9.57 12 8 10.43 8 8.5V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>@{{ sanitizeDisplayText(contact.lastMessage, t.noMessages) }}</div>
-<div class="c-prev c-typing-preview" v-else><span class="c-typing-label">يكتب</span><span class="c-typing-dots"><span></span><span></span><span></span></span></div>
+<div class="c-prev c-typing-preview" v-else><span class="c-typing-label">@{{ getTypingLabel(contact, true) }}</span><span class="c-typing-dots"><span></span><span></span><span></span></span></div>
 
 </div>
 
@@ -532,7 +532,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 <template v-else>
 <span class="dot" :class="{ offline: !selectedContact.isOnline }"></span>
 
-<span>@{{ selectedContact.isTyping ? 'يكتب الآن...' : (selectedContact.isOnline ? t.onlineNow : (t.lastSeen + ' ' + formatLastSeen(selectedContact))) }}</span>
+<span>@{{ selectedContact.isTyping ? getTypingLabel(selectedContact) : (selectedContact.isOnline ? t.onlineNow : (t.lastSeen + ' ' + formatLastSeen(selectedContact))) }}</span>
 </template>
 
 </div>
@@ -922,6 +922,20 @@ class="reaction-chip" :class="{ mine: r.myReaction }"
 </template>
 
 <div v-else class="empty">@{{ t.startChatPrompt }}</div>
+
+<!-- Typing indicator bubble at bottom of chat -->
+<transition name="typing-slide">
+<div class="chat-typing-bubble" v-if="selectedContact && selectedContact.isTyping && Number(selectedContact.id) !== -1">
+<div class="avatar ctb-avatar" style="width:28px;height:28px;flex-shrink:0;">
+<img v-if="selectedContact.avatar_url" :src="selectedContact.avatar_url" @error="handleAvatarError($event, selectedContact)">
+<span v-else>@{{ getAuthorInitial(selectedContact.name) }}</span>
+</div>
+<div class="ctb-content">
+<div class="ctb-label">@{{ getTypingLabel(selectedContact) }}</div>
+<div class="ctb-dots"><span></span><span></span><span></span></div>
+</div>
+</div>
+</transition>
 
 </section>
 
@@ -4886,6 +4900,7 @@ qrBgOptions: [
 // Call state
 
 callState: null, // null | 'calling' | 'in-call' | 'incoming'
+callDirection: null, // 'outgoing' | 'incoming' — tracked separately from callState
 callIsRinging: false,
 callTimeoutTimer: null,
 callMinimized: false,
@@ -8107,7 +8122,16 @@ this.typingStopTimer = setTimeout(() => this.sendTypingState(false), 3500);
 
 },
 
-sendTypingState(isTyping) {
+getTypingLabel(contact, short = false) {
+const mt = contact?.typingMediaType;
+if (mt === 'image') return short ? 'يرسل صورة' : 'يرسل صورة...';
+if (mt === 'video') return short ? 'يرسل فيديو' : 'يرسل فيديو...';
+if (mt === 'audio') return short ? 'يرسل صوتية' : 'يرسل رسالة صوتية...';
+if (mt === 'file') return short ? 'يرسل ملفاً' : 'يرسل ملفاً...';
+return short ? 'يكتب' : 'يكتب الآن...';
+},
+
+sendTypingState(isTyping, mediaType = null) {
 
 if (!this.selectedContact || !this.typingRoute || this.typingRoute === '#') return;
 
@@ -8117,7 +8141,7 @@ method: 'POST',
 
 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
 
-body: JSON.stringify({ recipient_id: Number(this.selectedContact.id), is_typing: !!isTyping }),
+body: JSON.stringify({ recipient_id: Number(this.selectedContact.id), is_typing: !!isTyping, media_type: mediaType || undefined }),
 
 }).catch(() => {});
 
@@ -8679,6 +8703,12 @@ openFilePicker() { this.$refs.fileInput?.click(); },
 handleFileSelect(e) {
 
 const files = Array.from(e.target.files || []);
+
+if (files.length) {
+const f = files[0];
+const mt = f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : f.type.startsWith('audio/') ? 'audio' : 'file';
+this.sendTypingState(true, mt);
+}
 
 files.forEach(file => {
 
@@ -13266,6 +13296,9 @@ try {
             time: v.viewedAtText || '',
             liked: !!v.liked,
         }));
+        // Sync the displayed count with actual unique viewer count
+        const st = this.myStatuses[idx];
+        if (st) st.viewsCount = j.data.length;
     }
 } catch (_) {}
 },
@@ -14206,6 +14239,7 @@ const isGroup = contacts.length > 1;
 this.callType = type;
 this.callContact = contacts[0];
 this.isGroupCall = isGroup;
+this.callDirection = 'outgoing';
 this.callParticipants = contacts.map(c => ({ id: Number(c.id), name: c.name, avatar_url: c.avatar_url || null, stream: null }));
 this.callState = 'calling';
 this.callMuted = false;
@@ -14392,8 +14426,8 @@ if (this.callContact && this.currentCallId) {
         contactName: this.callContact.name,
         contactAvatar: this.callContact.avatar_url,
         type: this.callType === 'video' ? 'video' : 'audio',
-        direction: this.callState === 'incoming' ? 'incoming' : 'outgoing',
-        status: wasConnected ? 'completed' : (this.callState === 'incoming' ? 'missed' : 'cancelled'),
+        direction: this.callDirection || (this.callState === 'incoming' ? 'incoming' : 'outgoing'),
+        status: wasConnected ? 'completed' : (this.callDirection === 'incoming' ? 'missed' : 'cancelled'),
         duration,
         timestamp: new Date().toISOString(),
     };
@@ -14403,6 +14437,7 @@ if (this.callContact && this.currentCallId) {
 }
 
 this.callState = null;
+this.callDirection = null;
 this.callType = null;
 this.callContact = null;
 this.currentCallId = null;
@@ -14571,6 +14606,7 @@ this.callContact = { id: data.caller.id, name: data.caller.name, avatar_url: dat
 this.callParticipants = [{ id: Number(data.caller.id), name: data.caller.name, avatar_url: data.caller.avatar_url, stream: null }];
 this.currentCallId = data.call_id;
 this.incomingCallOffer = data.offer;
+this.callDirection = 'incoming';
 this.callState = 'incoming';
 
 this.postCallAction(this.callRouteFor(this.callsRingRouteTemplate, data.call_id), {});
@@ -14670,6 +14706,22 @@ const entry = this.peerConnections[String(data.user_id)];
 if (entry?.pc) { try { entry.pc.close(); } catch (_) {} }
 delete this.peerConnections[String(data.user_id)];
 this.removeParticipantTile(data.user_id);
+});
+
+// Real-time typing indicator via WebSocket (instant, no polling delay)
+channel.listen('.user.typing', (data) => {
+const uid = Number(data.from_user_id);
+const isTyping = !!data.is_typing;
+const mediaType = data.media_type || null;
+const idx = this.contacts.findIndex(c => Number(c.id) === uid);
+if (idx !== -1) {
+    this.contacts[idx].isTyping = isTyping;
+    this.contacts[idx].typingMediaType = mediaType;
+}
+if (this.selectedContact && Number(this.selectedContact.id) === uid) {
+    this.selectedContact.isTyping = isTyping;
+    this.selectedContact.typingMediaType = mediaType;
+}
 });
 },
 
@@ -16914,6 +16966,8 @@ mounted() {
 this.init();
 
 this.loadCallSettings();
+this.loadCallLogs(); // pre-load so call cards appear in chat on open
+this.callLogsLoaded = true;
 this.initCallSignaling();
 
 this.initE2E();
