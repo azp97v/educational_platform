@@ -85,18 +85,15 @@ if (app()->environment('local')) {
 
 Route::get('/', function () {
     if (Auth::check()) {
-        $role = Auth::user()->role;
-        if ($role === 'teacher') {
-            return redirect()->route('teacher.dashboard');
-        }
-        if ($role === 'student') {
-            return redirect()->route('student.index');
-        }
-
-        return redirect()->route('landing');
+        return match (Auth::user()->role) {
+            'teacher' => redirect()->route('teacher.dashboard'),
+            'student'  => redirect()->route('student.index'),
+            'admin'    => redirect()->route('admin.index'),
+            default    => redirect()->route('landing'),
+        };
     }
 
-    return redirect()->route('login');
+    return view('landing-new');
 })->name('home');
 
 Route::get('/u/{user}', [\App\Http\Controllers\MessagingController::class, 'publicProfileCard'])->middleware('auth')->name('profile.card');
@@ -300,6 +297,14 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::post('/lesson/{lesson}/progress', [StudentController::class, 'updateProgress'])->name('progress.update');
     Route::get('/lesson/{lesson}/resources/download', [StudentController::class, 'downloadLessonResources'])->name('lesson.resources.download');
 
+    // Lesson Ratings & Notes
+    Route::post('/lesson/{lesson}/rating', [\App\Http\Controllers\LessonInteractionController::class, 'saveRating'])->name('lesson.rating.save');
+    Route::get('/lesson/{lesson}/rating', [\App\Http\Controllers\LessonInteractionController::class, 'getRating'])->name('lesson.rating.get');
+    Route::get('/lesson/{lesson}/notes', [\App\Http\Controllers\LessonInteractionController::class, 'getNotes'])->name('lesson.notes.get');
+    Route::post('/lesson/{lesson}/notes', [\App\Http\Controllers\LessonInteractionController::class, 'addNote'])->name('lesson.notes.add');
+    Route::delete('/lesson/{lesson}/notes/{note}', [\App\Http\Controllers\LessonInteractionController::class, 'deleteNote'])->name('lesson.notes.delete');
+    Route::put('/lesson/{lesson}/notes/{note}', [\App\Http\Controllers\LessonInteractionController::class, 'updateNote'])->name('lesson.notes.update');
+
     // Inquiry Routes
     Route::post('/inquiry/store', [StudentInquiryController::class, 'store'])->name('inquiry.store');  // إرسال سؤال
     Route::get('/my-inquiries', [StudentInquiryController::class, 'studentIndex'])->name('inquiries.index');  // أسئلتي
@@ -474,6 +479,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     // API Routes for lessons
     Route::post('/api/lessons/upload-file', [TeacherController::class, 'uploadLessonFile'])->name('teacher.api.upload-lesson-file');
     Route::post('/api/youtube-duration', [TeacherController::class, 'getYouTubeDuration'])->name('teacher.api.youtube-duration');
+    Route::get('/lessons/{lesson}/student-notes', [\App\Http\Controllers\LessonInteractionController::class, 'teacherNotes'])->name('teacher.lesson.student-notes');
 
     // Exam Routes - Form Pages
     Route::get('/exams/new', [TeacherController::class, 'showCreateExamPage'])->name('teacher.exam.new');

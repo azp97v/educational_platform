@@ -785,8 +785,74 @@
     </div>
   @endif
 
+  @if(count($endedExams ?? []) > 0)
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">
+          <i class="ri-time-line"></i>
+          اختبارات منتهية
+        </h2>
+        <p class="section-subtitle">هذه الاختبارات انتهت مدتها — يمكنك معاينة نتيجتك فقط</p>
+      </div>
+    </div>
+    <div class="exams-grid">
+      @foreach($endedExams as $exam)
+        <div class="exam-card" style="opacity:0.85;">
+          <span class="status-badge" style="background:rgba(100,116,139,0.18);color:var(--text-secondary);">
+            <i class="ri-time-line"></i> منتهي
+          </span>
+          <div class="exam-header">
+            <div>
+              <h3 class="exam-title">{{ $exam['name'] }}</h3>
+            </div>
+            <div class="exam-icon" style="color:var(--text-tertiary);">
+              <i class="ri-lock-line"></i>
+            </div>
+          </div>
+          <p class="exam-desc">{{ $exam['description'] ?? 'اختبار شامل في المادة' }}</p>
+          <div class="exam-meta">
+            <div class="meta-item">
+              <i class="ri-questionnaire-line"></i>
+              <span>{{ $exam['questions_count'] ?? 0 }} أسئلة</span>
+            </div>
+            <div class="meta-item">
+              <i class="ri-calendar-close-line"></i>
+              <span>انتهى {{ $exam['expires_at'] }}</span>
+            </div>
+            @if($exam['submitted'])
+              <div class="meta-item">
+                <i class="ri-medal-fill" style="color:{{ $exam['passed'] ? 'var(--theme-success)' : 'var(--danger)' }};"></i>
+                <span>درجتك: {{ $exam['score'] }}%</span>
+              </div>
+            @endif
+          </div>
+          @if($exam['submitted'])
+            <div class="progress-section">
+              <div class="progress-label">
+                <span>النتيجة</span>
+                <span style="color:{{ $exam['passed'] ? 'var(--theme-success)' : 'var(--danger)' }};">{{ number_format($exam['percentage'], 0) }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ $exam['percentage'] }}%;background:{{ $exam['passed'] ? 'var(--theme-success)' : 'var(--danger)' }};"></div>
+              </div>
+            </div>
+            <a href="{{ route('student.exam.show', $exam['id']) }}" class="exam-action view-results">
+              <i class="ri-eye-line"></i>
+              عرض النتائج
+            </a>
+          @else
+            <div class="exam-action" style="background:rgba(100,116,139,0.1);color:var(--text-secondary);cursor:default;text-align:center;padding:0.9rem;border-radius:10px;font-size:0.9rem;">
+              <i class="ri-close-circle-line"></i>
+              لم تشارك في هذا الاختبار
+            </div>
+          @endif
+        </div>
+      @endforeach
+    </div>
+  @endif
+
   <!-- حالة فارغة -->
-  @if(count($availableExams) === 0 && count($inProgressExams) === 0 && count($completedExams) === 0)
+  @if(count($availableExams) === 0 && count($inProgressExams) === 0 && count($completedExams) === 0 && count($endedExams ?? []) === 0)
     <div class="exams-grid">
       <div class="empty-state">
         <div class="empty-icon"><i class="ri-inbox-archive-line"></i></div>

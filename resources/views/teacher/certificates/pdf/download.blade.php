@@ -39,13 +39,13 @@
     <div class="cert-paper">
         <div class="main-title">شهادة إجتياز</div>
         <div class="statement">
-            يشـهد معهد {{ auth()->user()->name }} بأن المتدرب/ـة : <span class="name">{{ $student->name }}</span>
+            يشـهد معهد {{ $teacherName ?? '' }} بأن المتدرب/ـة : <span class="name">{{ $student->name }}</span>
         </div>
         <div class="course-text">
             قد اجتاز بنجاح الدورة التدريبية بعنوان :
             <span class="course-name">"{{ $student->course }}"</span>
             التي أقيمت في مركزنا التدريبي<br><br>
-            والمنعقدة بتاريخ {{ $student->course_date->format('Y-m-d') }} م وقد حصل على تقدير عام : {{ $student->degree }}
+            والمنعقدة بتاريخ {{ $student->course_date ? $student->course_date->format('Y-m-d') : '' }} م وقد حصل على تقدير عام : {{ $student->degree }}
         </div>
         <div class="course-text">بناءً عليه، مُنحت له هذه الشهادة تقديراً لجهوده وتمنياتنا له بمزيد من التوفيق والنجاح.</div>
         <div style="text-align:center;font-size:14pt;color:#475569;margin-bottom:10pt;">
@@ -56,7 +56,7 @@
                 <td class="footer-cell" style="width:33%;text-align:center;">
                     <div class="sig-line"></div>
                     <div class="label-text">الجهة</div>
-                    <div class="name-text">{{ auth()->user()->name }}</div>
+                    <div class="name-text">{{ $teacherName ?? '' }}</div>
                 </td>
                 <td class="footer-cell" style="width:33%;text-align:center;vertical-align:middle;">
                     <div class="seal-box" style="margin:0 auto;">الختم الرسمي</div>
