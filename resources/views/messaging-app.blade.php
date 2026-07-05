@@ -470,7 +470,8 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 
 <div class="c-name">@{{ contact.name }} <span v-if="settingsChats.showFolderTags && getContactFolderTag(contact.id)" class="folder-tag-badge">@{{ getContactFolderTag(contact.id) }}</span> <span v-if="blockedByContact[String(contact.id)]" class="contact-blocked-badge">محظور @{{ formatBlockedTime(blockedByContact[String(contact.id)]) }}</span></div>
 
-<div class="c-prev"><svg class="contact-status-reply-indicator" v-if="contact.lastMessageStatusRefId" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="3.5" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><path d="M14 8.5L18 12L14 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12H11.5C9.57 12 8 10.43 8 8.5V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>@{{ sanitizeDisplayText(contact.lastMessage, t.noMessages) }}</div>
+<div class="c-prev" v-if="!contact.isTyping"><svg class="contact-status-reply-indicator" v-if="contact.lastMessageStatusRefId" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="3.5" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><path d="M14 8.5L18 12L14 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12H11.5C9.57 12 8 10.43 8 8.5V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>@{{ sanitizeDisplayText(contact.lastMessage, t.noMessages) }}</div>
+<div class="c-prev c-typing-preview" v-else><span class="c-typing-label">يكتب</span><span class="c-typing-dots"><span></span><span></span><span></span></span></div>
 
 </div>
 
@@ -3215,9 +3216,10 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 <span v-else>@{{ getAuthorInitial(vw.name) }}</span>
 </div>
 <div style="flex:1;font-size:13px;font-weight:600;color:var(--text);">@{{ vw.name }}</div>
+<span v-if="vw.liked" style="font-size:16px;" title="أعجبه">❤️</span>
 <div style="font-size:11px;color:var(--muted);">@{{ vw.time || '' }}</div>
 </div>
-<div v-if="!myProfileViewersList.length" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">لا يوجد مشاهدون</div>
+<div v-if="!myProfileViewersList.length" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">لا يوجد مشاهدون بعد</div>
 </div>
 </div>
 </div>
@@ -4010,7 +4012,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <div class="incoming-call-actions">
 <button class="call-btn end" @click="rejectIncomingCall" title="رفض"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i></button>
 <button v-if="callType === 'video'" class="call-btn end" style="background:#1e7e34;" @click="answerIncomingCall('audio')" title="قبول بالصوت فقط"><i class="ri-mic-line"></i></button>
-<button class="call-btn end" style="background:#34C759;" @click="answerIncomingCall()" title="قبول"><i :class="callType === 'video' ? 'ri-vidicon-fill' : 'ri-phone-fill'"></i></button>
+<button class="call-btn end call-answer-ring" style="background:#34C759;" @click="answerIncomingCall()" title="قبول"><i :class="callType === 'video' ? 'ri-vidicon-fill' : 'ri-phone-fill'"></i></button>
 </div>
 </div>
 
@@ -13246,20 +13248,26 @@ if (this._myStatusScrollTimer) clearTimeout(this._myStatusScrollTimer);
 this._myStatusScrollTimer = setTimeout(() => { if (dateEl) dateEl.style.opacity = '0'; }, 1500);
 },
 
-openMyStatusViewer(idx) {
+async openMyStatusViewer(idx) {
 this.myProfileViewerIdx = idx;
 this.myProfileStatusViewerOpen = true;
-// Build viewers list from status data
-const s = this.myProfileStatuses[idx];
-if (s) {
-this.myProfileViewersList = (s.viewers || []).map(v => ({
-name: v.name || v.user_name || 'مستخدم',
-avatar: v.avatar || v.user_avatar || null,
-time: v.viewedAt || v.viewed_at || ''
-}));
-} else {
 this.myProfileViewersList = [];
-}
+const s = this.myProfileStatuses[idx];
+if (!s) return;
+// Fetch real viewers from backend
+try {
+    const r = await fetch(@json($statusViewersRoute).replace('__STATUS_ID__', s.id), { headers: { 'Accept': 'application/json' } });
+    const j = await r.json();
+    if (j.success && Array.isArray(j.data)) {
+        this.myProfileViewersList = j.data.map(v => ({
+            id: v.id,
+            name: v.name,
+            avatar: v.avatarUrl || null,
+            time: v.viewedAtText || '',
+            liked: !!v.liked,
+        }));
+    }
+} catch (_) {}
 },
 
 closeMyStatusViewer() {
@@ -14211,7 +14219,7 @@ type,
 });
 
 if (!result || !result.success) {
-this.showToast('فشل بدء المكالمة', 'error');
+this.showToast(result?.error || 'فشل بدء المكالمة', result?.busy ? 'info' : 'error');
 this.cleanupCall();
 return;
 }
@@ -14548,7 +14556,11 @@ if (!window.Echo || !this.currentUserId) return;
 const channel = window.Echo.private('user.' + this.currentUserId);
 
 channel.listen('.call.initiated', (data) => {
-if (this.callState) return; // already in/starting a call
+if (this.callState) {
+    // Auto-reject: already on a call
+    this.postCallAction(this.callRouteFor(this.callsRejectRouteTemplate, data.call_id), {});
+    return;
+}
 if (this.callSettings.doNotDisturb) {
 this.postCallAction(this.callRouteFor(this.callsRejectRouteTemplate, data.call_id), {});
 return;
