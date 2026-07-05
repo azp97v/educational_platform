@@ -35,7 +35,7 @@
       pointer-events: none;
     }
 
-    .app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+    .app { display: flex; min-height: 100vh; position: relative; }
 
     .sidebar {
       width: var(--sidebar-w);

@@ -609,8 +609,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.55);
-      z-index: 199;
-      backdrop-filter: blur(2px);
+      z-index: 9998;
     }
     .sidebar-backdrop.active { display: block; }
 
@@ -619,17 +618,23 @@
       .sidebar {
         position: fixed !important;
         transform: translateX(110%) !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
         width: var(--sidebar-w) !important;
         top: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
         height: 100vh !important;
-        z-index: 200 !important;
+        z-index: 9999 !important;
         border-radius: 0 !important;
         padding: 28px 18px !important;
-        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s !important;
       }
-      .sidebar.sidebar-open { transform: translateX(0) !important; }
+      .sidebar.sidebar-open {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
       .main { margin-right: 0 !important; }
     }
 
