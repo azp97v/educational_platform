@@ -1556,43 +1556,29 @@ key="mic-action"
 <div class="status-tap-zone left" @click="nextStatus"></div>
 <div class="status-tap-zone right" @click="prevStatus"></div>
 
-<div class="status-progress-bars" v-show="!statusLongPressActive">
-
-<div v-for="(s, i) in (statusViewerContact ? statusViewerContact.statuses : [])" :key="i" class="status-prog-seg">
-
-<div class="status-prog-fill" :style="{width: i < statusViewerIndex ? '100%' : (i === statusViewerIndex ? statusViewerProgress + '%' : '0%')}"></div>
-
-</div>
-
-</div>
-
-<div class="status-viewer-header" v-show="!statusLongPressActive">
-
-<div class="status-viewer-avatar">
-
-<img v-if="statusViewerContact && statusViewerContact.user_avatar" :src="normalizeAvatarUrl(statusViewerContact.user_avatar)" alt="" v-on:error="handleAvatarError($event, statusViewerContact)">
-
-<span v-else>@{{ statusViewerContact ? getAuthorInitial(statusViewerContact.user_name) : '' }}</span>
-
-</div>
-
-<div class="status-viewer-meta">
-
-<div class="status-viewer-name" style="cursor:pointer;" @click="statusViewerContact && openProfile({id: statusViewerContact.user_id, name: statusViewerContact.user_name, avatar_url: statusViewerContact.user_avatar || null, isOnline:false, lastSeenAt:null})">@{{ statusViewerContact ? statusViewerContact.user_name : '' }}</div>
-
-<div class="status-viewer-time">@{{ currentStatus ? formatMessageTime(currentStatus.created_at || currentStatus.createdAt) : '' }}</div>
-
-</div>
-
-<button class="status-viewer-close" @click="closeStatusViewer"><i class="ri-close-line"></i></button>
-
-</div>
-
 <div class="status-viewer-content" :key="currentStatus ? currentStatus.id : 'no-st'" v-if="currentStatus"
 @click="handleStatusContentClick"
 @mousedown="startStatusLongPress" @mouseup="endStatusLongPress" @mouseleave="cancelStatusLongPress"
 @touchstart.prevent="startStatusLongPress" @touchend="endStatusLongPress" @touchmove.prevent="cancelStatusLongPress"
 :style="{background: statusViewerBackground(currentStatus), filter: statusViewerFilter(currentStatus)}">
+
+<div class="status-progress-bars" v-show="!statusLongPressActive">
+<div v-for="(s, i) in (statusViewerContact ? statusViewerContact.statuses : [])" :key="i" class="status-prog-seg">
+<div class="status-prog-fill" :style="{width: i < statusViewerIndex ? '100%' : (i === statusViewerIndex ? statusViewerProgress + '%' : '0%')}"></div>
+</div>
+</div>
+
+<div class="status-viewer-header" v-show="!statusLongPressActive">
+<div class="status-viewer-avatar">
+<img v-if="statusViewerContact && statusViewerContact.user_avatar" :src="normalizeAvatarUrl(statusViewerContact.user_avatar)" alt="" v-on:error="handleAvatarError($event, statusViewerContact)">
+<span v-else>@{{ statusViewerContact ? getAuthorInitial(statusViewerContact.user_name) : '' }}</span>
+</div>
+<div class="status-viewer-meta">
+<div class="status-viewer-name" style="cursor:pointer;" @click="statusViewerContact && openProfile({id: statusViewerContact.user_id, name: statusViewerContact.user_name, avatar_url: statusViewerContact.user_avatar || null, isOnline:false, lastSeenAt:null})">@{{ statusViewerContact ? statusViewerContact.user_name : '' }}</div>
+<div class="status-viewer-time">@{{ currentStatus ? formatMessageTime(currentStatus.created_at || currentStatus.createdAt) : '' }}</div>
+</div>
+<button class="status-viewer-close" @click="closeStatusViewer"><i class="ri-close-line"></i></button>
+</div>
 
 <div class="status-viewer-media-backdrop" v-if="(currentStatus.content_url || currentStatus.contentUrl)" :style="{ backgroundImage: 'url(' + (currentStatus.contentUrl || ('/storage/' + currentStatus.content_url)) + ')' }"></div>
 
@@ -3201,7 +3187,7 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 <!-- Eye icon + views -->
 <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:13px;">
 <i class="ri-eye-line"></i>
-<span>@{{ myProfileViewerStatus?.viewCount || 0 }}</span>
+<span>@{{ myProfileViewerStatus?.viewsCount ?? myProfileViewerStatus?.views_count ?? 0 }}</span>
 <span style="font-size:12px;opacity:0.7;cursor:pointer;" @click.stop="openMyStatusViewers">مشاهدة الكل</span>
 </div>
 </div>
@@ -13899,6 +13885,25 @@ ctx.imageSmoothingEnabled = false;
 ctx.drawImage(this.qrRawImageCache, holderX + qrHolderPadding, holderY + qrHolderPadding, size, size);
 ctx.imageSmoothingEnabled = true;
 
+// Recolor dark QR modules with the card's gradient colors
+{
+    const qrX = holderX + qrHolderPadding;
+    const qrY = holderY + qrHolderPadding;
+    const imgData = ctx.getImageData(qrX, qrY, size, size);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+        if (d[i+3] < 128) continue;
+        if ((d[i] + d[i+1] + d[i+2]) / 3 < 80) {
+            const px = (i / 4) % size;
+            const py = Math.floor((i / 4) / size);
+            const t = Math.min(1, ((qrX + px) + (qrY + py)) / (2 * cardSize));
+            const col = this.lerpColor(c1, c2, t);
+            d[i] = col.r; d[i+1] = col.g; d[i+2] = col.b;
+        }
+    }
+    ctx.putImageData(imgData, qrX, qrY);
+}
+
 // الشعار/الصورة الشخصية في المنتصف
 const avatarSrc = this.qrShowProfilePhoto && this.qrModalContact?.avatar_url ? this.qrModalContact.avatar_url : '{{ asset('images/logo/logo.png') }}';
 try {
@@ -14367,6 +14372,27 @@ this.localStream.getTracks().forEach(t => t.stop());
 this.localStream = null;
 }
 if (this.$refs.localVideo) this.$refs.localVideo.srcObject = null;
+
+// Save call card to chat log before resetting state
+if (this.callContact && this.currentCallId) {
+    const cid = Number(this.callContact.id);
+    const wasConnected = !!this.callStartedAt;
+    const duration = wasConnected ? Math.floor((Date.now() - this.callStartedAt) / 1000) : 0;
+    const newLog = {
+        id: 'call_real_' + Date.now(),
+        contactId: cid,
+        contactName: this.callContact.name,
+        contactAvatar: this.callContact.avatar_url,
+        type: this.callType === 'video' ? 'video' : 'audio',
+        direction: this.callState === 'incoming' ? 'incoming' : 'outgoing',
+        status: wasConnected ? 'completed' : (this.callState === 'incoming' ? 'missed' : 'cancelled'),
+        duration,
+        timestamp: new Date().toISOString(),
+    };
+    this.callLogs = [newLog, ...(this.callLogs || [])];
+    this.saveCallLogs();
+    this.$nextTick(() => this.injectCallMessages());
+}
 
 this.callState = null;
 this.callType = null;
@@ -14846,6 +14872,23 @@ addStickerToStatus(emoji) {
         textBgStyle: 'none'
     });
     this.statusStickerDrawerOpen = false;
+    this.statusEditor.activeTextIndex = this.statusEditor.texts.length - 1;
+    this.statusFocusState = 0;
+},
+
+addEmojiToStatus(e) {
+    this.statusEditor.texts.push({
+        content: e,
+        textPosX: 50,
+        textPosY: 50,
+        scale: 2.5,
+        rotate: 0,
+        fontStyle: 'Segoe UI Emoji',
+        textBgStyle: 'none',
+        fontSize: 56,
+        textColor: '#ffffff',
+    });
+    this.statusDrawerOpen = false;
     this.statusEditor.activeTextIndex = this.statusEditor.texts.length - 1;
     this.statusFocusState = 0;
 },
