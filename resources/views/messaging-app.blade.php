@@ -927,7 +927,7 @@ class="reaction-chip" :class="{ mine: r.myReaction }"
 <transition name="typing-slide">
 <div class="chat-typing-bubble" v-if="selectedContact && selectedContact.isTyping && Number(selectedContact.id) !== -1">
 <div class="avatar ctb-avatar" style="width:28px;height:28px;flex-shrink:0;">
-<img v-if="selectedContact.avatar_url" :src="selectedContact.avatar_url" @error="handleAvatarError($event, selectedContact)">
+<img v-if="selectedContact.avatar_url" :src="selectedContact.avatar_url" v-on:error="handleAvatarError($event, selectedContact)">
 <span v-else>@{{ getAuthorInitial(selectedContact.name) }}</span>
 </div>
 <div class="ctb-content">
