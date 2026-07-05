@@ -1598,12 +1598,12 @@ key="mic-action"
 
 <img v-if="currentStatus.type === 'image' && (currentStatus.content_url || currentStatus.contentUrl)" class="status-viewer-img"
      :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))" alt=""
-     :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', maxWidth:'none', maxHeight:'none', width:'auto', height:'auto', minWidth:'100%', minHeight:'100%', objectFit:'cover' }"
+     :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', width:'100%', height:'100%', objectFit:'cover', maxWidth:'none', maxHeight:'none' }"
      @load="statusViewerReady = true; startStatusProgress()">
 
 <video v-else-if="currentStatus.type === 'video' && (currentStatus.content_url || currentStatus.contentUrl)" ref="statusViewerVideo" class="status-viewer-img" autoplay playsinline :muted="statusViewerMuted"
       :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))"
-      :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', maxWidth:'none', maxHeight:'none', width:'auto', height:'auto', minWidth:'100%', minHeight:'100%', objectFit:'cover' }"
+      :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', width:'100%', height:'100%', objectFit:'cover', maxWidth:'none', maxHeight:'none' }"
       @loadedmetadata="onStatusVideoReady" @canplay="onStatusVideoReady"></video>
 
   <div v-for="(layer, lIdx) in getStatusTextLayers(currentStatus)" :key="'txt-'+lIdx"
