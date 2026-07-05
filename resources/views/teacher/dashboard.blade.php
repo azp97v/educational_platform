@@ -56,7 +56,7 @@
       0%, 100% { opacity: 0.7; transform: scale(1); }
       50% { opacity: 1; transform: scale(1.08); }
     }
-    .app { display: flex; min-height: 100vh; position: relative; z-index: 2; }
+    .app { display: flex; min-height: 100vh; position: relative; }
 
     .sidebar {
       width: var(--sidebar-w);
