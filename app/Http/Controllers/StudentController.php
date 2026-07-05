@@ -881,6 +881,17 @@ class StudentController extends Controller
         }
 
         if ($exam->isExpired()) {
+            // Allow viewing results if student already submitted
+            $hasAttempt = \DB::table('exam_attempts')
+                ->where('exam_id', $exam->id)
+                ->where('user_id', $user->id)
+                ->whereNotNull('submitted_at')
+                ->exists();
+
+            if ($hasAttempt) {
+                return redirect()->route('student.exam.results', ['exam' => $exam->id]);
+            }
+
             return redirect()->route('student.exams')
                 ->with('error', 'انتهت صلاحية هذا الاختبار.');
         }

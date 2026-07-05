@@ -265,6 +265,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/activity', [AdminController::class, 'activity'])->name('activity');
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    // User management — specific routes MUST come before /{user} wildcard
+    Route::get('/users/export', [AdminController::class, 'exportUsers'])->name('users.export');
+    Route::post('/users/bulk', [AdminController::class, 'bulkAction'])->name('users.bulk');
     Route::get('/users', [AdminController::class, 'index'])->name('users');
     Route::get('/users/create', [AdminController::class, 'create'])->name('create');
     Route::post('/users', [AdminController::class, 'store'])->name('store');
@@ -272,7 +275,27 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/users/{user}/edit', [AdminController::class, 'edit'])->name('edit');
     Route::put('/users/{user}', [AdminController::class, 'update'])->name('update');
     Route::delete('/users/{user}', [AdminController::class, 'destroy'])->name('destroy');
+    Route::post('/users/{user}/reset-password', [AdminController::class, 'resetUserPassword'])->name('users.reset-password');
     Route::get('/check-username', [AdminController::class, 'checkUsername'])->name('check-username');
+
+    // Enrollment management
+    Route::get('/enrollments', [AdminController::class, 'enrollments'])->name('enrollments');
+    Route::post('/enrollments/{enrollment}/approve', [AdminController::class, 'approveEnrollment'])->name('enrollments.approve');
+    Route::post('/enrollments/{enrollment}/reject', [AdminController::class, 'rejectEnrollment'])->name('enrollments.reject');
+
+    // Failed jobs management
+    Route::get('/failed-jobs', [AdminController::class, 'failedJobs'])->name('failed-jobs');
+    Route::post('/failed-jobs/{uuid}/retry', [AdminController::class, 'retryFailedJob'])->name('failed-jobs.retry');
+    Route::delete('/failed-jobs/{uuid}', [AdminController::class, 'deleteFailedJob'])->name('failed-jobs.delete');
+    Route::delete('/failed-jobs', [AdminController::class, 'deleteAllFailedJobs'])->name('failed-jobs.delete-all');
+
+    // Announcements (Axis 5)
+    Route::get('/announcements', [AdminController::class, 'announcements'])->name('announcements');
+    Route::get('/announcements/create', [AdminController::class, 'createAnnouncement'])->name('announcements.create');
+    Route::post('/announcements', [AdminController::class, 'storeAnnouncement'])->name('announcements.store');
+    Route::get('/announcements/{announcement}/edit', [AdminController::class, 'editAnnouncement'])->name('announcements.edit');
+    Route::put('/announcements/{announcement}', [AdminController::class, 'updateAnnouncement'])->name('announcements.update');
+    Route::delete('/announcements/{announcement}', [AdminController::class, 'destroyAnnouncement'])->name('announcements.destroy');
 });
 
 // Student Routes - Dashboard with Real Data

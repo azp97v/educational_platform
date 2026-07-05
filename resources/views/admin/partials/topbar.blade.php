@@ -1,5 +1,8 @@
 ﻿<header class="admin-topbar">
     <div class="topbar-left">
+        <button class="icon-btn admin-hamburger" id="adminSidebarToggle" type="button" title="القائمة" aria-label="فتح القائمة">
+            <i class="ri-menu-line"></i>
+        </button>
         <a href="{{ route('profile.show') }}" class="icon-btn" title="الملف الشخصي"><i class="ri-user-line"></i></a>
         <button class="icon-btn" type="button" data-theme-toggle title="الوضع الليلي"><i class="ri-moon-line"></i></button>
         <a href="{{ route('notifications.index') }}" class="icon-btn" title="التنبيهات">

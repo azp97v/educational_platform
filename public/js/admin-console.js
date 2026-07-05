@@ -78,6 +78,42 @@
     }
   }
 
+  function wireSidebarToggle() {
+    var btn     = document.getElementById('adminSidebarToggle');
+    var sidebar = document.querySelector('.admin-sidebar');
+    if (!btn || !sidebar) return;
+
+    // Inject overlay element once
+    var overlay = document.getElementById('adminSidebarOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'adminSidebarOverlay';
+      overlay.className = 'admin-sidebar-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    function openSidebar() {
+      sidebar.classList.add('sidebar-open');
+      overlay.classList.add('overlay-open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('sidebar-open');
+      overlay.classList.remove('overlay-open');
+      document.body.style.overflow = '';
+    }
+
+    btn.addEventListener('click', function () {
+      sidebar.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+
+    // Close on nav link click (page navigation)
+    sidebar.querySelectorAll('.nav-btn').forEach(function (link) {
+      link.addEventListener('click', closeSidebar);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     updateLiveTime();
     setInterval(updateLiveTime, 1000);
@@ -87,6 +123,7 @@
     restoreScrollPosition();
     wireScrollPersistence();
     revealActiveNavItem();
+    wireSidebarToggle();
 
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('.admin-theme-switch');

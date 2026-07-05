@@ -6,8 +6,16 @@
     <section class="notifications-page">
         <div class="header-bar">
             @php
-                $backRoute = auth()->user()->role === 'teacher' ? route('teacher.dashboard') : route('student.academy');
-                $backText = auth()->user()->role === 'teacher' ? 'العودة للوحة التحكم' : 'العودة للأكاديمية';
+                $backRoute = match(auth()->user()->role) {
+                    'teacher' => route('teacher.dashboard'),
+                    'admin'   => route('admin.index'),
+                    default   => route('student.academy'),
+                };
+                $backText = match(auth()->user()->role) {
+                    'teacher' => 'العودة للوحة التحكم',
+                    'admin'   => 'العودة للإدارة',
+                    default   => 'العودة للأكاديمية',
+                };
             @endphp
             <a href="{{ $backRoute }}" class="back-navigation">
                 <i class="ri-arrow-left-line"></i>
@@ -48,7 +56,7 @@
 
                 <div class="hero-buttons">
                     <a href="{{ $backRoute }}" class="btn btn-secondary btn-lg">
-                        <i class="ri-arrow-left-line"></i>
+                        <i class="ri-arrow-{{ auth()->user()->role === 'teacher' || auth()->user()->role === 'admin' ? 'left' : 'left' }}-line"></i>
                         {{ $backText }}
                     </a>
                     <form action="{{ route('notifications.readAll') }}" method="POST" class="inline-form">

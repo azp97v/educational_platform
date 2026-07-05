@@ -490,9 +490,30 @@ input, select, textarea {
   text-align: right;
 }
 
+/* Hamburger — hidden on desktop, visible on mobile */
+.admin-hamburger { display: none; }
+
 @media (max-width: 1150px) {
-  .admin-app { display: block; }
-  .admin-sidebar { display: none; }
+  .admin-hamburger { display: flex; }
+  .admin-app { display: block; position: relative; }
+  .admin-sidebar {
+    display: none;
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 260px;
+    z-index: 9000;
+    box-shadow: -4px 0 24px rgba(0,0,0,.45);
+    overflow-y: auto;
+  }
+  .admin-sidebar.sidebar-open { display: flex; }
+  .admin-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 8999;
+  }
+  .admin-sidebar-overlay.overlay-open { display: block; }
   .admin-topbar {
     position: sticky;
     top: 0;
