@@ -836,7 +836,7 @@
                 <div class="progress-fill" style="width:{{ $exam['percentage'] }}%;background:{{ $exam['passed'] ? 'var(--theme-success)' : 'var(--danger)' }};"></div>
               </div>
             </div>
-            <a href="{{ route('student.exam.show', $exam['id']) }}" class="exam-action view-results">
+            <a href="{{ route('student.exam.results', ['exam' => $exam['id']]) }}" class="exam-action view-results">
               <i class="ri-eye-line"></i>
               عرض النتائج
             </a>

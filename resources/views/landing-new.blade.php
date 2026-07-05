@@ -40,6 +40,19 @@
       transition:var(--transition);
     }
     html[data-theme="dark"] .nav { background:rgba(5,5,5,0.88); }
+
+    /* Dark mode: deepen gold sections so white text has ≥4.5:1 contrast */
+    html[data-theme="dark"] .stats-section {
+      background: linear-gradient(135deg, #7A5520 0%, #4A3412 100%);
+    }
+    html[data-theme="dark"] .cta-box {
+      background: linear-gradient(135deg, #7A5520 0%, #4A3412 100%);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+    }
+    html[data-theme="dark"] .cta-box h2,
+    html[data-theme="dark"] .cta-box p {
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
     .nav.scrolled { box-shadow:0 4px 20px rgba(0,0,0,0.1); }
 
     .nav-logo {
@@ -274,8 +287,9 @@
     .stat-num {
       font-size:2.8rem; font-weight:900; color:#fff; line-height:1;
       margin-bottom:0.4rem; font-variant-numeric:tabular-nums;
+      text-shadow:0 1px 3px rgba(0,0,0,0.35);
     }
-    .stat-lbl { color:rgba(255,255,255,0.9); font-size:0.95rem; font-weight:600; }
+    .stat-lbl { color:#fff; font-size:0.95rem; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
 
     /* ── HOW IT WORKS ─────────────────────────────────── */
     .steps-grid {
@@ -315,8 +329,8 @@
       width:300px; height:300px; border-radius:50%;
       background:rgba(255,255,255,0.06); top:-80px; left:-60px; pointer-events:none;
     }
-    .cta-box h2 { font-size:clamp(1.6rem,4vw,2.2rem); color:#fff; font-weight:900; margin-bottom:0.8rem; }
-    .cta-box p  { color:rgba(255,255,255,0.9); font-size:1rem; margin-bottom:1.8rem; max-width:480px; margin-left:auto; margin-right:auto; }
+    .cta-box h2 { font-size:clamp(1.6rem,4vw,2.2rem); color:#fff; font-weight:900; margin-bottom:0.8rem; text-shadow:0 1px 3px rgba(0,0,0,0.35); }
+    .cta-box p  { color:#fff; font-size:1rem; font-weight:600; margin-bottom:1.8rem; max-width:480px; margin-left:auto; margin-right:auto; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
     .btn-cta {
       display:inline-flex; align-items:center; gap:0.5rem;
       padding:0.9rem 2.2rem; border-radius:10px; font-weight:800;

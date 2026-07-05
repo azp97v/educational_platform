@@ -20,10 +20,16 @@
 
         <section class="admin-content">
             @if(session('success'))
-                <div class="admin-alert admin-alert-success"><strong>نجاح:</strong> {{ session('success') }}</div>
+                <div class="admin-alert admin-alert-success"><i class="ri-checkbox-circle-line"></i> {{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="admin-alert admin-alert-error"><i class="ri-error-warning-line"></i> {{ session('error') }}</div>
+            @endif
+            @if(session('warning'))
+                <div class="admin-alert" style="background:rgba(245,158,11,0.12);border-right:3px solid #f59e0b;color:#f59e0b;padding:10px 16px;border-radius:8px;margin-bottom:12px;font-size:13px;"><i class="ri-alert-line"></i> {{ session('warning') }}</div>
             @endif
             @if($errors->any())
-                <div class="admin-alert admin-alert-error"><strong>تنبيه:</strong> {{ $errors->first() }}</div>
+                <div class="admin-alert admin-alert-error"><i class="ri-close-circle-line"></i> {{ $errors->first() }}</div>
             @endif
 
             @yield('content')
