@@ -754,18 +754,22 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 
 <div class="txt" v-if="message.content && message.messageType === 'text'">@{{ message.content }}</div>
 
-<div class="sticker-bubble" v-if="message.messageType === 'sticker_static' || message.messageType === 'sticker_animated'" @click="openStickerViewer(message)">
+<div class="sticker-bubble" v-if="(message.messageType === 'sticker_static' || message.messageType === 'sticker_animated') && !brokenMediaByMessageId[message.id]" @click="openStickerViewer(message)">
 <img v-if="message.messageType === 'sticker_static'" :src="message.attachmentUrl" :alt="message.attachmentName" class="sticker-bubble-media" v-on:error="markMediaAsBroken(message)">
 <video v-else :src="message.attachmentUrl" class="sticker-bubble-media" autoplay loop muted playsinline></video>
 </div>
 
-<div class="media gif-bubble" v-if="message.messageType === 'gif'" @click="openMediaModal(message)">
+<div class="media gif-bubble" v-if="message.messageType === 'gif'" @click="!brokenMediaByMessageId[message.id] && openMediaModal(message)">
+<template v-if="!brokenMediaByMessageId[message.id]">
 <div class="media-skeleton" v-if="!message.mediaLoaded"></div>
 <img :src="message.attachmentUrl" :alt="message.attachmentName" :class="{ 'media-loaded': message.mediaLoaded }" @load="onMediaLoaded(message)" v-on:error="markMediaAsBroken(message); onMediaLoaded(message)">
+</template>
+<div v-else style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:120px;border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:12px;gap:6px;"><i class="ri-image-off-line" style="font-size:28px;opacity:.5;"></i>ملف غير متاح</div>
 </div>
 
-<div class="media" v-if="message.messageType === 'image'" @click="message.isSensitive && !revealedSensitiveIds.has(message.id) ? revealSensitiveMessage(message.id) : openMediaModal(message)">
+<div class="media" v-if="message.messageType === 'image'" @click="!brokenMediaByMessageId[message.id] && (message.isSensitive && !revealedSensitiveIds.has(message.id) ? revealSensitiveMessage(message.id) : openMediaModal(message))">
 
+<template v-if="!brokenMediaByMessageId[message.id]">
 <div class="media-skeleton" v-if="!message.mediaLoaded"></div>
 
 <img :src="message.attachmentUrl" :alt="message.attachmentName"
@@ -777,11 +781,14 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 v-on:error="markMediaAsBroken(message); onMediaLoaded(message)">
 
 <div class="sensitive-overlay" v-if="message.isSensitive && !revealedSensitiveIds.has(message.id)"><i class="ri-eye-off-line"></i><span>محتوى حساس — اضغط للإظهار</span></div>
+</template>
+<div v-else style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px;min-height:80px;border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:12px;gap:6px;padding:16px;"><i class="ri-image-off-line" style="font-size:28px;opacity:.5;"></i>صورة غير متاحة</div>
 
 </div>
 
-<div class="media" v-if="message.messageType === 'video'" @click="message.isSensitive && !revealedSensitiveIds.has(message.id) ? revealSensitiveMessage(message.id) : openMediaModal(message)">
+<div class="media" v-if="message.messageType === 'video'" @click="!brokenMediaByMessageId[message.id] && (message.isSensitive && !revealedSensitiveIds.has(message.id) ? revealSensitiveMessage(message.id) : openMediaModal(message))">
 
+<template v-if="!brokenMediaByMessageId[message.id]">
 <div class="media-skeleton" v-if="!message.mediaLoaded"></div>
 
 <video :src="message.attachmentUrl" preload="metadata" muted
@@ -793,6 +800,8 @@ v-on:error="markMediaAsBroken(message); onMediaLoaded(message)">
 v-on:error="markMediaAsBroken(message); onMediaLoaded(message)"></video>
 
 <div class="sensitive-overlay" v-if="message.isSensitive && !revealedSensitiveIds.has(message.id)"><i class="ri-eye-off-line"></i><span>محتوى حساس — اضغط للإظهار</span></div>
+</template>
+<div v-else style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px;min-height:80px;border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:12px;gap:6px;padding:16px;"><i class="ri-vidicon-off-line" style="font-size:28px;opacity:.5;"></i>فيديو غير متاح</div>
 
 </div>
 
@@ -2734,7 +2743,7 @@ class="saved-msg-row">
 
 <div v-if="msg.messageType==='image' && msg.attachmentUrl" style="margin-bottom:4px;">
 
-<img :src="msg.attachmentUrl" style="max-height:80px;max-width:180px;border-radius:8px;object-fit:cover;">
+<img :src="msg.attachmentUrl" style="max-height:80px;max-width:180px;border-radius:8px;object-fit:cover;" v-on:error="e => e.target.style.display='none'">
 
 </div>
 
@@ -2826,8 +2835,8 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 <span style="font-size:11px;background:var(--panel-2);border-radius:20px;padding:2px 8px;border:1px solid var(--theme-border);">@{{ group.items.length }}</span>
 </div>
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;">
-<div v-for="msg in group.items" :key="msg.id" style="aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;background:var(--panel-2);" @click="openMediaModal(msg)">
-<img :src="msg.attachmentUrl" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+<div v-for="msg in group.items" :key="msg.id" style="aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;background:var(--panel-2);display:flex;align-items:center;justify-content:center;" @click="openMediaModal(msg)">
+<img :src="msg.attachmentUrl" style="width:100%;height:100%;object-fit:cover;" loading="lazy" v-on:error="e => { e.target.style.display='none'; e.target.parentElement.innerHTML='<i class=\'ri-image-off-line\' style=\'font-size:24px;opacity:.3;color:var(--muted)\'></i>'; }">
 </div>
 </div>
 </div>
@@ -3472,8 +3481,8 @@ From: the oldest message, to: present
 <div v-for="day in getProfileMediaCalendarDays()" :key="day.date" style="margin-bottom:18px;">
 <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);">@{{ day.label }}</div>
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
-<div v-for="(m,i) in day.items" :key="i" style="border-radius:10px;overflow:hidden;cursor:pointer;aspect-ratio:1;background:var(--panel-2);" @click="openMediaModal(m)">
-<img :src="m.attachmentUrl" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+<div v-for="(m,i) in day.items" :key="i" style="border-radius:10px;overflow:hidden;cursor:pointer;aspect-ratio:1;background:var(--panel-2);display:flex;align-items:center;justify-content:center;" @click="openMediaModal(m)">
+<img :src="m.attachmentUrl" style="width:100%;height:100%;object-fit:cover;" loading="lazy" v-on:error="e => { e.target.style.display='none'; e.target.parentElement.innerHTML='<i class=\'ri-image-off-line\' style=\'font-size:24px;opacity:.3;color:var(--muted)\'></i>'; }">
 </div>
 </div>
 </div>
