@@ -539,3 +539,71 @@ input, select, textarea {
   .topbar-title { width: 100%; }
   .search-wrap { max-width: 100%; }
 }
+
+/* ── Select / option contrast fix ─────────────────────── */
+select {
+  appearance: auto;
+  -webkit-appearance: auto;
+  cursor: pointer;
+}
+select option {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  padding: 6px 10px;
+}
+select option:checked,
+select option:hover {
+  background: var(--gold);
+  color: #fff;
+}
+
+/* ── Metric card: equal label height for number alignment ─ */
+.metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.metric .k {
+  min-height: 2.6em;
+  display: flex;
+  align-items: flex-start;
+}
+.metric .v {
+  margin-top: 0.5rem;
+}
+
+/* ── Card animations ───────────────────────────────────── */
+@keyframes card-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+
+.metric {
+  transition: transform 0.32s ease, box-shadow 0.32s ease;
+  animation: card-float 5s ease-in-out infinite;
+}
+.metric:nth-child(2) { animation-delay: 0.6s; }
+.metric:nth-child(3) { animation-delay: 1.2s; }
+.metric:nth-child(4) { animation-delay: 1.8s; }
+.metric:nth-child(5) { animation-delay: 2.4s; }
+.metric:nth-child(6) { animation-delay: 3.0s; }
+
+.metric:hover {
+  animation: none;
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(198,166,117,0.22), 0 4px 12px rgba(0,0,0,0.10);
+  border-color: rgba(198,166,117,0.4);
+  z-index: 2;
+}
+
+.admin-card,
+.glow-card,
+.rbac-card {
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+.admin-card:hover,
+.glow-card:hover,
+.rbac-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(198,166,117,0.15), 0 4px 10px rgba(0,0,0,0.08);
+}

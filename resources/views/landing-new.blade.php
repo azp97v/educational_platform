@@ -51,7 +51,16 @@
     }
     html[data-theme="dark"] .cta-box h2,
     html[data-theme="dark"] .cta-box p {
-      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    html[data-theme="dark"] .btn-cta {
+      background: #fff;
+      color: #7A5520;
+    }
+    html[data-theme="dark"] .btn-cta:hover {
+      background: #f5f0e8;
+      color: #4A3412;
     }
     .nav.scrolled { box-shadow:0 4px 20px rgba(0,0,0,0.1); }
 

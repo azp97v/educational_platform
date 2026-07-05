@@ -59,9 +59,9 @@
             <canvas id="roleChart" style="max-width:220px;max-height:220px;"></canvas>
         </div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;font-size:12px;">
-            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#7c3aed;margin-left:5px;"></span>مشرفون ({{ $roleDistribution['admins'] }})</span>
-            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#059669;margin-left:5px;"></span>معلمون ({{ $roleDistribution['teachers'] }})</span>
-            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2563eb;margin-left:5px;"></span>طلاب ({{ $roleDistribution['students'] }})</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C6A675;margin-left:5px;"></span>مشرفون ({{ $roleDistribution['admins'] }})</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8D7252;margin-left:5px;"></span>معلمون ({{ $roleDistribution['teachers'] }})</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#E8C99A;margin-left:5px;"></span>طلاب ({{ $roleDistribution['students'] }})</span>
         </div>
     </article>
 
@@ -121,10 +121,10 @@
 <script src="{{ asset('js/chart.min.js') }}"></script>
 <script>
 (function(){
-    const isDark = true;
-    const gridColor  = 'rgba(255,255,255,0.06)';
-    const textColor  = 'rgba(255,255,255,0.55)';
-    const accent     = '#6c63ff';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor  = isDark ? 'rgba(198,166,117,0.08)' : 'rgba(141,114,82,0.10)';
+    const textColor  = isDark ? 'rgba(198,166,117,0.70)' : 'rgba(107,80,64,0.80)';
+    const accent     = '#C6A675';
 
     // Daily registrations line chart
     const regCtx = document.getElementById('regChart');
@@ -137,7 +137,7 @@
                     label: 'تسجيلات جديدة',
                     data: {!! json_encode($chartCounts) !!},
                     borderColor: accent,
-                    backgroundColor: 'rgba(108,99,255,0.12)',
+                    backgroundColor: 'rgba(198,166,117,0.13)',
                     borderWidth: 2.5,
                     pointRadius: 3,
                     pointBackgroundColor: accent,
@@ -165,9 +165,9 @@
                 labels: ['مشرفون', 'معلمون', 'طلاب'],
                 datasets: [{
                     data: [{{ $roleDistribution['admins'] }}, {{ $roleDistribution['teachers'] }}, {{ $roleDistribution['students'] }}],
-                    backgroundColor: ['#7c3aed','#059669','#2563eb'],
+                    backgroundColor: ['#C6A675','#8D7252','#E8C99A'],
                     borderWidth: 2,
-                    borderColor: '#0f1623',
+                    borderColor: isDark ? '#1a1410' : '#f4f0ea',
                 }]
             },
             options: {

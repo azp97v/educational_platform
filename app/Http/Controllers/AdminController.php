@@ -38,7 +38,7 @@ class AdminController extends Controller
             'teachers'           => User::where('role', 'teacher')->count(),
             'students'           => User::where('role', 'student')->count(),
             'admins'             => User::where('role', 'admin')->count(),
-            'activeUsers'        => $this->safeConditionalCount('users', fn($q) => $q->where('status', 'active')),
+            'activeUsers'        => $this->safeConditionalCount('users', fn($q) => $q->where('last_activity_at', '>=', now()->subHour())),
             'totalCourses'       => Course::count(),
             'totalLessons'       => Lesson::count(),
             'totalExams'         => $this->safeTableCount('exams'),
@@ -172,7 +172,7 @@ class AdminController extends Controller
         $certCount = Schema::hasTable('certificates')
             ? DB::table('certificates')->where('user_id', $user->id)->count() : 0;
         $inquiryCount = Schema::hasTable('student_inquiries')
-            ? DB::table('student_inquiries')->where('user_id', $user->id)->count() : 0;
+            ? DB::table('student_inquiries')->where('student_id', $user->id)->count() : 0;
 
         $enrollments = Schema::hasTable('course_enrollments')
             ? DB::table('course_enrollments')
