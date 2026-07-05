@@ -265,6 +265,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/activity', [AdminController::class, 'activity'])->name('activity');
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    Route::get('/users', [AdminController::class, 'index'])->name('users');
     Route::get('/users/create', [AdminController::class, 'create'])->name('create');
     Route::post('/users', [AdminController::class, 'store'])->name('store');
     Route::get('/users/{user}', [AdminController::class, 'show'])->name('show');
