@@ -27,7 +27,7 @@
         <div style="flex:1;">
             <div style="font-size:20px;font-weight:800;margin-bottom:4px;">{{ $user->name }}</div>
             @if($user->username)
-                <div style="font-size:13px;opacity:.6;margin-bottom:4px;">@{{ $user->username }}</div>
+                <div style="font-size:13px;opacity:.6;margin-bottom:4px;">{{ '@' . $user->username }}</div>
             @endif
             <div style="font-size:12px;opacity:.5;">انضم {{ $user->created_at?->diffForHumans() }} — {{ $user->created_at?->format('Y-m-d') }}</div>
         </div>
@@ -79,7 +79,7 @@
         <div><label>رقم الهاتف</label><input value="{{ $user->phone ?? '—' }}" disabled></div>
         <div><label>الدور</label><input value="{{ $roleLabels[$user->role] ?? $user->role }}" disabled></div>
         <div><label>الحالة</label><input value="{{ $stLabel }}" disabled></div>
-        <div><label>آخر نشاط</label><input value="{{ $user->last_activity_at ? $user->last_activity_at->diffForHumans() : '—' }}" disabled></div>
+        <div><label>آخر نشاط</label><input value="{{ $user->last_activity_at ? \Carbon\Carbon::parse($user->last_activity_at)->diffForHumans() : '—' }}" disabled></div>
         <div><label>تاريخ التسجيل</label><input value="{{ $user->created_at?->format('Y-m-d H:i') }}" disabled></div>
     </div>
 
@@ -87,10 +87,12 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);">
         <a href="{{ route('admin.edit', $user) }}" class="admin-btn"><i class="ri-edit-line"></i> تعديل</a>
 
-        <form method="POST" action="{{ route('admin.users.reset-password', $user) }}" onsubmit="return confirm('إعادة تعيين كلمة المرور؟')">
+        @if($user->role === 'student')
+        <form method="POST" action="{{ route('admin.users.reset-password', $user) }}" onsubmit="return confirm('إعادة تعيين كلمة مرور الطالب؟')">
             @csrf
             <button type="submit" class="admin-btn secondary" style="background:rgba(249,115,22,.12);color:#fb923c;"><i class="ri-lock-password-line"></i> إعادة تعيين كلمة المرور</button>
         </form>
+        @endif
 
         @if($user->status === 'blocked')
             <form method="POST" action="{{ route('admin.users.bulk') }}" onsubmit="return confirm('إلغاء حظر هذا المستخدم؟')">
