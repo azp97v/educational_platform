@@ -88,9 +88,15 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'nullable|string|max:50|unique:users,username|regex:/^[a-zA-Z0-9_.]+$/i',
+            'username' => ['nullable', 'string', 'min:3', 'max:50', 'unique:users,username', 'regex:/^[A-Za-z0-9_]+$/'],
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', 'min:6'],
+            'password' => ['required', 'confirmed', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'],
+        ], [
+            'password.min' => 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+            'password.regex' => 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم على الأقل',
+            'password.confirmed' => 'كلمتا المرور غير متطابقتين',
+            'username.regex' => 'اسم المستخدم يجب أن يحتوي على حروف إنجليزية أو أرقام أو شرطة سفلية فقط',
+            'username.min' => 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل',
         ]);
 
         $otp = Str::upper(Str::random(6));
