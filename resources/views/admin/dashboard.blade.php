@@ -17,12 +17,12 @@
 .x-search-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
 .x-search-bar input, .x-search-bar select { background:var(--bg-secondary,#1e2535); border:1px solid rgba(255,255,255,.1); color:var(--text-primary,#fff); border-radius:8px; padding:8px 14px; font-size:13px; outline:none; }
 .x-search-bar input { flex:1; min-width:160px; }
-.x-search-bar input:focus, .x-search-bar select:focus { border-color:var(--accent,#6c63ff); }
-.x-bulk-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 14px; background:rgba(108,99,255,.08); border-radius:8px; margin-bottom:14px; font-size:13px; }
+.x-search-bar input:focus, .x-search-bar select:focus { border-color:#C6A675; }
+.x-bulk-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 14px; background:rgba(198,166,117,.08); border-radius:8px; margin-bottom:14px; font-size:13px; }
 .x-bulk-bar select { background:var(--bg-secondary,#1e2535); border:1px solid rgba(255,255,255,.1); color:var(--text-primary,#fff); border-radius:6px; padding:6px 12px; }
-.x-check { accent-color:var(--accent,#6c63ff); width:15px; height:15px; cursor:pointer; }
+.x-check { accent-color:#C6A675; width:15px; height:15px; cursor:pointer; }
 .x-role-label { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
-.x-role-admin   { background:#7c3aed22; color:#a78bfa; }
+.x-role-admin   { background:rgba(198,166,117,.18); color:#C6A675; }
 .x-role-teacher { background:#065f4622; color:#34d399; }
 .x-role-student { background:#1d4ed822; color:#60a5fa; }
 .x-status-active   { background:#16a34a22; color:#4ade80; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:700; }
@@ -149,7 +149,7 @@
                                 @if($user->avatar_url)
                                     <img src="{{ $user->avatar_url }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
                                 @else
-                                    <div style="width:28px;height:28px;border-radius:50%;background:rgba(108,99,255,.25);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#a78bfa;">{{ mb_substr($user->name,0,1) }}</div>
+                                    <div style="width:28px;height:28px;border-radius:50%;background:rgba(198,166,117,.25);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#C6A675;">{{ mb_substr($user->name,0,1) }}</div>
                                 @endif
                                 <strong>{{ $user->name }}</strong>
                             </div>

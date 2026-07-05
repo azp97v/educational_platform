@@ -15,8 +15,8 @@
 <style>
 .enroll-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
 .enroll-tab { padding:7px 18px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.55); text-decoration:none; background:transparent; transition:.2s; }
-.enroll-tab:hover { border-color:rgba(108,99,255,.4); color:#a78bfa; }
-.enroll-tab.active { background:rgba(108,99,255,.18); border-color:#6c63ff; color:#a78bfa; }
+.enroll-tab:hover { border-color:rgba(198,166,117,.5); color:#C6A675; }
+.enroll-tab.active { background:rgba(198,166,117,.15); border-color:#C6A675; color:#C6A675; }
 .reject-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9999; align-items:center; justify-content:center; }
 .reject-modal.open { display:flex; }
 .reject-box { background:#1a2035; border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:28px; width:90%; max-width:440px; }

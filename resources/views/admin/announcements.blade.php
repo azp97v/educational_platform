@@ -14,8 +14,8 @@
 .ann-type-success { background:#16a34a22;color:#4ade80; }
 .ann-type-warning { background:#d9770622;color:#fb923c; }
 .ann-type-danger  { background:#dc262622;color:#f87171; }
-.ann-role-all     { background:rgba(108,99,255,.15);color:#a78bfa; }
-.ann-role-admin   { background:#7c3aed22;color:#c4b5fd; }
+.ann-role-all     { background:rgba(198,166,117,.15);color:#C6A675; }
+.ann-role-admin   { background:rgba(198,166,117,.25);color:#8D7252; }
 .ann-role-teacher { background:#06594622;color:#34d399; }
 .ann-role-student { background:#1d4ed822;color:#60a5fa; }
 .ann-badge { display:inline-block;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px; }

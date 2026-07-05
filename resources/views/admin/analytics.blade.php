@@ -16,9 +16,9 @@
 .chart-wrap { position:relative; width:100%; }
 .chart-wrap canvas { width:100% !important; }
 .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:14px; margin-bottom:20px; }
-.kpi-card { background:rgba(108,99,255,.07); border-radius:10px; padding:16px; text-align:center; border:1px solid rgba(255,255,255,.06); }
-.kpi-card .kv { font-size:26px; font-weight:900; color:#a78bfa; }
-.kpi-card .kk { font-size:11px; opacity:.55; margin-top:4px; }
+.kpi-card { background:rgba(198,166,117,.08); border-radius:10px; padding:16px; text-align:center; border:1px solid rgba(198,166,117,.18); }
+.kpi-card .kv { font-size:26px; font-weight:900; color:#C6A675; }
+.kpi-card .kk { font-size:11px; opacity:.6; margin-top:4px; }
 .growth-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:2px 10px; border-radius:20px; }
 .growth-up   { background:#16a34a22; color:#4ade80; }
 .growth-down { background:#dc262622; color:#f87171; }
@@ -60,8 +60,8 @@
         </div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px;font-size:12px;">
             <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C6A675;margin-left:5px;"></span>مشرفون ({{ $roleDistribution['admins'] }})</span>
-            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8D7252;margin-left:5px;"></span>معلمون ({{ $roleDistribution['teachers'] }})</span>
-            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#E8C99A;margin-left:5px;"></span>طلاب ({{ $roleDistribution['students'] }})</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#6B4422;margin-left:5px;"></span>معلمون ({{ $roleDistribution['teachers'] }})</span>
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F0DDB8;margin-left:5px;"></span>طلاب ({{ $roleDistribution['students'] }})</span>
         </div>
     </article>
 
@@ -71,7 +71,7 @@
         @forelse($topTeachers as $t)
             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);">
                 <div style="font-size:13px;">{{ $t->name }}</div>
-                <div style="font-size:12px;font-weight:700;color:#a78bfa;">{{ $t->student_count }} طالب</div>
+                <div style="font-size:12px;font-weight:700;color:#C6A675;">{{ $t->student_count }} طالب</div>
             </div>
         @empty
             <div style="opacity:.4;font-size:13px;text-align:center;padding:20px;">لا توجد بيانات.</div>
@@ -165,7 +165,7 @@
                 labels: ['مشرفون', 'معلمون', 'طلاب'],
                 datasets: [{
                     data: [{{ $roleDistribution['admins'] }}, {{ $roleDistribution['teachers'] }}, {{ $roleDistribution['students'] }}],
-                    backgroundColor: ['#C6A675','#8D7252','#E8C99A'],
+                    backgroundColor: ['#C6A675','#6B4422','#F0DDB8'],
                     borderWidth: 2,
                     borderColor: isDark ? '#1a1410' : '#f4f0ea',
                 }]
