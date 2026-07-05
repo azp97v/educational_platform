@@ -61,6 +61,19 @@ class AuthController extends Controller
             return redirect()->route('otp.verify')->with('success', 'يرجى تأكيد حسابك. تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
         }
 
+        // Verify password manually before checking status
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة']);
+        }
+
+        // Check account status — give specific message instead of generic error
+        if ($user->status === 'inactive') {
+            return back()->withErrors(['email' => 'حسابك غير مفعّل حالياً. يرجى التواصل مع الإدارة لإعادة تفعيل حسابك.']);
+        }
+        if ($user->status === 'blocked') {
+            return back()->withErrors(['email' => 'تم تعليق هذا الحساب. للاستفسار يرجى التواصل مع إدارة المنصة.']);
+        }
+
         // Attempt login
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
