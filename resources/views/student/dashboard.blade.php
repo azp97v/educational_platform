@@ -39,6 +39,7 @@
       color: var(--theme-text);
       min-height: 100vh;
       scroll-behavior: smooth;
+      overflow-x: hidden;
     }
 
     body::before {
@@ -985,9 +986,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.55);
-      z-index: 198;
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
+      z-index: 9998;
     }
     .sidebar-backdrop.active { display: block; }
 
@@ -1003,15 +1002,19 @@
         bottom: 0 !important;
         width: 280px !important;
         height: 100vh !important;
-        z-index: 199 !important;
-        transform: translateX(110%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        z-index: 9999 !important;
+        transform: translateX(110%) !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s !important;
         display: flex !important;
         border-radius: 0 !important;
         overflow-y: auto !important;
       }
       .sidebar.sidebar-open {
-        transform: translateX(0);
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
       }
       .hamburger-btn { display: flex; }
       .topbar { padding: 0 16px; }
