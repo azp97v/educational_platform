@@ -15,21 +15,6 @@ class SecurityHeaders
 
         $response = $next($request);
 
-        if (str_contains($response->headers->get('Content-Type', 'text/html'), 'text/html')) {
-            $content = $response->getContent();
-            $content = preg_replace_callback(
-                '/<script\b(?!\s[^>]*\bsrc\s*=\s*["\'])([^>]*)>/is',
-                function ($m) use ($nonce) {
-                    if (str_contains($m[0], 'nonce=')) {
-                        return $m[0];
-                    }
-                    return '<script' . $m[1] . ' nonce="' . $nonce . '">';
-                },
-                $content
-            );
-            $response->setContent($content);
-        }
-
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-XSS-Protection', '1; mode=block');

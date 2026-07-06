@@ -5806,10 +5806,5 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
     [class*="-ring"] { animation: none !important; }
 }
 
-/* ── Performance: pause animations when tab is hidden (applied via JS visibilitychange) ── */
-body.tab-hidden .c-typing-dots span,
-body.tab-hidden .ctb-dots span,
-body.tab-hidden .typing-dot,
-body.tab-hidden [class*="shimmer"],
-body.tab-hidden [class*="pulse"],
-body.tab-hidden .status-ring-pulse { animation-play-state: paused !important; }
+/* ── Performance: pause ALL animations when tab is hidden (applied via JS visibilitychange) ── */
+body.tab-hidden * { animation-play-state: paused !important; }

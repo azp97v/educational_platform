@@ -132,10 +132,10 @@
         new Chart(regCtx, {
             type: 'line',
             data: {
-                labels: {!! json_encode($chartLabels) !!},
+                labels: {{ json_encode($chartLabels) }},
                 datasets: [{
                     label: 'تسجيلات جديدة',
-                    data: {!! json_encode($chartCounts) !!},
+                    data: {{ json_encode($chartCounts) }},
                     borderColor: accent,
                     backgroundColor: 'rgba(198,166,117,0.13)',
                     borderWidth: 2.5,

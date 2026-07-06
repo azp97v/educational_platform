@@ -73,23 +73,7 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
-        ]
-    },
-    "extra": {
-        "laravel": {
-            "dont-discover": []
-        }
-    },
-    "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "php-http/discovery": true
-        }
-    },
-    "scripts": {
+        ],
         "loadtest:smoke": "k6 run tests/Load/smoke.js",
         "loadtest:scenarios": "k6 run tests/Load/scenarios.js",
         "loadtest:stress": "k6 run tests/Load/stress.js",
@@ -116,6 +100,20 @@
             "@php artisan test",
             "@php artisan migrate --dry-run --force"
         ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true

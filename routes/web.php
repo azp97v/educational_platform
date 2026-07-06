@@ -336,17 +336,19 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     // Messaging Routes (with auth)
     Route::get('/messaging', [MessagingController::class, 'index'])->name('messaging');
     Route::get('/messaging/qr/{user}', [MessagingController::class, 'qrCode'])->name('messaging.qr');
-    Route::post('/calls', [CallController::class, 'initiate'])->name('calls.initiate');
-    Route::post('/calls/{call}/offer', [CallController::class, 'offer'])->name('calls.offer');
-    Route::post('/calls/{call}/invite', [CallController::class, 'invite'])->name('calls.invite');
-    Route::post('/calls/{call}/peer-offer', [CallController::class, 'peerOffer'])->name('calls.peer-offer');
-    Route::post('/calls/{call}/peer-answer', [CallController::class, 'peerAnswer'])->name('calls.peer-answer');
-    Route::post('/calls/{call}/join', [CallController::class, 'join'])->name('calls.join');
-    Route::post('/calls/{call}/answer', [CallController::class, 'answer'])->name('calls.answer');
-    Route::post('/calls/{call}/reject', [CallController::class, 'reject'])->name('calls.reject');
-    Route::post('/calls/{call}/ring', [CallController::class, 'ring'])->name('calls.ring');
-    Route::post('/calls/{call}/end', [CallController::class, 'end'])->name('calls.end');
-    Route::post('/calls/{call}/ice-candidate', [CallController::class, 'iceCandidate'])->name('calls.ice-candidate');
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('/calls', [CallController::class, 'initiate'])->name('calls.initiate');
+        Route::post('/calls/{call}/offer', [CallController::class, 'offer'])->name('calls.offer');
+        Route::post('/calls/{call}/invite', [CallController::class, 'invite'])->name('calls.invite');
+        Route::post('/calls/{call}/peer-offer', [CallController::class, 'peerOffer'])->name('calls.peer-offer');
+        Route::post('/calls/{call}/peer-answer', [CallController::class, 'peerAnswer'])->name('calls.peer-answer');
+        Route::post('/calls/{call}/join', [CallController::class, 'join'])->name('calls.join');
+        Route::post('/calls/{call}/answer', [CallController::class, 'answer'])->name('calls.answer');
+        Route::post('/calls/{call}/reject', [CallController::class, 'reject'])->name('calls.reject');
+        Route::post('/calls/{call}/ring', [CallController::class, 'ring'])->name('calls.ring');
+        Route::post('/calls/{call}/end', [CallController::class, 'end'])->name('calls.end');
+        Route::post('/calls/{call}/ice-candidate', [CallController::class, 'iceCandidate'])->name('calls.ice-candidate');
+    });
     Route::post('/messaging/send', [MessagingController::class, 'send'])->middleware('throttle:30,1')->name('messaging.send');
     Route::get('/messaging/refresh', [MessagingController::class, 'refresh'])->name('messaging.refresh');
     Route::get('/messaging/load', [MessagingController::class, 'loadMessages'])->name('messaging.load');
@@ -541,17 +543,19 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     // Messaging Routes
     Route::get('/messaging', [MessagingController::class, 'index'])->name('teacher.messaging');
     Route::get('/messaging/qr/{user}', [MessagingController::class, 'qrCode'])->name('teacher.messaging.qr');
-    Route::post('/calls', [CallController::class, 'initiate'])->name('teacher.calls.initiate');
-    Route::post('/calls/{call}/offer', [CallController::class, 'offer'])->name('teacher.calls.offer');
-    Route::post('/calls/{call}/invite', [CallController::class, 'invite'])->name('teacher.calls.invite');
-    Route::post('/calls/{call}/peer-offer', [CallController::class, 'peerOffer'])->name('teacher.calls.peer-offer');
-    Route::post('/calls/{call}/peer-answer', [CallController::class, 'peerAnswer'])->name('teacher.calls.peer-answer');
-    Route::post('/calls/{call}/join', [CallController::class, 'join'])->name('teacher.calls.join');
-    Route::post('/calls/{call}/answer', [CallController::class, 'answer'])->name('teacher.calls.answer');
-    Route::post('/calls/{call}/reject', [CallController::class, 'reject'])->name('teacher.calls.reject');
-    Route::post('/calls/{call}/ring', [CallController::class, 'ring'])->name('teacher.calls.ring');
-    Route::post('/calls/{call}/end', [CallController::class, 'end'])->name('teacher.calls.end');
-    Route::post('/calls/{call}/ice-candidate', [CallController::class, 'iceCandidate'])->name('teacher.calls.ice-candidate');
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('/calls', [CallController::class, 'initiate'])->name('teacher.calls.initiate');
+        Route::post('/calls/{call}/offer', [CallController::class, 'offer'])->name('teacher.calls.offer');
+        Route::post('/calls/{call}/invite', [CallController::class, 'invite'])->name('teacher.calls.invite');
+        Route::post('/calls/{call}/peer-offer', [CallController::class, 'peerOffer'])->name('teacher.calls.peer-offer');
+        Route::post('/calls/{call}/peer-answer', [CallController::class, 'peerAnswer'])->name('teacher.calls.peer-answer');
+        Route::post('/calls/{call}/join', [CallController::class, 'join'])->name('teacher.calls.join');
+        Route::post('/calls/{call}/answer', [CallController::class, 'answer'])->name('teacher.calls.answer');
+        Route::post('/calls/{call}/reject', [CallController::class, 'reject'])->name('teacher.calls.reject');
+        Route::post('/calls/{call}/ring', [CallController::class, 'ring'])->name('teacher.calls.ring');
+        Route::post('/calls/{call}/end', [CallController::class, 'end'])->name('teacher.calls.end');
+        Route::post('/calls/{call}/ice-candidate', [CallController::class, 'iceCandidate'])->name('teacher.calls.ice-candidate');
+    });
     Route::post('/messaging/send', [MessagingController::class, 'send'])->middleware('throttle:30,1')->name('teacher.messaging.send');
     Route::get('/messaging/refresh', [MessagingController::class, 'refresh'])->name('teacher.messaging.refresh');
     Route::get('/messaging/load', [MessagingController::class, 'loadMessages'])->name('teacher.messaging.load');

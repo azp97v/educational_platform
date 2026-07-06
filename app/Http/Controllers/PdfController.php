@@ -71,7 +71,7 @@ class PdfController extends Controller
         // إذا كان لا يزال pending لأكثر من 3 ثوان، نُنفّذه inline
         // (يحدث عندما لا يكون queue worker يعمل)
         if ($gen->status === 'pending' && $gen->created_at->diffInSeconds(now()) > 3) {
-            Log::info('[PDF-CTRL] Inline processing for token=' . $token);
+            Log::info('[PDF-CTRL] Inline processing gen_id=' . $gen->id);
             try {
                 (new \App\Jobs\GenerateCertificatePdfJob($gen->id))->handle();
                 $gen->refresh(); // تحديث البيانات
@@ -118,7 +118,7 @@ class PdfController extends Controller
         $filePath = $gen->file_path;
         $fileName = $gen->file_name ?: 'certificate.pdf';
 
-        Log::info('[PDF-CTRL] Download: token=' . $token . ' file=' . $filePath);
+        Log::info('[PDF-CTRL] Download: gen_id=' . $gen->id . ' file=' . $filePath);
 
         return response()->download($filePath, $fileName, [
             'Content-Type'        => 'application/pdf',

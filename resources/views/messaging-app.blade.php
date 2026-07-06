@@ -1697,7 +1697,7 @@ key="mic-action"
 <button class="sep-close" @click="closeStatusFullEmoji"><i class="ri-close-line"></i></button>
 </div>
 <div class="sep-grid">
-<button v-for="e in emojiList" :key="e" @mousedown.prevent @click="sendQuickStatusReaction(e); closeStatusFullEmoji()" v-html="e"></button>
+<button v-for="e in emojiList" :key="e" @mousedown.prevent @click="sendQuickStatusReaction(e); closeStatusFullEmoji()">{{ e }}</button>
 </div>
 </div>
 <!-- Dim overlay when reply input is focused or full emoji picker is open -->
@@ -14111,10 +14111,11 @@ const iceServers = [
 ]},
 ];
 if (this.turnIceConfig && this.turnIceConfig.length) {
-    // Use env-configured TURN servers (production — set TURN_URL etc. in .env)
+    // Use env-configured TURN servers (set TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in .env)
     iceServers.push(...this.turnIceConfig);
 } else {
-    // Fallback public TURN — replace with a dedicated server for production
+    // Public shared TURN — set TURN_URL in .env for production to avoid rate-limiting
+    if (typeof console !== 'undefined') console.warn('[WebRTC] Using shared public TURN — set TURN_URL in .env for production');
     iceServers.push({
         urls: [
             'turn:openrelay.metered.ca:80',
