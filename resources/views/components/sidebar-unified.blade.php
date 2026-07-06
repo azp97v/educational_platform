@@ -502,13 +502,14 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
     /* RESPONSIVE DESIGN - التصميم الاستجابي */
     /* ═════════════════════════════════════════════════════════════════════════ */
 
-    /* Sidebar backdrop overlay */
+    /* Sidebar backdrop overlay — visual only, pointer-events:none so touch goes through to sidebar */
     .sidebar-backdrop {
         display: none;
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.5);
         z-index: 9998;
+        pointer-events: none;
     }
     .sidebar-backdrop.active {
         display: block;
@@ -840,12 +841,14 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
             });
         }
 
-        // إغلاق الـ Sidebar عند النقر على الـ backdrop
-        if (sidebarBackdrop) {
-            sidebarBackdrop.addEventListener('click', function() {
+        // Close sidebar when tapping outside (backdrop has pointer-events:none so we use document)
+        document.addEventListener('click', function(e) {
+            if (!sidebar || !sidebar.classList.contains('sidebar-open')) return;
+            var toggle = document.getElementById('sidebarToggle');
+            if (!sidebar.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
                 closeSidebar();
-            });
-        }
+            }
+        }, true);
 
         // إغلاق الـ Sidebar عند الضغط على ESC
         document.addEventListener('keydown', function(e) {
