@@ -596,6 +596,13 @@ select option:hover {
   z-index: 2;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .metric { animation: none !important; }
+  .admin-card, .glow-card, .rbac-card { transition: none !important; }
+}
+
+body.tab-hidden .metric { animation-play-state: paused !important; }
+
 .admin-card,
 .glow-card,
 .rbac-card {

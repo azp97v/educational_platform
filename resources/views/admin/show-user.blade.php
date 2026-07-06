@@ -20,7 +20,7 @@
 <section class="admin-card" style="margin-bottom:20px;">
     <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.08);">
         @if($user->avatar_url)
-            <img src="{{ asset('storage/' . $user->avatar_url) }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(198,166,117,.5);">
+            <img src="{{ asset('storage/' . $user->avatar_url) }}" loading="lazy" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(198,166,117,.5);">
         @else
             <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#C6A675,#8D7252);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;flex-shrink:0;">{{ mb_substr($user->name,0,1) }}</div>
         @endif
