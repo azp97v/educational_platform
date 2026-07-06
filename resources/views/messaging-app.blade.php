@@ -15258,20 +15258,8 @@ const iceServers = [
 if (this.turnIceConfig && this.turnIceConfig.length) {
     // Use env-configured TURN servers (set TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in .env)
     iceServers.push(...this.turnIceConfig);
-} else {
-    // Public shared TURN — set TURN_URL in .env for production to avoid rate-limiting
-    if (typeof console !== 'undefined') console.warn('[WebRTC] Using shared public TURN — set TURN_URL in .env for production');
-    iceServers.push({
-        urls: [
-            'turn:openrelay.metered.ca:80',
-            'turn:openrelay.metered.ca:443',
-            'turn:openrelay.metered.ca:443?transport=tcp',
-            'turns:openrelay.metered.ca:443',
-        ],
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-    });
 }
+// No public TURN fallback — configure TURN_URL in .env to enable relay for restrictive networks
 return {
     iceServers,
     iceCandidatePoolSize: 10,
