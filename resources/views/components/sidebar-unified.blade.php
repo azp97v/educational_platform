@@ -593,14 +593,14 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
             border-left: none;
             border-radius: 0;
             padding: 24px 16px;
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
         .nav-btn,
         .nav-btn.active {
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
         }
 
         .sidebar.sidebar-open {
