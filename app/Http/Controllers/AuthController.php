@@ -39,39 +39,39 @@ class AuthController extends Controller
             return back()->withErrors(['email' => 'بريد إلكتروني غير مسجل']);
         }
 
+        // Check account status FIRST — user sees the real reason before anything else
+        if ($user->status === 'inactive') {
+            return back()->withErrors(['email' => 'حسابك غير مفعّل حالياً. يرجى التواصل مع الإدارة لإعادة تفعيل حسابك.']);
+        }
+        if ($user->status === 'blocked') {
+            return back()->withErrors(['email' => 'تم تعليق هذا الحساب. للاستفسار يرجى التواصل مع إدارة المنصة.']);
+        }
+
         // Check if email is verified (admin is exempt)
         if ($user->email_verified_at === null && $user->role !== 'admin') {
             // Generate OTP
             $otp = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(6));
             $expires = \Carbon\Carbon::now()->addMinutes(10);
-            
+
             \App\Models\EmailOtp::updateOrCreate(
                 ['email' => $user->email],
                 ['otp' => $otp, 'expires_at' => $expires, 'attempts' => 0]
             );
-            
+
             try {
                 \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\SendOtpCode($user->name, $otp));
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Login OTP send failed: ' . $e->getMessage());
                 return back()->withErrors(['email' => 'تعذر إرسال رمز التحقق. يرجى المحاولة لاحقاً.']);
             }
-            
+
             session(['otp_email' => $user->email]);
             return redirect()->route('otp.verify')->with('success', 'يرجى تأكيد حسابك. تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
         }
 
-        // Verify password manually before checking status
+        // Verify password
         if (!Hash::check($request->password, $user->password)) {
             return back()->withErrors(['email' => 'بيانات الدخول غير صحيحة']);
-        }
-
-        // Check account status — give specific message instead of generic error
-        if ($user->status === 'inactive') {
-            return back()->withErrors(['email' => 'حسابك غير مفعّل حالياً. يرجى التواصل مع الإدارة لإعادة تفعيل حسابك.']);
-        }
-        if ($user->status === 'blocked') {
-            return back()->withErrors(['email' => 'تم تعليق هذا الحساب. للاستفسار يرجى التواصل مع إدارة المنصة.']);
         }
 
         // Attempt login
