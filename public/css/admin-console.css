@@ -122,6 +122,8 @@ body.admin-console::before {
   font-size: 0.95rem;
   transition: all 0.3s ease;
   text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-btn i { font-size: 1.2rem; color: var(--gold); }
