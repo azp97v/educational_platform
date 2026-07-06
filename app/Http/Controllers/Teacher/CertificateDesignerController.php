@@ -491,7 +491,7 @@ class CertificateDesignerController extends Controller
         // أطلق المهمة في طابور الخلفية
         GenerateCertificatePdfJob::dispatch($gen->id);
 
-        Log::info('[PDF-CTRL] Preset job dispatched: gen_id=' . $gen->id . ' token=' . $token);
+        Log::info('[PDF-CTRL] Preset job dispatched: gen_id=' . $gen->id);
 
         // إعادة توجيه لصفحة الانتظار
         return redirect()->route('pdf.wait', ['token' => $token]);
@@ -770,7 +770,7 @@ class CertificateDesignerController extends Controller
 
         GenerateCertificatePdfJob::dispatch($gen->id);
 
-        Log::info('[PDF-CTRL] Custom job dispatched: gen_id=' . $gen->id . ' token=' . $token);
+        Log::info('[PDF-CTRL] Custom job dispatched: gen_id=' . $gen->id);
 
         return redirect()->route('pdf.wait', ['token' => $token]);
     }
