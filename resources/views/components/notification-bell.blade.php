@@ -4,7 +4,7 @@
   display: inline-flex;
   align-items: center;
   overflow: visible !important;
-  z-index: 2147483640;
+  z-index: 10001;
 }
 .notification-btn {
   position: relative;
@@ -46,12 +46,15 @@
   display: none;
   flex-direction: column;
   overflow: hidden;
-  z-index: 2147483646 !important;
+  z-index: 10003;
   opacity: 0;
   transform: translateY(-12px) scale(0.98);
   transform-origin: top right;
   transition: opacity 0.25s ease, transform 0.25s ease;
   isolation: isolate;
+  pointer-events: none;
+}
+.notification-dropdown.active {
   pointer-events: auto;
 }
 .notification-dropdown.active {
@@ -164,15 +167,15 @@
 .notification-backdrop {
   position: fixed;
   inset: 0;
-  background: transparent;
-  z-index: 2147483645 !important;
+  background: rgba(0, 0, 0, 0.001);
+  z-index: 10002;
   display: none;
   pointer-events: none;
 }
 
 .notification-backdrop.active {
   display: block;
-  pointer-events: auto;
+  /* pointer-events stays none — document click listener handles close-on-outside */
 }
 
 /* ── Teacher-account: always dark notification dropdown ── */
@@ -482,13 +485,19 @@ body[data-theme="light"] .notification-dropdown .notification-time,
       closeDropdown();
     });
 
-    document.addEventListener('click', function (event) {
+    // Close when clicking/touching outside — handles both desktop and iOS Safari
+    function handleOutsideClose(event) {
       if (!event.target.closest('.notification-wrapper') && !event.target.closest('.notification-dropdown')) {
         closeDropdown();
       }
-    });
+    }
+    document.addEventListener('click', handleOutsideClose, true);
+    document.addEventListener('touchend', function(event) {
+      if (!event.target.closest('.notification-wrapper') && !event.target.closest('.notification-dropdown')) {
+        closeDropdown();
+      }
+    }, true);
 
-    backdrop.addEventListener('click', closeDropdown);
     window.addEventListener('resize', function () {
       if (dropdown.classList.contains('active')) updateDropdownPosition();
     });

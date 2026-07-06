@@ -575,6 +575,17 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
     }
     .hamburger-btn:hover { background: rgba(255,214,122,0.1); border-color: rgba(255,214,122,0.3); }
 
+    /* iOS touch: remove 300ms delay on all nav buttons */
+    .nav-btn {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        cursor: pointer;
+    }
+    .hamburger-btn {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
     @media (max-width: 768px) {
         .hamburger-btn { display: flex; }
 
