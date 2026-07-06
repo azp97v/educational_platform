@@ -1,4 +1,4 @@
-﻿@extends('layouts.app-unified')
+@extends('layouts.app-unified')
 
 @section('title','طلاب المعلم - لوحة تحكم المعلم')
 
@@ -528,7 +528,7 @@ body {
       <div class="student-header">
         <div class="student-avatar">
           @if($student->avatar_url)
-            <img src="{{ asset('storage/' . $student->avatar_url) }}" alt="{{ $student->name }}">
+            <img src="{{ asset('storage/' . $student->avatar_url) }}" loading="lazy" alt="{{ $student->name }}">
           @else
             <div class="avatar-placeholder">{{ mb_substr($student->name, 0, 1) }}</div>
           @endif

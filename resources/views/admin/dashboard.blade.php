@@ -147,7 +147,7 @@
                         <td>
                             <div style="display:flex;align-items:center;gap:8px;">
                                 @if($user->avatar_url)
-                                    <img src="{{ asset('storage/' . $user->avatar_url) }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+                                    <img src="{{ asset('storage/' . $user->avatar_url) }}" loading="lazy" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
                                 @else
                                     <div style="width:28px;height:28px;border-radius:50%;background:rgba(198,166,117,.25);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#C6A675;">{{ mb_substr($user->name,0,1) }}</div>
                                 @endif

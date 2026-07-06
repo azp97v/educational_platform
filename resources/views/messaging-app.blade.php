@@ -9296,7 +9296,7 @@ if (this.audioPlayers[message.id]) return this.audioPlayers[message.id];
 
 const audio = new Audio(message.attachmentUrl);
 
-audio.preload = 'auto';
+audio.preload = 'metadata';
 
 try { audio.load(); } catch (_) {}
 
@@ -9459,7 +9459,7 @@ const applySeek = () => {
                     try { audio.currentTime = val; } catch (_) {}
                     audio.removeEventListener('canplaythrough', onReady);
                 };
-                audio.preload = 'auto';
+                audio.preload = 'metadata';
                 audio.addEventListener('canplaythrough', onReady, { once: true });
                 try { audio.load(); } catch (_) {}
             }
@@ -9679,7 +9679,7 @@ const setupAndPlay = (audioEl) => {
                 
                 const blobUrl = URL.createObjectURL(blob);
                 const a2 = new Audio(blobUrl);
-                a2.preload = 'auto';
+                a2.preload = 'metadata';
                 a2.onended = onEnded;
                 a2.ontimeupdate = () => onTimeUpdate(a2);
                 a2.onloadedmetadata = () => {
@@ -9710,7 +9710,7 @@ const setupAndPlay = (audioEl) => {
             fetch(message.attachmentUrl).then(r => r.blob()).then(blob => {
                 const blobUrl = URL.createObjectURL(blob);
                 const a2 = new Audio(blobUrl);
-                a2.preload = 'auto';
+                a2.preload = 'metadata';
                 a2.onended = onEnded;
                 a2.ontimeupdate = () => onTimeUpdate(a2);
                 a2.onloadedmetadata = () => {
@@ -9728,7 +9728,7 @@ const setupAndPlay = (audioEl) => {
 };
 
 const a = new Audio(message.attachmentUrl);
-a.preload = 'auto';
+a.preload = 'metadata';
 a.onloadedmetadata = () => { try { a.currentTime = targetPos; } catch (_) {} };
 setupAndPlay(a);
 
@@ -17361,6 +17361,15 @@ if (this.themeObserver) this.themeObserver.disconnect();
 
 
 }).mount('#app');
+
+// Pause decorative infinite animations when tab is not visible
+document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+        document.body.classList.add('tab-hidden');
+    } else {
+        document.body.classList.remove('tab-hidden');
+    }
+});
 
 </script>
 

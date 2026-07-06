@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -569,7 +569,7 @@
               <div class="student-cell">
                 <div class="student-avatar">
                   @if($inquiry->student->avatar_url)
-                    <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" alt="{{ $inquiry->student->name }}">
+                    <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" loading="lazy" alt="{{ $inquiry->student->name }}">
                   @else
                     <div class="avatar-placeholder">{{ mb_substr($inquiry->student->name, 0, 1) }}</div>
                   @endif
@@ -644,7 +644,7 @@
               <div class="student-cell">
                 <div class="student-avatar">
                   @if($inquiry->student->avatar_url)
-                    <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" alt="{{ $inquiry->student->name }}">
+                    <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" loading="lazy" alt="{{ $inquiry->student->name }}">
                   @else
                     <div class="avatar-placeholder">{{ mb_substr($inquiry->student->name, 0, 1) }}</div>
                   @endif

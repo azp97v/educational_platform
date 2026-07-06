@@ -116,8 +116,22 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     updateLiveTime();
-    setInterval(updateLiveTime, 1000);
+    var liveTimeTimer = setInterval(updateLiveTime, 1000);
     animateMetrics();
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        clearInterval(liveTimeTimer);
+        liveTimeTimer = null;
+        document.body.classList.add('tab-hidden');
+      } else {
+        if (!liveTimeTimer) {
+          updateLiveTime();
+          liveTimeTimer = setInterval(updateLiveTime, 1000);
+        }
+        document.body.classList.remove('tab-hidden');
+      }
+    });
     syncThemeSwitch();
 
     restoreScrollPosition();
