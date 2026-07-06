@@ -184,8 +184,8 @@
                 @if($template->show_logo)
                     <div class="logo-box" style="position: absolute; right: 30px; top: 30px; transform: translate({{ $template->logo_x }}px, {{ $template->logo_y }}px) rotate({{ $template->logo_rotation ?? 0 }}deg); width: {{ $template->logo_width }}px; height: {{ $template->logo_width }}px;">
                         @if($forPdf ?? false)
-                            @if(!empty($logoBase64))
-                                <img src="{{ $logoBase64 }}" alt="logo" style="width:100%;height:100%;object-fit:contain;">
+                            @if(!empty($logoPath ?? null))
+                                <img src="{{ $logoPath }}" alt="logo" style="width:100%;height:100%;object-fit:contain;">
                             @endif
                         @else
                             <img src="{{ $template->logo_image ? asset('storage/' . $template->logo_image) : asset('image/logono.png') }}" alt="logo" style="width:100%;height:100%;object-fit:contain;">

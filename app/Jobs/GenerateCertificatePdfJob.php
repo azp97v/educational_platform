@@ -145,18 +145,18 @@ class GenerateCertificatePdfJob implements ShouldQueue
         }
 
         // تحميل صورة الشعار بمسارها المباشر
-        $logoBase64 = null;
+        $logoPath = null;
         if ($template->show_logo && $template->logo_image) {
             $logoPath = storage_path('app/public/' . $template->logo_image);
             if (file_exists($logoPath)) {
-                $logoBase64 = str_replace('\\', '/', $logoPath);
+                $logoPath = str_replace('\\', '/', $logoPath);
             }
         }
-        if (!$logoBase64) {
+        if (!$logoPath) {
             // الشعار الافتراضي
             $defaultLogo = public_path('image/logono.png');
             if (file_exists($defaultLogo)) {
-                $logoBase64 = str_replace('\\', '/', $defaultLogo);
+                $logoPath = str_replace('\\', '/', $defaultLogo);
             }
         }
 
@@ -166,7 +166,7 @@ class GenerateCertificatePdfJob implements ShouldQueue
             'preview'    => false,
             'forPdf'     => true,
             'pdfBgImage' => $pdfBgImage,
-            'logoBase64' => $logoBase64,
+            'logoPath'   => $logoPath,
         ])->render();
 
         Log::info('[PDF-JOB] Custom HTML rendered: ' . strlen($html) . ' bytes');
