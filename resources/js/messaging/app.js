@@ -1591,9 +1591,17 @@ class TelegramMessagingApp {
 
 // Initialize
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => new TelegramMessagingApp());
+  document.addEventListener('DOMContentLoaded', () => {
+    const _app = new TelegramMessagingApp();
+    window.addEventListener('beforeunload', () => {
+      if (_app.recordingTimer) { clearInterval(_app.recordingTimer); _app.recordingTimer = null; }
+    });
+  });
 } else {
-  new TelegramMessagingApp();
+  const _app = new TelegramMessagingApp();
+  window.addEventListener('beforeunload', () => {
+    if (_app.recordingTimer) { clearInterval(_app.recordingTimer); _app.recordingTimer = null; }
+  });
 }
 
 

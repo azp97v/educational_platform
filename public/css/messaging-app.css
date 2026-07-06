@@ -856,18 +856,18 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
             background: linear-gradient(180deg,
                 color-mix(in srgb, var(--panel) 80%, transparent),
                 color-mix(in srgb, var(--panel-2) 80%, transparent)) !important;
-            backdrop-filter: blur(24px) saturate(1.4);
-            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            backdrop-filter: blur(12px) saturate(1.4);
+            -webkit-backdrop-filter: blur(12px) saturate(1.4);
         }
         .hbar {
             background: color-mix(in srgb, var(--panel) 75%, transparent) !important;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         .composer {
             background: color-mix(in srgb, var(--panel) 78%, transparent) !important;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         .bubble {
             backdrop-filter: blur(6px);
@@ -893,7 +893,7 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
         .search-panel {
             position: fixed; inset: 0 0 0 auto; width: min(420px,100%); z-index: 130;
             background: color-mix(in srgb, var(--panel) 88%, transparent);
-            backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             border-left: 1px solid var(--theme-border);
             box-shadow: -12px 0 40px rgba(0,0,0,.32);
             display: flex; flex-direction: column;
@@ -970,7 +970,7 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
         .settings-panel {
             position: fixed; inset: 0 0 0 auto; width: min(380px,100%); z-index: 24;
             background: color-mix(in srgb, var(--panel) 88%, transparent);
-            backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             border-left: 1px solid var(--theme-border);
             box-shadow: -12px 0 40px rgba(0,0,0,.32);
             display: flex; flex-direction: column;
@@ -1048,7 +1048,7 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
             background: linear-gradient(160deg,
                 color-mix(in srgb, var(--bg-0) 85%, rgba(0,0,0,.7)),
                 color-mix(in srgb, var(--panel-2) 85%, rgba(0,0,0,.7)));
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
         }
         .call-overlay.is-active { display: flex; }
@@ -1468,14 +1468,14 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
             position: fixed; inset: 0 0 0 auto; width: min(480px,100%); z-index: 130;
             display: flex;
             background: color-mix(in srgb, var(--panel) 92%, transparent);
-            backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             border-left: 1px solid var(--theme-border);
             box-shadow: -12px 0 40px rgba(0,0,0,.35);
             animation: panel-slide-in .28s var(--ease-out);
         }
         .feed { font-family: var(--chat-font, inherit); }
         .media { position: relative; }
-        .sensitive-blur { filter: blur(24px) brightness(0.6); }
+        .sensitive-blur { filter: blur(12px) brightness(0.6); }
         .sensitive-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #fff; font-size: 12px; cursor: pointer; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
         .sensitive-overlay i { font-size: 22px; }
         .folder-tag-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--theme-gold-soft); color: var(--gold); vertical-align: middle; }
@@ -3125,7 +3125,7 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
     border: 1px solid rgba(255,255,255,.1);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.05);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
     z-index: 140;
     overflow: hidden;
     min-width: 200px;
@@ -4281,7 +4281,7 @@ input[type=range]::-webkit-slider-thumb {
 .composer {
     border-top: 1px solid rgba(255,255,255,.06);
     background: var(--panel);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
 }
 
 /* ══════════════════════════════════════════════════
@@ -4389,7 +4389,7 @@ input[type=range]::-webkit-slider-thumb {
 .toast-msg {
     padding: 12px 24px; border-radius: 999px;
     font-size: 14px; font-weight: 500;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0,0,0,.4);
     white-space: nowrap;
 }
@@ -5427,7 +5427,7 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
     }
     .sc-overlay {
         background: rgba(0,0,0,0.85);
-        backdrop-filter: blur(20px) saturate(180%);
+        backdrop-filter: blur(10px) saturate(180%);
     }
 }
 
@@ -5488,7 +5488,7 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
 .sc-trash-bin {
     position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%) translateY(40px) scale(0.8);
     width: 60px; height: 60px; border-radius: 50%;
-    background: rgba(0,0,0,0.3); backdrop-filter: blur(20px) saturate(200%);
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(10px) saturate(200%);
     border: 1px solid rgba(255,255,255,0.1);
     display: flex; align-items: center; justify-content: center;
     color: rgba(255,255,255,0.8); font-size: 26px;
@@ -5522,7 +5522,7 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
 .sc-top-tools { 
     display: flex; gap: 8px; 
     background: rgba(0,0,0,0.25);
-    backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
     border: 1px solid rgba(255,255,255,0.1);
     padding: 6px; border-radius: 30px;
 }
@@ -5539,7 +5539,7 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
 
 .sc-close-btn { 
     background: rgba(0,0,0,0.25);
-    backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(10px) saturate(180%);
     border: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -5549,7 +5549,7 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
     padding: 20px; pointer-events: auto;
 }
 .sc-pill-btn {
-    background: rgba(0,0,0,0.3); backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(10px) saturate(180%);
     border: 1px solid rgba(255,255,255,0.1);
     color: #fff; border-radius: 30px;
     padding: 10px 20px; font-weight: 600; font-size: 14px; cursor: pointer;
@@ -5711,7 +5711,7 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
     width: 100%;
     height: 50%;
     background: rgba(25, 25, 25, 0.85);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
     border-radius: 20px 20px 0 0;
     display: flex;
     flex-direction: column;
@@ -5791,3 +5791,25 @@ html[data-theme="light"] .voice-player-bar .vpb-play-btn:hover {
 .draggable-media:active {
     cursor: grabbing;
 }
+
+/* ── Performance: pause infinite animations when user prefers reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    .c-typing-dots span,
+    .ctb-dots span,
+    .spin,
+    .typing-dot,
+    .sc-send-btn-high-contrast { animation: none !important; transition: none !important; }
+    .media-shimmer-placeholder { animation: none !important; background: var(--panel-2) !important; }
+    .status-ring-pulse,
+    [class*="pulse"],
+    [class*="shimmer"],
+    [class*="-ring"] { animation: none !important; }
+}
+
+/* ── Performance: pause animations when tab is hidden (applied via JS visibilitychange) ── */
+body.tab-hidden .c-typing-dots span,
+body.tab-hidden .ctb-dots span,
+body.tab-hidden .typing-dot,
+body.tab-hidden [class*="shimmer"],
+body.tab-hidden [class*="pulse"],
+body.tab-hidden .status-ring-pulse { animation-play-state: paused !important; }

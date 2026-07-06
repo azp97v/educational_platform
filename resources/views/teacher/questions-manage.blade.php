@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 @php $unreadCount = auth()->user()->unreadNotifications()->count(); @endphp
 <head>
@@ -1174,7 +1174,7 @@
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($question->student->avatar_url)
-                      <img src="{{ asset('storage/' . $question->student->avatar_url) }}" alt="{{ $question->student->name }}">
+                      <img src="{{ asset('storage/' . $question->student->avatar_url) }}" loading="lazy" alt="{{ $question->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($question->student->name, 0, 2) }}</div>
                     @endif
@@ -1219,7 +1219,7 @@
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($inquiry->student->avatar_url)
-                      <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" alt="{{ $inquiry->student->name }}">
+                      <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" loading="lazy" alt="{{ $inquiry->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($inquiry->student->name, 0, 2) }}</div>
                     @endif
@@ -1267,7 +1267,7 @@
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($question->student->avatar_url)
-                      <img src="{{ asset('storage/' . $question->student->avatar_url) }}" alt="{{ $question->student->name }}">
+                      <img src="{{ asset('storage/' . $question->student->avatar_url) }}" loading="lazy" alt="{{ $question->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($question->student->name, 0, 2) }}</div>
                     @endif
@@ -1308,7 +1308,7 @@
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($inquiry->student->avatar_url)
-                      <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" alt="{{ $inquiry->student->name }}">
+                      <img src="{{ asset('storage/' . $inquiry->student->avatar_url) }}" loading="lazy" alt="{{ $inquiry->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($inquiry->student->name, 0, 2) }}</div>
                     @endif

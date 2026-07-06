@@ -862,7 +862,7 @@
               <div class="podium-stand" style="animation-delay: 0.2s;">
                 <div class="podium-avatar second">
                   @if(!empty($top3Students->get(1)->avatar_url))
-                    <img src="{{ asset('storage/' . $top3Students->get(1)->avatar_url) }}" alt="{{ $top3Students->get(1)->name }}">
+                    <img src="{{ asset('storage/' . $top3Students->get(1)->avatar_url) }}" loading="lazy" alt="{{ $top3Students->get(1)->name }}">
                   @else
                     {{ mb_substr($top3Students->get(1)->name, 0, 2) }}
                   @endif
@@ -879,7 +879,7 @@
               <div class="podium-stand" style="animation-delay: 0s;">
                 <div class="podium-avatar first">
                   @if(!empty($top3Students->first()->avatar_url))
-                    <img src="{{ asset('storage/' . $top3Students->first()->avatar_url) }}" alt="{{ $top3Students->first()->name }}">
+                    <img src="{{ asset('storage/' . $top3Students->first()->avatar_url) }}" loading="lazy" alt="{{ $top3Students->first()->name }}">
                   @else
                     {{ mb_substr($top3Students->first()->name, 0, 2) }}
                   @endif
@@ -896,7 +896,7 @@
               <div class="podium-stand" style="animation-delay: 0.4s;">
                 <div class="podium-avatar third">
                   @if(!empty($top3Students->get(2)->avatar_url))
-                    <img src="{{ asset('storage/' . $top3Students->get(2)->avatar_url) }}" alt="{{ $top3Students->get(2)->name }}">
+                    <img src="{{ asset('storage/' . $top3Students->get(2)->avatar_url) }}" loading="lazy" alt="{{ $top3Students->get(2)->name }}">
                   @else
                     {{ mb_substr($top3Students->get(2)->name, 0, 2) }}
                   @endif

@@ -1,4 +1,4 @@
-﻿@extends('layouts.app-unified')
+@extends('layouts.app-unified')
 
 @section('title','طلبات الالتحاق - لوحة تحكم المعلم')
 
@@ -370,7 +370,7 @@
                 <div class="student-cell">
                   <div class="student-avatar">
                     @if($enrollment->student->avatar_url)
-                      <img src="{{ asset('storage/' . $enrollment->student->avatar_url) }}" alt="{{ $enrollment->student->name }}">
+                      <img src="{{ asset('storage/' . $enrollment->student->avatar_url) }}" loading="lazy" alt="{{ $enrollment->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($enrollment->student->name, 0, 1) }}</div>
                     @endif
@@ -428,7 +428,7 @@
                 <div class="student-cell">
                   <div class="student-avatar">
                     @if($enrollment->student->avatar_url)
-                      <img src="{{ asset('storage/' . $enrollment->student->avatar_url) }}" alt="{{ $enrollment->student->name }}">
+                      <img src="{{ asset('storage/' . $enrollment->student->avatar_url) }}" loading="lazy" alt="{{ $enrollment->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($enrollment->student->name, 0, 1) }}</div>
                     @endif
@@ -484,7 +484,7 @@
                 <div class="student-cell">
                   <div class="student-avatar">
                     @if($enrollment->student->avatar_url)
-                      <img src="{{ asset('storage/' . $enrollment->student->avatar_url) }}" alt="{{ $enrollment->student->name }}">
+                      <img src="{{ asset('storage/' . $enrollment->student->avatar_url) }}" loading="lazy" alt="{{ $enrollment->student->name }}">
                     @else
                       <div class="avatar-placeholder">{{ mb_substr($enrollment->student->name, 0, 1) }}</div>
                     @endif
