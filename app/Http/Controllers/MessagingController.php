@@ -2035,7 +2035,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             ->data($url)
             ->size(320)
             ->margin(10)
-            ->errorCorrectionLevel(new \Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh())
+            ->errorCorrectionLevel(\Endroid\QrCode\ErrorCorrectionLevel::High)
             ->build();
 
         return response($result->getString(), 200)

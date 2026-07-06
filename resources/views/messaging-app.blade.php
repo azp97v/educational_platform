@@ -13218,21 +13218,68 @@ this.showToast('لا توجد وسائط محفوظة بعد', 'info');
 return;
 }
 // Simple media gallery display inline
-let html = '<div class="media-gallery-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:12px;max-height:60vh;overflow:auto;">';
+const grid = document.createElement('div');
+grid.className = 'media-gallery-grid';
+grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:12px;max-height:60vh;overflow:auto;';
 msgs.forEach(m => {
 if (m.messageType === 'image' && m.attachmentUrl) {
-html += '<div class="mg-item" style="aspect-ratio:1;overflow:hidden;border-radius:8px;background:var(--panel-2);cursor:pointer;"><img src="' + m.attachmentUrl + '" style="width:100%;height:100%;object-fit:cover;"></div>';
+const wrap = document.createElement('div');
+wrap.className = 'mg-item';
+wrap.style.cssText = 'aspect-ratio:1;overflow:hidden;border-radius:8px;background:var(--panel-2);cursor:pointer;';
+const img = document.createElement('img');
+img.src = m.attachmentUrl;
+img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+wrap.appendChild(img);
+grid.appendChild(wrap);
 } else if (m.messageType === 'video' && m.attachmentUrl) {
-html += '<div class="mg-item" style="aspect-ratio:1;overflow:hidden;border-radius:8px;background:#000;position:relative;cursor:pointer;"><video src="' + m.attachmentUrl + '" preload="metadata" muted style="width:100%;height:100%;object-fit:cover;"></video><i class="ri-play-fill" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:28px;text-shadow:0 0 8px rgba(0,0,0,0.6);"></i></div>';
+const wrap = document.createElement('div');
+wrap.className = 'mg-item';
+wrap.style.cssText = 'aspect-ratio:1;overflow:hidden;border-radius:8px;background:#000;position:relative;cursor:pointer;';
+const vid = document.createElement('video');
+vid.src = m.attachmentUrl;
+vid.preload = 'metadata';
+vid.muted = true;
+vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+const playIcon = document.createElement('i');
+playIcon.className = 'ri-play-fill';
+playIcon.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:28px;text-shadow:0 0 8px rgba(0,0,0,0.6);';
+wrap.appendChild(vid);
+wrap.appendChild(playIcon);
+grid.appendChild(wrap);
 } else if (m.messageType === 'audio' && m.attachmentUrl) {
-html += '<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--panel-2);"><i class="ri-mic-line"></i><audio controls src="' + m.attachmentUrl + '" style="flex:1;height:40px;"></audio></div>';
+const wrap = document.createElement('div');
+wrap.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--panel-2);';
+const micIcon = document.createElement('i');
+micIcon.className = 'ri-mic-line';
+const aud = document.createElement('audio');
+aud.controls = true;
+aud.src = m.attachmentUrl;
+aud.style.cssText = 'flex:1;height:40px;';
+wrap.appendChild(micIcon);
+wrap.appendChild(aud);
+grid.appendChild(wrap);
 }
 });
-html += '</div>';
 const d = document.createElement('div');
 d.className = 'folders-modal';
 d.style.cssText = 'z-index:300;';
-d.innerHTML = '<div class="folders-card" style="width:min(420px,96%);max-height:80vh;"><div class="folders-head"><strong>وسائط الرسائل المحفوظة</strong><button class="h-icon-btn folders-close-btn"><i class="ri-close-line"></i></button></div>' + html + '</div></div>';
+const card = document.createElement('div');
+card.className = 'folders-card';
+card.style.cssText = 'width:min(420px,96%);max-height:80vh;';
+const head = document.createElement('div');
+head.className = 'folders-head';
+const titleEl = document.createElement('strong');
+titleEl.textContent = 'وسائط الرسائل المحفوظة';
+const closeBtn = document.createElement('button');
+closeBtn.className = 'h-icon-btn folders-close-btn';
+const closeIcon = document.createElement('i');
+closeIcon.className = 'ri-close-line';
+closeBtn.appendChild(closeIcon);
+head.appendChild(titleEl);
+head.appendChild(closeBtn);
+card.appendChild(head);
+card.appendChild(grid);
+d.appendChild(card);
 d.addEventListener('click', function(e) { if (e.target === d) d.remove(); });
 d.querySelector('.folders-card').addEventListener('click', function(e) { e.stopPropagation(); });
 d.querySelector('.folders-close-btn').addEventListener('click', function() { d.remove(); });

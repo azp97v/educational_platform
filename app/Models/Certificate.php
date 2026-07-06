@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\Log;
 
@@ -76,9 +77,13 @@ class Certificate extends Model
         try {
             $verificationUrl = route('certificate.verify', ['token' => $this->certificate_number]);
             
-            $qrCode = new QrCode($verificationUrl);
-            $writer = new PngWriter();
-            $result = $writer->write($qrCode);
+            $result = Builder::create()
+                ->writer(new PngWriter())
+                ->data($verificationUrl)
+                ->size(300)
+                ->margin(10)
+                ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+                ->build();
             
             $dir = storage_path('app/public/qr_codes');
             if (!is_dir($dir)) {
