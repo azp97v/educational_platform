@@ -125,6 +125,16 @@ $callsPeerAnswerRouteTemplate = $buildCallRouteTemplate('peer-answer');
 $callsJoinRouteTemplate = $buildCallRouteTemplate('join');
 $callsInviteRouteTemplate = $buildCallRouteTemplate('invite');
 
+// TURN server config — set TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in .env for production
+$turnIceConfig = [];
+$turnUrl = env('TURN_URL');
+if ($turnUrl) {
+    $turnEntry = ['urls' => array_filter(array_map('trim', explode(',', $turnUrl)))];
+    if (env('TURN_USERNAME')) $turnEntry['username'] = env('TURN_USERNAME');
+    if (env('TURN_CREDENTIAL')) $turnEntry['credential'] = env('TURN_CREDENTIAL');
+    $turnIceConfig[] = $turnEntry;
+}
+
 $updateRouteTemplate = $updateRouteTemplate ?? (\Illuminate\Support\Facades\Route::has('student.messages.update')
 
 ? route('student.messages.update', ['message' => '__MESSAGE_ID__'])
@@ -4511,6 +4521,7 @@ callsPeerOfferRouteTemplate: @json($callsPeerOfferRouteTemplate),
 callsPeerAnswerRouteTemplate: @json($callsPeerAnswerRouteTemplate),
 callsJoinRouteTemplate: @json($callsJoinRouteTemplate),
 callsInviteRouteTemplate: @json($callsInviteRouteTemplate),
+turnIceConfig: @json($turnIceConfig),
 
 stickersIndexRoute: @json($stickersIndexRoute),
 stickersStoreRoute: @json($stickersStoreRoute),
@@ -14091,20 +14102,35 @@ return icon + ' ' + (this.callIsRinging ? 'يرن...' : 'جاري الاتصال
 // Calls
 
 rtcIceServers() {
+const iceServers = [
+{ urls: [
+    'stun:stun.l.google.com:19302',
+    'stun:stun1.l.google.com:19302',
+    'stun:stun2.l.google.com:19302',
+    'stun:stun3.l.google.com:19302',
+]},
+];
+if (this.turnIceConfig && this.turnIceConfig.length) {
+    // Use env-configured TURN servers (production — set TURN_URL etc. in .env)
+    iceServers.push(...this.turnIceConfig);
+} else {
+    // Fallback public TURN — replace with a dedicated server for production
+    iceServers.push({
+        urls: [
+            'turn:openrelay.metered.ca:80',
+            'turn:openrelay.metered.ca:443',
+            'turn:openrelay.metered.ca:443?transport=tcp',
+            'turns:openrelay.metered.ca:443',
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+    });
+}
 return {
-iceServers: [
-{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-{
-urls: [
-'turn:openrelay.metered.ca:80',
-'turn:openrelay.metered.ca:443',
-'turn:openrelay.metered.ca:443?transport=tcp',
-'turns:openrelay.metered.ca:443',
-],
-username: 'openrelayproject',
-credential: 'openrelayproject',
-},
-],
+    iceServers,
+    iceCandidatePoolSize: 10,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
 };
 },
 
@@ -14185,7 +14211,7 @@ this.callStartedAt = this.callStartedAt || Date.now();
 }
 }
 if (s === 'failed') {
-this.showToast('فشل الاتصال — تحقق من شبكتك وحاول مجدداً', 'error');
+this.showToast('تعذّر تأسيس الاتصال — قد تكون الشبكة تحجب المكالمات، حاول من شبكة مختلفة', 'error');
 this.endCall();
 }
 if (s === 'disconnected') {
