@@ -83,13 +83,16 @@
     var sidebar = document.querySelector('.admin-sidebar');
     if (!btn || !sidebar) return;
 
-    // Inject overlay element once
+    // Inject overlay element once (visual only — pointer-events:none to allow sidebar touches)
     var overlay = document.getElementById('adminSidebarOverlay');
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.id = 'adminSidebarOverlay';
       overlay.className = 'admin-sidebar-overlay';
+      overlay.style.pointerEvents = 'none';
       document.body.appendChild(overlay);
+    } else {
+      overlay.style.pointerEvents = 'none';
     }
 
     function openSidebar() {
@@ -103,10 +106,18 @@
       document.body.style.overflow = '';
     }
 
-    btn.addEventListener('click', function () {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
       sidebar.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
     });
-    overlay.addEventListener('click', closeSidebar);
+
+    // Close when tapping outside sidebar (overlay is pointer-events:none so use document)
+    document.addEventListener('click', function (e) {
+      if (!sidebar.classList.contains('sidebar-open')) return;
+      if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
+        closeSidebar();
+      }
+    }, true);
 
     // Close on nav link click (page navigation)
     sidebar.querySelectorAll('.nav-btn').forEach(function (link) {

@@ -512,6 +512,7 @@ input, select, textarea {
     inset: 0;
     background: rgba(0,0,0,.55);
     z-index: 8999;
+    pointer-events: none;
   }
   .admin-sidebar-overlay.overlay-open { display: block; }
   .admin-topbar {
