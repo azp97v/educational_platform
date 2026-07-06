@@ -11,7 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/admin-console.css') }}?v={{ @filemtime(public_path('css/admin-console.css')) ?: time() }}">
 </head>
-<body class="admin-console" data-admin-live="true">
+<body class="admin-console" data-admin-live="true" data-role="admin">
 <div class="admin-app">
     @include('admin.partials.sidebar')
 

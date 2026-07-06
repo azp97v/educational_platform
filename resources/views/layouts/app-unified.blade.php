@@ -222,7 +222,7 @@
     {{-- Page Styles --}}
     @yield('styles')
 </head>
-<body>
+<body data-role="{{ auth()->user()?->role ?? '' }}">
     {{-- Load Theme ASAP --}}
     <script>
         (function() {

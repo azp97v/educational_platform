@@ -91,6 +91,22 @@ html[data-theme="light"] .search-no-results {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const ADMIN_SEARCH_ITEMS = [
+        { label: 'لوحة التحكم', icon: 'ri-dashboard-line', url: '/admin/users' },
+        { label: 'المستخدمون', icon: 'ri-team-line', url: '/admin/users' },
+        { label: 'إضافة مستخدم', icon: 'ri-user-add-line', url: '/admin/users/create' },
+        { label: 'طلبات التسجيل', icon: 'ri-user-add-line', url: '/admin/enrollments' },
+        { label: 'الإحصاءات', icon: 'ri-bar-chart-box-line', url: '/admin/analytics' },
+        { label: 'المالية', icon: 'ri-money-dollar-circle-line', url: '/admin/finance' },
+        { label: 'الصلاحيات', icon: 'ri-shield-line', url: '/admin/rbac' },
+        { label: 'العمليات الحية', icon: 'ri-live-line', url: '/admin/liveops' },
+        { label: 'سجل النشاط', icon: 'ri-history-line', url: '/admin/activity' },
+        { label: 'الإعلانات', icon: 'ri-megaphone-line', url: '/admin/announcements' },
+        { label: 'الإعدادات', icon: 'ri-settings-3-line', url: '/admin/settings' },
+        { label: 'المراسلة', icon: 'ri-message-2-line', url: '/messaging' },
+        { label: 'الملف الشخصي', icon: 'ri-user-settings-line', url: '/profile' },
+    ];
+
     const TEACHER_SEARCH_ITEMS = [
         { label: 'لوحة التحكم', icon: 'ri-dashboard-line', url: '/teacher' },
         { label: 'المسارات', icon: 'ri-book-open-line', url: '/teacher/courses' },
@@ -140,8 +156,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const listEl = existingDropdown.querySelector('.search-dropdown-list');
-        const role = document.body.dataset.role || 'teacher';
-        const items = role === 'student' ? STUDENT_SEARCH_ITEMS : TEACHER_SEARCH_ITEMS;
+        const role = document.body.dataset.role || '';
+        const items = role === 'admin' ? ADMIN_SEARCH_ITEMS
+                    : role === 'student' ? STUDENT_SEARCH_ITEMS
+                    : TEACHER_SEARCH_ITEMS;
 
         let hideTimeout = null;
 
