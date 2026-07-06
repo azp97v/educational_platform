@@ -174,17 +174,9 @@ class StudentController extends Controller
             }
         }
 
-        // الطلاب المتنافسون من أعلى النقاط
-        $topStudents = User::where('role', 'student')
-            ->orderBy('points', 'desc')
-            ->limit(20)
-            ->get();
-
-        // أفضل 3 طلاب للمنصة
-        $top3Students = User::where('role', 'student')
-            ->orderBy('points', 'desc')
-            ->limit(3)
-            ->get();
+        // الطلاب المتنافسون من أعلى النقاط (query واحد، top3 مشتقة منه)
+        $topStudents  = $this->getTopStudents(20);
+        $top3Students = $topStudents->take(3);
 
         // بيانات الطالب الشخصية - استخدام StreakService للحصول على البيانات الصحيحة
         $streakService = new StreakService();
@@ -386,15 +378,8 @@ class StudentController extends Controller
      */
     public function competition()
     {
-        $topStudents = User::where('role', 'student')
-            ->orderBy('points', 'desc')
-            ->limit(20)
-            ->get();
-
-        $top3Students = User::where('role', 'student')
-            ->orderBy('points', 'desc')
-            ->limit(3)
-            ->get();
+        $topStudents  = $this->getTopStudents(20);
+        $top3Students = $topStudents->take(3);
 
         return view('student.competition', compact('topStudents', 'top3Students'));
     }
@@ -615,14 +600,15 @@ class StudentController extends Controller
         $totalLessons = $lessonsList->count();
         $progress = $totalLessons > 0 ? round(($completedLessonsCount / $totalLessons) * 100) : 0;
 
-        // تحويل الدروس إلى تنسيق يتوقعه الملف مع بيانات صحيحة
-        $lessons = $lessonsList->map(function($lesson) use ($user) {
-            $isCompleted = UserProgress::where('lesson_id', $lesson->id)
-                ->where('user_id', $user->id)
-                ->where('status', 'completed')
-                ->exists();
+        // جلب جميع معرّفات الدروس المكتملة دفعةً واحدة (يمنع N+1)
+        $completedIds = UserProgress::whereIn('lesson_id', $lessonsList->pluck('id'))
+            ->where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->pluck('lesson_id')
+            ->flip();
 
-            return $this->mapLessonForStudent($lesson, $isCompleted);
+        $lessons = $lessonsList->map(function($lesson) use ($completedIds) {
+            return $this->mapLessonForStudent($lesson, $completedIds->has($lesson->id));
         })->toArray();
 
         return view('student.course', compact('course', 'lessons', 'progress', 'totalLessons', 'completedLessonsCount'));
@@ -1479,5 +1465,13 @@ class StudentController extends Controller
 
         $host = strtolower($host);
         return str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be');
+    }
+
+    private function getTopStudents(int $limit): \Illuminate\Database\Eloquent\Collection
+    {
+        return User::where('role', 'student')
+            ->orderBy('points', 'desc')
+            ->limit($limit)
+            ->get();
     }
 }

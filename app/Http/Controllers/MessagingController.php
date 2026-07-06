@@ -242,6 +242,7 @@ class MessagingController extends Controller
     {
         $contacts = User::where('role', 'student')
             ->orderBy('name')
+            ->limit(200)
             ->get();
 
         $studentIds = $contacts->pluck('id');
@@ -404,6 +405,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $classmates = User::where('role', 'student')
             ->where('id', '!=', $user->id)
             ->orderBy('name')
+            ->limit(200)
             ->get();
 
         if ($classmates->isNotEmpty()) {

@@ -169,13 +169,35 @@ class TeacherController extends Controller
         return view('teacher.create-course');
     }
 
+    private function courseValidationRules(): array
+    {
+        return [
+            'name'        => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'duration'    => 'nullable|integer',
+        ];
+    }
+
+    private function lessonValidationRules(): array
+    {
+        return [
+            'name'             => 'required|string|max:255',
+            'description'      => 'nullable|string',
+            'video_url'        => 'nullable|url',
+            'video_file'       => 'nullable',
+            'video_file_path'  => 'nullable|string',
+            'audio_file'       => 'nullable',
+            'audio_file_path'  => 'nullable|string',
+            'content'          => 'nullable|string',
+            'duration'         => 'nullable|string|regex:/^(\d{1,3}:\d{2}(:\d{2})?)?$/',
+            'lesson_type'      => 'required|in:video-upload,audio-upload,youtube,other-content',
+            'order'            => 'required|integer|min:1',
+        ];
+    }
+
     public function storeCourse(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration' => 'nullable|integer',
-        ]);
+        $validated = $request->validate($this->courseValidationRules());
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -426,11 +448,7 @@ class TeacherController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration' => 'nullable|integer',
-        ]);
+        $validated = $request->validate($this->courseValidationRules());
 
         $course->update($validated);
         return redirect()->route('teacher.show', $course)->with('success', 'تم تحديث المسار');
@@ -453,19 +471,7 @@ class TeacherController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'video_url' => 'nullable|url',
-            'video_file' => 'nullable', // Don't validate as file - will be uploaded via AJAX
-            'video_file_path' => 'nullable|string', // Path from AJAX upload
-            'audio_file' => 'nullable', // Don't validate as file - will be uploaded via AJAX
-            'audio_file_path' => 'nullable|string', // Path from AJAX upload
-            'content' => 'nullable|string',
-            'duration' => 'nullable|string|regex:/^(\d{1,3}:\d{2}(:\d{2})?)?$/',
-            'lesson_type' => 'required|in:video-upload,audio-upload,youtube,other-content',
-            'order' => 'required|integer|min:1',
-        ]);
+        $validated = $request->validate($this->lessonValidationRules());
 
         // Enforce dynamic lesson order on create (server-side source of truth)
         $validated['order'] = ((int) $course->lessons()->max('order')) + 1;
@@ -530,19 +536,7 @@ class TeacherController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'video_url' => 'nullable|url',
-            'video_file' => 'nullable', // Don't validate as file - will be uploaded via AJAX
-            'video_file_path' => 'nullable|string', // Path from AJAX upload
-            'audio_file' => 'nullable', // Don't validate as file - will be uploaded via AJAX
-            'audio_file_path' => 'nullable|string', // Path from AJAX upload
-            'content' => 'nullable|string',
-            'duration' => 'nullable|string|regex:/^(\d{1,3}:\d{2}(:\d{2})?)?$/',
-            'lesson_type' => 'required|in:video-upload,audio-upload,youtube,other-content',
-            'order' => 'required|integer|min:1',
-        ]);
+        $validated = $request->validate($this->lessonValidationRules());
 
         // Clear content fields that don't match the selected lesson type
         $lessonType = $validated['lesson_type'];
@@ -1635,8 +1629,14 @@ class TeacherController extends Controller
         $candidates = ['/usr/local/bin/yt-dlp', '/usr/bin/yt-dlp', 'yt-dlp', 'youtube-dl'];
         $command    = null;
         foreach ($candidates as $bin) {
-            $test = shell_exec("which {$bin} 2>/dev/null || command -v {$bin} 2>/dev/null");
-            if (!empty(trim($test ?? ''))) { $command = $bin; break; }
+            if (str_starts_with($bin, '/')) {
+                // Absolute path — check directly, no shell needed
+                if (is_executable($bin)) { $command = $bin; break; }
+            } else {
+                // Relative name — use properly escaped command -v
+                $found = trim((string) shell_exec('command -v ' . escapeshellarg($bin) . ' 2>/dev/null'));
+                if ($found !== '') { $command = $bin; break; }
+            }
         }
         if (!$command) return null;
 

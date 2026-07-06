@@ -26,9 +26,14 @@ class UpdateUserActivity
             }
         }
 
+        // Throttle streak updates: at most once per 10 minutes per student
         if (Auth::check() && Auth::user()->role === 'student') {
-            $streakService = new StreakService();
-            $streakService->updateStreak(Auth::user(), 0);
+            $streakKey = 'streak-checked-' . Auth::id();
+            if (!Cache::has($streakKey)) {
+                Cache::put($streakKey, true, now()->addMinutes(10));
+                $streakService = new StreakService();
+                $streakService->updateStreak(Auth::user(), 0);
+            }
         }
 
         return $next($request);

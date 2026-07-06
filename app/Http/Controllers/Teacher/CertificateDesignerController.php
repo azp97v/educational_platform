@@ -368,7 +368,11 @@ class CertificateDesignerController extends Controller
         $path = public_path('image/' . $imageName);
         $base64 = '';
         if (file_exists($path)) {
-            $base64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($path));
+            try {
+                $base64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($path));
+            } catch (\Throwable $e) {
+                // File may have been deleted between check and read — serve without background
+            }
         }
 
         return view('teacher.certificates.preview', [
