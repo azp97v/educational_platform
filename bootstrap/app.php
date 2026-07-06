@@ -18,7 +18,6 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // تسجيل نشاط المستخدم (تحديث الـ streak)
         $middleware->append(\App\Http\Middleware\UpdateUserActivity::class);
-        $middleware->append(\App\Http\Middleware\NormalizeMojibakeEncoding::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         // prepend so it runs LAST on the response — after StartSession sets no-cache,private
         $middleware->prepend(\App\Http\Middleware\NoCacheHeaders::class);
