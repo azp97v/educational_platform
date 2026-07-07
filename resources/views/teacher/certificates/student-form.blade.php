@@ -104,6 +104,27 @@
             margin:4px 4px 0 0;
         }
         @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+
+        /* Avatar preview */
+        .avatar-preview-wrap {
+            display:none;align-items:center;gap:12px;
+            margin-top:10px;padding:10px 14px;
+            background:var(--theme-surface-2);border:1px solid var(--theme-border);
+            border-radius:12px;
+        }
+        .avatar-preview-wrap.show { display:flex; }
+        .avatar-circle {
+            width:44px;height:44px;border-radius:50%;
+            overflow:hidden;flex-shrink:0;
+            background:var(--theme-gold);
+            display:flex;align-items:center;justify-content:center;
+            font-size:20px;font-weight:800;color:#000;
+        }
+        .avatar-circle img { width:100%;height:100%;object-fit:cover;display:none; }
+        .avatar-circle .initial { display:flex; }
+        .avatar-info { font-size:13px; }
+        .avatar-info .av-name { font-weight:700;color:var(--text-primary); }
+        .avatar-info .av-email { color:var(--text-secondary);font-size:12px; }
     </style>
 </head>
 <body>
@@ -130,6 +151,19 @@
                 </div>
                 <div class="autocomplete-dropdown" id="nameDropdown"></div>
                 <div id="userSmartBadge"></div>
+
+                {{-- Avatar preview shown after selecting a system user --}}
+                <div class="avatar-preview-wrap" id="avatarPreviewWrap">
+                    <div class="avatar-circle" id="avatarCircle">
+                        <img id="avatarImg" src="" alt="">
+                        <span class="initial" id="avatarInitial"></span>
+                    </div>
+                    <div class="avatar-info">
+                        <div class="av-name" id="avatarName"></div>
+                        <div class="av-email" id="avatarEmail"></div>
+                    </div>
+                </div>
+
                 <div class="hint">اضغط على الحقل لعرض كل الطلاب المسجلين في النظام، أو اكتب للبحث</div>
             </div>
 
@@ -141,15 +175,18 @@
                 </div>
             </div>
 
+            @isset($student)
+            {{-- حقل المسار يظهر في وضع التعديل فقط --}}
             <div class="field">
                 <label>المسار/الدورة</label>
                 <div class="autocomplete-wrap">
                     <i class="ri-book-2-line search-icon"></i>
-                    <input type="text" name="course" id="courseInput" value="{{ old('course', $student->course ?? '') }}" required placeholder="ابحث أو اكتب اسم المسار..." autocomplete="off">
+                    <input type="text" name="course" id="courseInput" value="{{ old('course', $student->course ?? '') }}" placeholder="ابحث أو اكتب اسم المسار..." autocomplete="off">
                 </div>
                 <div class="autocomplete-dropdown" id="courseDropdown"></div>
                 <div class="hint">سيتم اقتراح مساراتك المنشورة تلقائياً</div>
             </div>
+            @endisset
 
             <div class="field">
                 <label>اسم المستخدم (اختياري)</label>
@@ -204,20 +241,25 @@
     <script>
     const systemUsers = @json($systemUsers ?? []);
     const systemCourses = @json($courses ?? []);
-    const addedEntries = @json($addedEntries ?? []);
+    const addedEntries = @json($addedEntries ?? []); // now email-only strings
 
     const nameInput = document.getElementById('nameInput');
     const emailInput = document.getElementById('emailInput');
-    const courseInput = document.getElementById('courseInput');
     const nameDropdown = document.getElementById('nameDropdown');
-    const courseDropdown = document.getElementById('courseDropdown');
     const userSmartBadge = document.getElementById('userSmartBadge');
+    const avatarPreviewWrap = document.getElementById('avatarPreviewWrap');
+    const avatarImg = document.getElementById('avatarImg');
+    const avatarInitial = document.getElementById('avatarInitial');
+    const avatarName = document.getElementById('avatarName');
+    const avatarEmail = document.getElementById('avatarEmail');
     let selectedUserId = null;
 
+    // Course elements may not exist (create mode hides them)
+    const courseInput = document.getElementById('courseInput');
+    const courseDropdown = document.getElementById('courseDropdown');
+
     function isAlreadyAdded(email) {
-        const course = courseInput.value.trim();
-        if (!course) return false;
-        return addedEntries.includes(email.toLowerCase() + '|' + course);
+        return addedEntries.includes(email.toLowerCase());
     }
 
     function showDropdown(dropdown, items, inputVal, renderFn) {
@@ -229,7 +271,26 @@
 
     function hideDropdowns() {
         nameDropdown.classList.remove('show');
-        courseDropdown.classList.remove('show');
+        if (courseDropdown) courseDropdown.classList.remove('show');
+    }
+
+    function setAvatarPreview(user) {
+        if (!user) {
+            avatarPreviewWrap.classList.remove('show');
+            return;
+        }
+        avatarName.textContent = user.name;
+        avatarEmail.textContent = user.email;
+        if (user.avatar_url) {
+            avatarImg.src = user.avatar_url;
+            avatarImg.style.display = 'block';
+            avatarInitial.style.display = 'none';
+        } else {
+            avatarImg.style.display = 'none';
+            avatarInitial.style.display = 'flex';
+            avatarInitial.textContent = (user.name || '?').trim()[0];
+        }
+        avatarPreviewWrap.classList.add('show');
     }
 
     function renderUserDropdown(val) {
@@ -238,7 +299,7 @@
             template: u => {
                 const added = isAlreadyAdded(u.email);
                 return `<div class="item${added ? ' already-added' : ''}" data-id="${u.id}" data-name="${u.name}" data-email="${u.email}">
-                    <div><i class="ri-user-line item-icon"></i><span class="item-name">${u.name}</span>${added ? '<span class="item-added-badge"><i class="ri-checkbox-circle-fill"></i> مُضاف لهذه الدورة</span>' : ''}</div>
+                    <div><i class="ri-user-line item-icon"></i><span class="item-name">${u.name}</span>${added ? '<span class="item-added-badge"><i class="ri-checkbox-circle-fill"></i> مُضاف مسبقاً</span>' : ''}</div>
                     <div class="item-sub">${u.email}</div>
                 </div>`;
             }
@@ -252,6 +313,7 @@
 
     nameInput.addEventListener('input', function () {
         selectedUserId = null;
+        avatarPreviewWrap.classList.remove('show');
         renderUserDropdown(this.value.trim());
     });
 
@@ -266,6 +328,7 @@
             if (u.username && u.username.trim() && !document.getElementById('usernameInput').value.trim()) {
                 document.getElementById('usernameInput').value = u.username;
             }
+            setAvatarPreview(u);
         }
         hideDropdowns();
         updateUserBadge();
@@ -287,30 +350,28 @@
     emailInput.addEventListener('input', updateUserBadge);
     nameInput.addEventListener('blur', updateUserBadge);
 
-    // ── Course Autocomplete / Dropdown ──
-    function renderCourseDropdown(val) {
-        showDropdown(courseDropdown, systemCourses, val, {
-            filter: c => c.name.toLowerCase().includes(val.toLowerCase()),
-            template: c => `<div class="item" data-name="${c.name}">
-                <div><i class="ri-book-2-line item-icon"></i><span class="item-name">${c.name}</span></div>
-                <div class="item-sub">مسار منشور</div>
-            </div>`
+    // ── Course Autocomplete / Dropdown (edit mode only) ──
+    if (courseInput && courseDropdown) {
+        function renderCourseDropdown(val) {
+            showDropdown(courseDropdown, systemCourses, val, {
+                filter: c => c.name.toLowerCase().includes(val.toLowerCase()),
+                template: c => `<div class="item" data-name="${c.name}">
+                    <div><i class="ri-book-2-line item-icon"></i><span class="item-name">${c.name}</span></div>
+                    <div class="item-sub">مسار منشور</div>
+                </div>`
+            });
+        }
+
+        courseInput.addEventListener('focus', function () { renderCourseDropdown(this.value.trim()); });
+        courseInput.addEventListener('input', function () { renderCourseDropdown(this.value.trim()); });
+
+        courseDropdown.addEventListener('click', function (e) {
+            const item = e.target.closest('.item');
+            if (!item) return;
+            courseInput.value = item.dataset.name;
+            hideDropdowns();
         });
     }
-
-    courseInput.addEventListener('focus', function () { renderCourseDropdown(this.value.trim()); });
-    courseInput.addEventListener('input', function () {
-        renderCourseDropdown(this.value.trim());
-        // Refresh "already added" badges for the name dropdown since they depend on the selected course.
-        if (nameDropdown.classList.contains('show')) renderUserDropdown(nameInput.value.trim());
-    });
-
-    courseDropdown.addEventListener('click', function (e) {
-        const item = e.target.closest('.item');
-        if (!item) return;
-        courseInput.value = item.dataset.name;
-        hideDropdowns();
-    });
 
     // ── Hide on click outside ──
     document.addEventListener('click', function (e) {
@@ -319,13 +380,8 @@
         }
     });
 
-    // ── Keyboard navigation ──
-    nameInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') hideDropdowns();
-    });
-    courseInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') hideDropdowns();
-    });
+    nameInput.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideDropdowns(); });
+    if (courseInput) courseInput.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideDropdowns(); });
 
     // ── Init badge on edit ──
     if (nameInput.value.trim()) {
