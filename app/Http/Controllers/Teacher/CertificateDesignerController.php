@@ -105,8 +105,8 @@ class CertificateDesignerController extends Controller
             ->get(['id', 'name']);
 
         $addedEntries = CertificateStudent::where('user_id', auth()->id())
-            ->get(['email', 'course'])
-            ->map(fn ($row) => strtolower($row->email) . '|' . $row->course)
+            ->pluck('email')
+            ->map(fn ($email) => strtolower($email))
             ->values();
 
         return view('teacher.certificates.student-form', compact('systemUsers', 'courses', 'addedEntries'));
@@ -131,8 +131,8 @@ class CertificateDesignerController extends Controller
 
         $addedEntries = CertificateStudent::where('user_id', auth()->id())
             ->where('id', '!=', $student->id)
-            ->get(['email', 'course'])
-            ->map(fn ($row) => strtolower($row->email) . '|' . $row->course)
+            ->pluck('email')
+            ->map(fn ($email) => strtolower($email))
             ->values();
 
         return view('teacher.certificates.student-form', compact('student', 'systemUsers', 'courses', 'addedEntries'));
@@ -212,16 +212,15 @@ class CertificateDesignerController extends Controller
                     }
                 }
             }],
-            'email' => ['required', 'email', 'max:255', function ($attribute, $value, $fail) use ($request) {
+            'email' => ['required', 'email', 'max:255', function ($attribute, $value, $fail) {
                 $duplicate = CertificateStudent::where('user_id', auth()->id())
                     ->whereRaw('LOWER(email) = ?', [strtolower($value)])
-                    ->where('course', $request->input('course'))
                     ->exists();
                 if ($duplicate) {
-                    $fail('هذا المستفيد مُضاف بالفعل لهذه الدورة.');
+                    $fail('هذا المستفيد مُضاف بالفعل.');
                 }
             }],
-            'course' => 'required|string|max:255',
+            'course' => 'nullable|string|max:255',
             'course_date' => 'required|date',
             'degree' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -272,17 +271,16 @@ class CertificateDesignerController extends Controller
                     }
                 }
             }],
-            'email' => ['required', 'email', 'max:255', function ($attribute, $value, $fail) use ($request, $student) {
+            'email' => ['required', 'email', 'max:255', function ($attribute, $value, $fail) use ($student) {
                 $duplicate = CertificateStudent::where('user_id', auth()->id())
                     ->where('id', '!=', $student->id)
                     ->whereRaw('LOWER(email) = ?', [strtolower($value)])
-                    ->where('course', $request->input('course'))
                     ->exists();
                 if ($duplicate) {
-                    $fail('هذا المستفيد مُضاف بالفعل لهذه الدورة.');
+                    $fail('هذا المستفيد مُضاف بالفعل.');
                 }
             }],
-            'course' => 'required|string',
+            'course' => 'nullable|string',
             'course_date' => 'required|date',
             'degree' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -346,7 +344,24 @@ class CertificateDesignerController extends Controller
     {
         abort_if($student->user_id !== auth()->id(), 403);
         $uploadedTemplates = auth()->user()->customTemplates()->latest()->get();
-        return view('teacher.certificates.gallery', compact('student', 'uploadedTemplates'));
+
+        // Check if the linked system user has completed the course (null = cannot determine)
+        $courseCompleted = null;
+        if ($student->recipient_user_id && $student->course) {
+            $systemUser = User::find($student->recipient_user_id);
+            if ($systemUser) {
+                $course = Course::where('name', $student->course)->withCount('lessons')->first();
+                if ($course && $course->lessons_count > 0) {
+                    $completedLessons = $systemUser->progress()
+                        ->whereHas('lesson', fn($q) => $q->where('course_id', $course->id))
+                        ->where('status', 'completed')
+                        ->count();
+                    $courseCompleted = $completedLessons >= $course->lessons_count;
+                }
+            }
+        }
+
+        return view('teacher.certificates.gallery', compact('student', 'uploadedTemplates', 'courseCompleted'));
     }
 
     // ─── Preset Preview ─────────────────────────────────────────
