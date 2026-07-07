@@ -228,7 +228,7 @@
                 <div class="form-group">
                     <label for="confirmation">تأكيد حذف الحساب</label>
                     <input type="text" id="confirmation" name="confirmation" required placeholder="اكتب: تأكيد حذف حسابي">
-                    <div style="font-size: 12px; color: var(--theme-muted, #6C6C70); margin-top: 5px;">يجب أن تكتب 'تأكيد حذف حسابي' بالضبط</div>
+                    <div style="font-size: 12px; color: var(--theme-muted, #6C6C70); margin-top: 5px;">اكتب 'تأكيد حذف حسابي' أو 'تاكيد حذف حسابي' بالضبط</div>
                     @error('confirmation')
                         <div class="error-message">{{ $message }}</div>
                     @enderror

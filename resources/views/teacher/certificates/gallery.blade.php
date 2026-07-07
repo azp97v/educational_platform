@@ -18,7 +18,25 @@
             padding: 30px;
         }
         .container { max-width: 1200px; margin: 0 auto; }
-        .page-title { text-align: center; margin-bottom: 10px; }
+
+        /* ── Top bar with back link ── */
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 20px; border-radius: 12px;
+            background: var(--theme-surface); border: 1px solid var(--theme-border);
+            color: var(--text-secondary); font-size: 13px; font-weight: 600;
+            text-decoration: none; transition: 0.25s;
+        }
+        .back-btn:hover { background: var(--theme-gold-soft); color: var(--text-primary); border-color: var(--theme-gold-soft); }
+        .back-btn i { font-size: 16px; }
+
+        .page-title { text-align: center; margin-bottom: 24px; }
         .page-title h1 { font-size: 28px; font-weight: 800; color: var(--theme-gold); }
         .page-title p { color: var(--text-secondary); font-size: 14px; margin-top: 6px; }
         .page-title .badge {
@@ -26,6 +44,26 @@
             background: var(--theme-gold-soft); color: var(--theme-gold);
             font-size: 16px; font-weight: 700; margin-top: 4px;
         }
+
+        /* ── Completion warning banner ── */
+        .warning-banner {
+            display: flex; align-items: flex-start; gap: 14px;
+            background: rgba(255, 159, 10, 0.1);
+            border: 1px solid rgba(255, 159, 10, 0.3);
+            border-radius: 16px; padding: 16px 20px; margin-bottom: 24px;
+        }
+        .warning-banner i { font-size: 22px; color: #ff9f0a; flex-shrink: 0; margin-top: 2px; }
+        .warning-banner .wb-text { flex: 1; }
+        .warning-banner .wb-title { font-weight: 700; font-size: 14px; color: #ff9f0a; margin-bottom: 4px; }
+        .warning-banner .wb-body { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+        .warning-banner .wb-close {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-secondary); font-size: 18px; padding: 0;
+            flex-shrink: 0; line-height: 1;
+        }
+        .warning-banner .wb-close:hover { color: var(--text-primary); }
+
+        /* ── Upload card ── */
         .upload-card {
             background: var(--theme-surface); backdrop-filter: blur(24px);
             border: 1px solid var(--theme-border); border-radius: 22px;
@@ -35,6 +73,8 @@
         .upload-card h3 { color: var(--theme-gold); font-size: 18px; margin-bottom: 4px; }
         .upload-card p { color: var(--text-secondary); font-size: 13px; }
         .upload-card ul { color: var(--text-secondary); font-size: 12px; margin-top: 8px; list-style: disc; padding-right: 18px; }
+        .upload-card-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
         .btn {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 12px 24px; border-radius: 14px; font-weight: 700;
@@ -77,20 +117,38 @@
 
         .flash { padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600; }
         .flash-success { background: var(--theme-success-soft, rgba(52,199,89,0.12)); color: var(--theme-success); border: 1px solid var(--theme-success-border, rgba(52,199,89,0.2)); }
-
-        .back-link {
-            text-align: center; margin-top: 32px;
-        }
-        .back-link a {
-            color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 600;
-        }
-        .back-link a:hover { color: var(--theme-gold); }
     </style>
 </head>
 <body>
     <div class="container">
+
+        {{-- زر العودة أعلى يمين الصفحة --}}
+        <div class="top-bar">
+            <a href="{{ route('teacher.certificates.students') }}" class="back-btn">
+                <i class="ri-arrow-right-line"></i> العودة لقائمة المستفيدين
+            </a>
+        </div>
+
         @if(session('success'))
             <div class="flash flash-success">{{ session('success') }}</div>
+        @endif
+
+        {{-- تحذير إتمام المسار (يظهر فقط إذا تحقق عدم الإتمام) --}}
+        @if($courseCompleted === false)
+        <div class="warning-banner" id="completionWarning">
+            <i class="ri-alert-line"></i>
+            <div class="wb-text">
+                <div class="wb-title">تنبيه: لم يُتمّ الطالب المسار بعد</div>
+                <div class="wb-body">
+                    <strong>{{ $student->name }}</strong> لم يُكمل جميع دروس مسار
+                    <strong>{{ $student->course }}</strong> حتى الآن.
+                    يمكنك إصدار الشهادة على أي حال، لكن يُنصح بالانتظار حتى يُتمّ الطالب المسار.
+                </div>
+            </div>
+            <button class="wb-close" onclick="document.getElementById('completionWarning').style.display='none'" title="إغلاق">
+                <i class="ri-close-line"></i>
+            </button>
+        </div>
         @endif
 
         <div class="page-title">
@@ -98,19 +156,24 @@
             <p>إصدار شهادة للمستفيد: <span class="badge">{{ $student->name }}</span></p>
         </div>
 
-        <!-- Upload Card -->
+        <!-- Upload Card — يضم زر الرفع وزر الإنشاء جنباً إلى جنب -->
         <div class="upload-card">
             <div>
-                <h3><i class="ri-upload-cloud-line"></i> رفع قالبك الخاص</h3>
-                <p>يمكنك رفع صورة قالبك الخاص بصيغة JPG أو PNG أو SVG أو WebP.</p>
+                <h3><i class="ri-cloud-line"></i> قوالبك الخاصة</h3>
+                <p>ارفع قالباً جاهزاً أو أنشئ قالبك من الصفر.</p>
                 <ul>
                     <li>يفضل أن يكون القالب واضحاً مع خلفية مناسبة للشهادة.</li>
                     <li>النصوص الأساسية قابلة للتعديل لاحقاً من محرر القالب.</li>
                 </ul>
             </div>
-            <a href="{{ route('teacher.certificates.custom.upload.view', $student) }}" class="btn btn-primary">
-                <i class="ri-upload-line"></i> رفع قالب
-            </a>
+            <div class="upload-card-actions">
+                <a href="{{ route('teacher.certificates.custom.upload.view', $student) }}" class="btn btn-primary">
+                    <i class="ri-upload-line"></i> رفع قالب
+                </a>
+                <a href="{{ route('teacher.certificates.custom.create', $student) }}" class="btn btn-gold">
+                    <i class="ri-pencil-ruler-2-line"></i> إنشاء قالب مخصص
+                </a>
+            </div>
         </div>
 
         <!-- Uploaded Templates -->
@@ -192,22 +255,6 @@
             @endforeach
         </div>
 
-        <!-- Custom Create Card -->
-        <div class="upload-card" style="justify-content:center;text-align:center;">
-            <div>
-                <h3><i class="ri-pencil-ruler-2-line"></i> تصميم قالبك الخاص</h3>
-                <p>ابدأ من الصفر أو من قالب جاهز وعدّله حتى يناسب هويتك.</p>
-            </div>
-            <div style="margin-top:12px;">
-                <a href="{{ route('teacher.certificates.custom.create', $student) }}" class="btn btn-gold btn-block">
-                    <i class="ri-add-circle-line"></i> إنشاء قالب مخصص
-                </a>
-            </div>
-        </div>
-
-        <div class="back-link">
-            <a href="{{ route('teacher.certificates.students') }}"><i class="ri-arrow-right-line"></i> العودة لقائمة المستفيدين</a>
-        </div>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
