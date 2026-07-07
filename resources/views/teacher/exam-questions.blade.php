@@ -1286,7 +1286,7 @@
     <!-- Beautiful Alert Modal -->
     <div id="alertOverlay" class="modal-overlay">
       <div class="alert-modal warning">
-        <button class="close-alert-btn" id="closeAlertModalBtn">أ—</button>
+        <button class="close-alert-btn" id="closeAlertModalBtn">&times;</button>
         <div class="alert-header">
           <div class="alert-icon warning">
             <i class="ri-alert-line"></i>
@@ -1311,7 +1311,7 @@
     <!-- Beautiful Delete Confirm Modal -->
     <div id="confirmOverlay" class="modal-overlay">
       <div class="confirm-modal">
-        <button class="close-confirm-btn" id="closeConfirmModalBtn">أ—</button>
+        <button class="close-confirm-btn" id="closeConfirmModalBtn">&times;</button>
         <div class="confirm-header">
           <div class="confirm-icon">
             <i class="ri-delete-bin-6-line"></i>
@@ -1553,7 +1553,18 @@
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.name = `answers[${index}][is_correct]`;
-      checkbox.checked = isCorrect;
+      if (isCorrect) {
+        checkbox.setAttribute('checked', 'checked');
+        checkbox.defaultChecked = true;
+        checkbox.checked = true;
+      }
+      checkbox.addEventListener('change', function() {
+        if (this.checked) {
+          document.querySelectorAll('.answer-field input[type="checkbox"]').forEach(function(cb) {
+            if (cb !== checkbox) cb.checked = false;
+          });
+        }
+      });
 
       const label = document.createElement('label');
       label.style.cssText = 'display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; white-space: nowrap; margin-bottom: 0;';
