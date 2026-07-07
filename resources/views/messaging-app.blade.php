@@ -718,7 +718,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 
 <button @click="replyToMessage(message)" :title="t.reply"><i class="ri-corner-up-right-line"></i></button>
 
-<button v-if="Number(message.senderId) === Number(currentUserId) && !['audio','video','sticker_static','sticker_animated','gif'].includes(message.messageType)" @click="editMessage(message)" :title="t.edit"><i class="ri-edit-2-line"></i></button>
+<button v-if="Number(message.senderId) === Number(currentUserId) && !['audio','video','sticker_static','sticker_animated','gif','call'].includes(message.messageType)" @click="editMessage(message)" :title="t.edit"><i class="ri-edit-2-line"></i></button>
 
 <button v-if="Number(message.senderId) === Number(currentUserId)" class="d" @click="deleteMessage(message)" :title="t.delete"><i class="ri-delete-bin-6-line"></i></button>
 
@@ -2468,7 +2468,7 @@ class="ie2-filter-card" :class="{active: imageEditorFilter===f.css}"
 <button @click="contextSave">
 <i :class="isMessageSaved(messageContextMessage) ? 'ri-bookmark-fill' : 'ri-bookmark-line'"></i> @{{ isMessageSaved(messageContextMessage) ? 'إزالة من المحفوظات' : 'حفظ الرسالة' }}
 </button>
-<button v-if="messageContextMessage && Number(messageContextMessage.senderId) === Number(currentUserId) && !['audio','video','sticker_static','sticker_animated','gif'].includes(messageContextMessage.messageType)" @click="editMessage(messageContextMessage); closeMessageContext()">
+<button v-if="messageContextMessage && Number(messageContextMessage.senderId) === Number(currentUserId) && !['audio','video','sticker_static','sticker_animated','gif','call'].includes(messageContextMessage.messageType)" @click="editMessage(messageContextMessage); closeMessageContext()">
 <i class="ri-edit-2-line"></i> تعديل
 </button>
 <template v-if="messageContextMessage && (messageContextMessage.messageType === 'sticker_static' || messageContextMessage.messageType === 'sticker_animated')">
@@ -8002,6 +8002,19 @@ if (!this.restoreSavedScrollPosition()) {
 
 this.scrollToUnreadOrBottom();
 
+} else {
+
+// Images may still be loading and change scrollHeight; re-apply once after media settles.
+// Cancelled by onFeedScroll if the user scrolls manually first.
+if (this._scrollRestoreTimer) clearTimeout(this._scrollRestoreTimer);
+this._pendingScrollRestore = true;
+this._scrollRestoreTimer = setTimeout(() => {
+if (this._pendingScrollRestore) {
+this._pendingScrollRestore = false;
+this.restoreSavedScrollPosition();
+}
+}, 500);
+
 }
 
 } else if (wasNearBottom) {
@@ -8546,6 +8559,8 @@ if (this.isNearBottom() && this.unreadRemainingCount > 0) {
     this.initialUnreadSnapshot = 0;
     if (this.selectedContact) this.selectedContact.unreadCount = 0;
 }
+
+this._pendingScrollRestore = false;
 
 this.saveCurrentScrollPosition();
 
@@ -13538,13 +13553,8 @@ return (m ? m + ' د ' : '') + s + ' ث';
 
 callFromMessage(message) {
 if (!message) return;
-const contact = this.contacts.find(c => Number(c.id) === Number(message.senderId));
-if (contact) {
-this.selectContact(contact);
-this.$nextTick(() => this.scrollToMessage(message.id));
-} else {
-this.showToast('لم يتم العثور على المستخدم', 'error');
-}
+const callType = message.callType === 'video' ? 'video' : 'voice';
+this.startCall(callType);
 },
 
 injectCallMessages() {
