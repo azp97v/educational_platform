@@ -1225,7 +1225,7 @@
     @if($questions->count() > 0)
       <div class="questions-list">
         @foreach($questions as $question)
-          <div class="question-card" data-question="{{ json_encode(['id' => $question->id, 'text' => $question->question_text, 'type' => $question->question_type, 'order' => $question->order, 'answers' => $question->answers->map(fn($a) => ['id' => $a->id, 'text' => $a->answer_text, 'is_correct' => (bool)$a->is_correct])->toArray()]) }}">
+          <div class="question-card" data-question="{{ json_encode(['id' => $question->id, 'text' => $question->question_text, 'type' => $question->question_type, 'order' => $question->order, 'answers' => $question->answers->map(fn($a) => ['id' => $a->id, 'text' => $a->answer_text, 'is_correct' => (bool)$a->is_correct])->toArray()], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) }}">
             <div class="question-header">
               <div>
                 <div class="question-title"><strong>#{{ $question->order }}.</strong> {{ $question->question_text }}</div>
@@ -1407,25 +1407,13 @@
 
           // Populate answers if not short_answer
           if (questionData.type !== 'short_answer') {
-            questionTypeSelect.dispatchEvent(new Event('change'));
-            setTimeout(() => {
-              questionData.answers.forEach((answer, idx) => {
-                if (idx < document.querySelectorAll('.answer-field').length) {
-                  const fields = document.querySelectorAll('.answer-field');
-                  fields[idx].querySelector('input[type="text"]').value = answer.text;
-                  fields[idx].querySelector('input[type="checkbox"]').checked = answer.is_correct;
-
-                  // Add ID to the field for update
-                  const idInput = document.createElement('input');
-                  idInput.type = 'hidden';
-                  idInput.name = `answers[${idx}][id]`;
-                  idInput.value = answer.id;
-                  fields[idx].appendChild(idInput);
-                } else {
-                  addAnswerField(answer.text, answer.is_correct, answer.id);
-                }
-              });
-            }, 50);
+            document.getElementById('answersSection').style.display = 'block';
+            questionData.answers.forEach(function(answer) {
+              addAnswerField(answer.text, answer.is_correct, answer.id);
+            });
+            updateAddAnswerBtnState();
+          } else {
+            document.getElementById('answersSection').style.display = 'none';
           }
         }
       } else {
