@@ -1838,9 +1838,11 @@ let currentRating = 0;
 let isDarkMode = true;
 
 const LESSON_ID = <?php echo e($lesson->id); ?>;
-const PROGRESS_URL = '<?php echo e(route("student.progress.update", $lesson->id)); ?>';
-const DOWNLOAD_URL = '<?php echo e(route("student.lesson.resources.download", $lesson->id)); ?>';
-const INQUIRY_URL = '<?php echo e(route("student.inquiry.store")); ?>';
+const PROGRESS_URL  = '<?php echo e(route("student.progress.update", $lesson->id)); ?>';
+const DOWNLOAD_URL  = '<?php echo e(route("student.lesson.resources.download", $lesson->id)); ?>';
+const INQUIRY_URL   = '<?php echo e(route("student.inquiry.store")); ?>';
+const NOTES_URL     = '<?php echo e(route("student.lesson.notes.get", $lesson->id)); ?>';
+const RATING_URL    = '<?php echo e(route("student.lesson.rating.get", $lesson->id)); ?>';
 const REQUIRES_PLAYBACK_PROOF = <?php echo json_encode($requiresPlaybackProof, 15, 512) ?>;
 const playback = {
   kind: null,
@@ -2400,7 +2402,7 @@ const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 async function loadUserNotes() {
   try {
-    const res = await fetch(`/lesson/${LESSON_ID}/notes`, { headers: { 'Accept': 'application/json' } });
+    const res = await fetch(NOTES_URL, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
     userNotes = (data.notes || []).map(n => ({
       id: n.id, text: n.text,
@@ -2439,7 +2441,7 @@ async function deleteNote(i) {
   const note = userNotes[i];
   if (note?.id) {
     try {
-      await fetch(`/lesson/${LESSON_ID}/notes/${note.id}`, {
+      await fetch(NOTES_URL + '/' + note.id, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
       });
@@ -2474,7 +2476,7 @@ async function saveEditNote() {
   }
   if (note?.id) {
     try {
-      const res = await fetch(`/lesson/${LESSON_ID}/notes/${note.id}`, {
+      const res = await fetch(NOTES_URL + '/' + note.id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
         body: JSON.stringify({ text }),
@@ -2533,7 +2535,7 @@ function applyRatingUI(rating) {
 async function setRating(rating) {
   applyRatingUI(rating);
   try {
-    const res = await fetch(`/lesson/${LESSON_ID}/rating`, {
+    const res = await fetch(RATING_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
       body: JSON.stringify({ rating }),
@@ -2550,7 +2552,7 @@ async function setRating(rating) {
 
 async function loadSavedRating() {
   try {
-    const res = await fetch(`/lesson/${LESSON_ID}/rating`, { headers: { 'Accept': 'application/json' } });
+    const res = await fetch(RATING_URL, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
     if (data.my_rating) applyRatingUI(data.my_rating);
     const avgEl = document.getElementById('lessonAverageRating');
@@ -2595,7 +2597,7 @@ async function submitNote() {
     return;
   }
   try {
-    const res = await fetch(`/lesson/${LESSON_ID}/notes`, {
+    const res = await fetch(NOTES_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
       body: JSON.stringify({ text }),
