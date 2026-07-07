@@ -434,6 +434,29 @@ class TeacherController extends Controller
         return redirect(route('teacher.questions.manage'))->with('success', 'تم الرد على السؤال بنجاح');
     }
 
+    public function answerInquiry(Request $request, \App\Models\StudentInquiry $inquiry)
+    {
+        $userCourses = Auth::user()->courses()->pluck('id');
+        if (!$userCourses->contains($inquiry->course_id)) {
+            if ($request->wantsJson()) return response()->json(['success' => false], 403);
+            abort(403);
+        }
+
+        $validated = $request->validate(['answer_text' => 'required|string|min:2']);
+
+        $inquiry->update([
+            'answer_text' => $validated['answer_text'],
+            'status'      => 'answered',
+            'teacher_id'  => Auth::id(),
+            'answered_at' => now(),
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+        return redirect(route('teacher.questions.manage'))->with('success', 'تم الرد على الاستفسار بنجاح');
+    }
+
     public function editCourse(Course $course)
     {
         if ($course->instructor_id !== Auth::id()) {

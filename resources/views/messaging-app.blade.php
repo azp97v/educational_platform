@@ -1697,7 +1697,7 @@ key="mic-action"
 <button class="sep-close" @click="closeStatusFullEmoji"><i class="ri-close-line"></i></button>
 </div>
 <div class="sep-grid">
-<button v-for="e in emojiList" :key="e" @mousedown.prevent @click="sendQuickStatusReaction(e); closeStatusFullEmoji()">{{ e }}</button>
+<button v-for="e in emojiList" :key="e" @mousedown.prevent @click="sendQuickStatusReaction(e); closeStatusFullEmoji()">@{{ e }}</button>
 </div>
 </div>
 <!-- Dim overlay when reply input is focused or full emoji picker is open -->

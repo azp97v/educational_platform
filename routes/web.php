@@ -539,6 +539,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     // Legacy inquiry routes — redirect to the unified questions page
     Route::get('/inquiries', fn() => redirect()->route('teacher.questions.manage'))->name('teacher.inquiries');
     Route::get('/inquiries/analytics', fn() => redirect()->route('teacher.questions.manage'))->name('teacher.inquiries.analytics');
+    Route::post('/inquiries/{inquiry}/answer', [TeacherController::class, 'answerInquiry'])->name('teacher.inquiries.answer');
 
     // Messaging Routes
     Route::get('/messaging', [MessagingController::class, 'index'])->name('teacher.messaging');
