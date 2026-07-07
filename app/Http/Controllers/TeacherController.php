@@ -779,6 +779,15 @@ class TeacherController extends Controller
             ])->withInput();
         }
 
+        if (in_array($questionType, ['multiple_choice', 'true_false']) && !empty($validated['answers'])) {
+            $hasCorrect = collect($validated['answers'])->contains(fn($a) => !empty($a['is_correct']));
+            if (!$hasCorrect) {
+                return back()->withErrors([
+                    'answers' => 'يجب تحديد إجابة صحيحة واحدة على الأقل'
+                ])->withInput();
+            }
+        }
+
         // Check for duplicate questions in this exam
         $existingQuestions = $exam->questions()->get();
         foreach ($existingQuestions as $existing) {
@@ -852,6 +861,15 @@ class TeacherController extends Controller
                 'answers' => "لا يمكن إضافة أكثر من {$maxAnswers[$questionType]} إجابات لأسئلة "
                     . ($questionType === 'true_false' ? 'الصح والخطأ' : 'الاختيار من متعدد')
             ])->withInput();
+        }
+
+        if (in_array($questionType, ['multiple_choice', 'true_false']) && !empty($validated['answers'])) {
+            $hasCorrect = collect($validated['answers'])->contains(fn($a) => !empty($a['is_correct']));
+            if (!$hasCorrect) {
+                return back()->withErrors([
+                    'answers' => 'يجب تحديد إجابة صحيحة واحدة على الأقل'
+                ])->withInput();
+            }
         }
 
         // Check for duplicate questions in this exam (excluding current question)

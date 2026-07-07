@@ -147,7 +147,7 @@ class ProfileController extends Controller
     {
         $validated = $request->validate([
             'password' => 'required',
-            'confirmation' => 'required|in:تأكيد حذف حسابي'
+            'confirmation' => 'required|in:تأكيد حذف حسابي,تاكيد حذف حسابي'
         ]);
 
         // التحقق من كلمة المرور

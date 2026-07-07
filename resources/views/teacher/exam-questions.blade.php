@@ -1657,6 +1657,18 @@
       const questionType = document.getElementById('question_type').value;
       const questionId = document.getElementById('question_id').value; // For editing
 
+      // Validate at least one correct answer for non-short_answer types
+      if (questionType === 'multiple_choice' || questionType === 'true_false') {
+        const hasCorrect = [...document.querySelectorAll('.answer-field input[type="checkbox"]')].some(cb => cb.checked);
+        if (!hasCorrect) {
+          document.getElementById('alertTitle').textContent = '⚠️ لا توجد إجابة صحيحة!';
+          document.getElementById('alertMessage').innerHTML = 'يجب تحديد <strong>إجابة صحيحة واحدة على الأقل</strong> قبل حفظ السؤال.';
+          document.getElementById('alertSuggestion').style.display = 'none';
+          document.getElementById('alertOverlay').classList.add('show');
+          return false;
+        }
+      }
+
       // Get all current answers
       const answerFields = document.querySelectorAll('.answer-field');
       const currentAnswers = [];
@@ -1768,7 +1780,7 @@
     document.getElementById('closeQuestionModalBtn').addEventListener('click', closeQuestionModal);
     document.getElementById('closeQuestionModalBtn2').addEventListener('click', closeQuestionModal);
     document.getElementById('openQuestionModalBtn').addEventListener('click', function() { openQuestionModal(); });
-    document.getElementById('openQuestionModalBtn2').addEventListener('click', function() { openQuestionModal(); });
+    document.getElementById('openQuestionModalBtn2')?.addEventListener('click', function() { openQuestionModal(); });
     document.getElementById('closeAlertModalBtn').addEventListener('click', closeAlertModal);
     document.getElementById('closeAlertModalBtn2').addEventListener('click', closeAlertModal);
     document.getElementById('closeConfirmModalBtn').addEventListener('click', closeConfirmModal);
