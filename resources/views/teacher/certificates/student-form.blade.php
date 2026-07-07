@@ -213,7 +213,7 @@
                 </div>
             </div>
 
-            <div class="field">
+            <div class="field" id="imageUploadField">
                 <label>الصورة (اختياري)</label>
                 <input type="file" name="image" accept="image/*">
                 @if(isset($student) && $student->image)
@@ -275,14 +275,17 @@
     }
 
     function setAvatarPreview(user) {
+        const imageUploadField = document.getElementById('imageUploadField');
         if (!user) {
             avatarPreviewWrap.classList.remove('show');
+            if (imageUploadField) imageUploadField.style.display = '';
             return;
         }
         avatarName.textContent = user.name;
         avatarEmail.textContent = user.email;
         if (user.avatar_url) {
-            avatarImg.src = user.avatar_url;
+            const src = user.avatar_url.startsWith('http') ? user.avatar_url : '/storage/' + user.avatar_url;
+            avatarImg.src = src;
             avatarImg.style.display = 'block';
             avatarInitial.style.display = 'none';
         } else {
@@ -291,6 +294,7 @@
             avatarInitial.textContent = (user.name || '?').trim()[0];
         }
         avatarPreviewWrap.classList.add('show');
+        if (imageUploadField) imageUploadField.style.display = 'none';
     }
 
     function renderUserDropdown(val) {
@@ -313,7 +317,7 @@
 
     nameInput.addEventListener('input', function () {
         selectedUserId = null;
-        avatarPreviewWrap.classList.remove('show');
+        setAvatarPreview(null);
         renderUserDropdown(this.value.trim());
     });
 
