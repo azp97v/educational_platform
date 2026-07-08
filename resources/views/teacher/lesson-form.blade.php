@@ -1148,8 +1148,8 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">مدة الدرس (دقائق:ثواني) <span style="font-size: 11px; color: var(--text-muted);">(تُستخرج تلقائياً من الملف)</span></label>
-                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="صيغة صحيحة: دقائق:ثواني (مثال 5:30)">
+                <label class="form-label" id="durationLabel">مدة الدرس (دقائق:ثواني) <span id="durationHint" style="font-size: 11px; color: var(--text-muted);">(تُستخرج تلقائياً من الملف)</span></label>
+                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="تُستخرج المدة تلقائياً من الملف المرفوع" readonly style="opacity:0.8;cursor:default;">
                 @error('duration')
                   <div style="color:var(--danger);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:4px;">
                     <i class="ri-error-warning-line"></i> {{ $message }}
@@ -1380,6 +1380,7 @@
           document.getElementById('lessonTypeInput').value = type;
           showContentType(type);
           updateRequiredFields(type);
+          updateDurationLockForType(type);
         });
       });
 
@@ -1407,10 +1408,13 @@
           showContentType(lessonTypeValue);
           selectedContentType = lessonTypeValue;
           updateRequiredFields(lessonTypeValue);
+          updateDurationLockForType(lessonTypeValue);
         } else {
           contentTypeOptions[0].classList.add('active');
-          showContentType(contentTypeOptions[0].getAttribute('data-type'));
-          updateRequiredFields('video-upload');
+          const defaultType = contentTypeOptions[0].getAttribute('data-type');
+          showContentType(defaultType);
+          updateRequiredFields(defaultType);
+          updateDurationLockForType(defaultType);
         }
       }
 
@@ -1635,13 +1639,15 @@
           displayAudioPreview(file.name);
         }
 
-        // Extract duration
+        // Extract duration and lock field
         try {
           const durationFormatted = await extractDurationFromFile(file);
           document.getElementById('durationInput').value = durationFormatted;
+          lockDurationInput();
           showDurationSuccess(`تم استخراج المدة تلقائياً: ${durationFormatted}`);
         } catch (error) {
           console.log('تعذر استخراج المدة:', error.message);
+          // Leave field unlocked so teacher can enter manually if extraction failed
         }
 
         showUploadSuccess(`تم رفع ${type === 'video' ? 'الفيديو' : 'الملف الصوتي'} بنجاح`);
@@ -1785,25 +1791,25 @@
     }
 
     function extractDurationFromFile(file) {
-      // Warn for very large files — reading into memory may freeze the browser
-      if (file.size > 200 * 1024 * 1024) {
-        return Promise.reject(new Error('الملف كبير جداً للقراءة تلقائياً، أدخل المدة يدوياً'));
-      }
+      // createObjectURL avoids loading the entire file into memory — works for any size
       return new Promise((resolve, reject) => {
         const isAudio = file.type.startsWith('audio');
         const media   = document.createElement(isAudio ? 'audio' : 'video');
-        const reader  = new FileReader();
+        const url     = URL.createObjectURL(file);
         let settled   = false;
 
-        // 30-second timeout guard
+        const cleanup = () => URL.revokeObjectURL(url);
+
+        // 30-second timeout guard (browser needs to read enough of the file for metadata)
         const timeout = setTimeout(() => {
-          if (!settled) { settled = true; reject(new Error('استغرق تحليل الملف وقتاً طويلاً')); }
+          if (!settled) { settled = true; cleanup(); reject(new Error('استغرق تحليل الملف وقتاً طويلاً')); }
         }, 30000);
 
         media.onloadedmetadata = () => {
           clearTimeout(timeout);
           if (settled) return;
           settled = true;
+          cleanup();
           const secs = Math.round(media.duration);
           if (!isFinite(secs) || secs <= 0) return reject(new Error('مدة غير صالحة'));
           resolve(formatDurationSeconds(secs));
@@ -1811,16 +1817,11 @@
 
         media.onerror = () => {
           clearTimeout(timeout);
-          if (!settled) { settled = true; reject(new Error('الكودك غير مدعوم في المتصفح، أدخل المدة يدوياً')); }
+          if (!settled) { settled = true; cleanup(); reject(new Error('الكودك غير مدعوم في المتصفح، أدخل المدة يدوياً')); }
         };
 
-        reader.onload = () => { media.src = reader.result; };
-        reader.onerror = () => {
-          clearTimeout(timeout);
-          if (!settled) { settled = true; reject(new Error('فشل في قراءة الملف')); }
-        };
-
-        reader.readAsDataURL(file);
+        media.preload = 'metadata';
+        media.src = url;
       });
     }
 
@@ -1999,6 +2000,25 @@
       });
     }
 
+    // Manage duration lock state based on content type
+    // other-content (text) → teacher types manually → unlock
+    // video-upload / audio-upload / youtube → auto-filled only → lock
+    function updateDurationLockForType(type) {
+      const durationInput = document.getElementById('durationInput');
+      if (!durationInput) return;
+
+      if (type === 'other-content') {
+        // Text content has no extractable media → let teacher enter manually
+        unlockDurationInput();
+        // Don't clear existing value in edit mode — teacher may have typed it before
+      } else {
+        // Media types: lock immediately; value will be filled by auto-extraction
+        // Clear only if the field is empty (don't wipe a value the teacher already has)
+        // But do lock it — it must come from the extractor, not manual typing
+        lockDurationInput();
+      }
+    }
+
     // Lock/Unlock duration input
     function lockDurationInput() {
       const input = document.getElementById('durationInput');
@@ -2006,24 +2026,23 @@
       input.readOnly = true;
       input.style.opacity = '0.8';
       input.style.cursor = 'default';
-      input.style.backgroundColor = 'rgba(52, 199, 89, 0.08)';
-      input.title = 'تم ملء هذا الحقل تلقائياً - اضغط "امسح" في رابط YouTube لتعديله';
+      input.style.backgroundColor = input.value ? 'rgba(52, 199, 89, 0.08)' : '';
+      input.title = 'تُستخرج المدة تلقائياً من الملف المرفوع';
 
-      // Add visual indicator
-      if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('auto-filled-indicator')) {
+      // Update hint text
+      const hint = document.getElementById('durationHint');
+      if (hint) hint.textContent = '(تُستخرج تلقائياً من الملف)';
+
+      // Add visual indicator only when value is present
+      const existing = input.parentElement.querySelector('.auto-filled-indicator');
+      if (input.value && !existing) {
         const indicator = document.createElement('div');
         indicator.className = 'auto-filled-indicator';
         indicator.innerHTML = '<i class="ri-check-line"></i> تم ملؤها تلقائياً من الفيديو';
-        indicator.style.cssText = `
-          font-size: 11px;
-          color: var(--success);
-          font-weight: 600;
-          margin-top: 4px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        `;
+        indicator.style.cssText = 'font-size:11px;color:var(--success);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px;';
         input.parentElement.appendChild(indicator);
+      } else if (!input.value && existing) {
+        existing.remove();
       }
     }
 
@@ -2033,13 +2052,16 @@
       input.style.opacity = '1';
       input.style.cursor = 'text';
       input.style.backgroundColor = '';
-      input.title = '';
+      input.title = 'أدخل المدة يدوياً بصيغة دقائق:ثواني (مثال: 5:30)';
+      input.placeholder = 'مثال: 5:30';
+
+      // Update hint text
+      const hint = document.getElementById('durationHint');
+      if (hint) hint.textContent = '(أدخل المدة يدوياً)';
 
       // Remove indicator
       const indicator = input.parentElement.querySelector('.auto-filled-indicator');
-      if (indicator) {
-        indicator.remove();
-      }
+      if (indicator) indicator.remove();
     }
 
     // ===== Duration Success/Warning Messages =====
