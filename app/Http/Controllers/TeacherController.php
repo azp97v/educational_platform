@@ -1734,10 +1734,10 @@ class TeacherController extends Controller
         }
 
         // All failures return HTTP 200 so the browser never logs a red "Failed to load"
-        // error — the JSON `success` flag is what the frontend inspects.
-        // Try Innertube first (no external process, fast), then yt-dlp as fallback.
+        // Priority: Data API v3 (official) → Innertube → yt-dlp with cookies → yt-dlp bare
         try {
-            $durationSeconds = $this->extractYouTubeDurationViaAPI($videoId)
+            $durationSeconds = $this->extractYouTubeDurationViaDataAPI($videoId)
+                            ?? $this->extractYouTubeDurationViaAPI($videoId)
                             ?? $this->extractYouTubeDurationWithYoutubeDl($videoId);
 
             \Log::warning('YouTube duration result', ['videoId' => $videoId, 'url' => $url, 'seconds' => $durationSeconds]);
@@ -1770,7 +1770,51 @@ class TeacherController extends Controller
     }
 
     /**
-     * Try yt-dlp binary (fastest, most accurate)
+     * YouTube Data API v3 — official, bot-detection-free, works for all video types.
+     * Requires YOUTUBE_API_KEY in .env. Returns null if key not set.
+     * ISO 8601 duration PT1H23M45S → seconds.
+     */
+    private function extractYouTubeDurationViaDataAPI($videoId)
+    {
+        $key = config('services.youtube.api_key') ?? env('YOUTUBE_API_KEY');
+        if (!$key) return null;
+
+        try {
+            $ch = curl_init('https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=' . urlencode($videoId) . '&key=' . urlencode($key));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || !$response) {
+                \Log::warning('YouTube DataAPI non-200', ['code' => $httpCode]);
+                return null;
+            }
+
+            $data     = json_decode($response, true);
+            $iso      = $data['items'][0]['contentDetails']['duration'] ?? null;
+            if (!$iso) return null;
+
+            // Parse ISO 8601 PT1H23M45S
+            preg_match('/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/', $iso, $m);
+            $seconds = ((int)($m[1] ?? 0)) * 3600 + ((int)($m[2] ?? 0)) * 60 + (int)($m[3] ?? 0);
+            \Log::warning('YouTube DataAPI success', ['videoId' => $videoId, 'iso' => $iso, 'seconds' => $seconds]);
+            return $seconds > 0 ? $seconds : null;
+
+        } catch (\Exception $e) {
+            \Log::warning('YouTube DataAPI exception: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * yt-dlp binary — uses cookies file if available to bypass bot-detection.
+     * Place a Netscape-format cookies export at storage/app/youtube_cookies.txt
      */
     private function extractYouTubeDurationWithYoutubeDl($videoId)
     {
@@ -1778,31 +1822,32 @@ class TeacherController extends Controller
         $command    = null;
         foreach ($candidates as $bin) {
             if (str_starts_with($bin, '/')) {
-                // Absolute path — check directly, no shell needed
                 if (is_executable($bin)) { $command = $bin; break; }
             } else {
-                // Relative name — use properly escaped command -v
                 $found = trim((string) shell_exec('command -v ' . escapeshellarg($bin) . ' 2>/dev/null'));
                 if ($found !== '') { $command = $bin; break; }
             }
         }
         if (!$command) return null;
 
+        // Use cookies file to bypass YouTube bot-detection on server IPs
+        $cookiesFile  = storage_path('app/youtube_cookies.txt');
+        $cookiesFlag  = (file_exists($cookiesFile) && is_readable($cookiesFile))
+            ? ' --cookies ' . escapeshellarg($cookiesFile)
+            : '';
+
         try {
             $videoUrl = 'https://www.youtube.com/watch?v=' . $videoId;
             $output = [];
             $ret    = 0;
-            // Use timeout 20 so PHP-FPM is never stuck waiting on yt-dlp
-            exec('timeout 30 ' . $command . ' --no-warnings --print duration_string --skip-download ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output, $ret);
-            \Log::warning('yt-dlp exec', ['ret' => $ret, 'output' => $output]);
+            exec('timeout 30 ' . $command . $cookiesFlag . ' --no-warnings --print duration_string --skip-download ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output, $ret);
+            \Log::warning('yt-dlp exec', ['ret' => $ret, 'output' => $output, 'cookies' => !empty($cookiesFlag)]);
             if ($ret === 0 && !empty($output)) {
-                $parts = explode(':', trim(implode('', $output)));
-                if (count($parts) === 3) return ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
-                if (count($parts) === 2) return ((int)$parts[0] * 60) + (int)$parts[1];
+                return $this->parseYtDlpDuration(trim(implode('', $output)));
             }
-            // Fallback: dump-json (slower but catches edge cases)
+            // Fallback: --dump-json
             $output2 = [];
-            exec('timeout 30 ' . $command . ' --no-warnings --dump-json ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output2, $ret);
+            exec('timeout 30 ' . $command . $cookiesFlag . ' --no-warnings --dump-json ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output2, $ret);
             if ($ret === 0 && !empty($output2)) {
                 $json = json_decode(implode('', $output2), true);
                 if (isset($json['duration']) && is_numeric($json['duration'])) return (int)$json['duration'];
@@ -1811,6 +1856,19 @@ class TeacherController extends Controller
             \Log::warning('yt-dlp exception: ' . $e->getMessage());
         }
 
+        return null;
+    }
+
+    /**
+     * Parse yt-dlp duration_string: "H:MM:SS", "M:SS", or decimal seconds
+     */
+    private function parseYtDlpDuration(string $raw): ?int
+    {
+        if (!$raw) return null;
+        $parts = array_map('intval', explode(':', $raw));
+        if (count($parts) === 3) return $parts[0] * 3600 + $parts[1] * 60 + $parts[2];
+        if (count($parts) === 2) return $parts[0] * 60 + $parts[1];
+        if (count($parts) === 1 && $parts[0] > 0) return $parts[0];
         return null;
     }
 

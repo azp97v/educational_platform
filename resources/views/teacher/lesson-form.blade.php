@@ -952,8 +952,12 @@
         .content { padding: 0 8px 8px !important; }
     }
   </style>
+<!-- YouTube IFrame Player API for client-side duration extraction (no bot-detection) -->
+<script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
+  <!-- Invisible YouTube player used only to read duration -->
+  <div id="yt-duration-player" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;pointer-events:none;" aria-hidden="true"></div>
   @include('components.alerts')
   <div class="app">
     @include('components.sidebar-unified')
@@ -1845,6 +1849,51 @@
       return match ? match[1] : null;
     }
 
+    // ===== YouTube IFrame API (browser-side, no bot detection) =====
+    // The global callback that YouTube's script calls when the API is ready.
+    let _ytApiResolve;
+    const ytApiReady = new Promise(resolve => { _ytApiResolve = resolve; });
+    window.onYouTubeIframeAPIReady = function() { _ytApiResolve(); };
+
+    /**
+     * Get duration from YouTube IFrame player running in the user's browser.
+     * Works for any video type visible to the user — no bot detection, no API key.
+     */
+    function getYouTubeDurationViaIframe(videoId) {
+      return new Promise((resolve, reject) => {
+        let player = null;
+        let settled = false;
+
+        const done = (val) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try { player && player.destroy(); } catch (_) {}
+          player = null;
+          val !== null ? resolve(val) : reject(new Error('dur=0'));
+        };
+
+        const timer = setTimeout(() => done(null) || reject(new Error('IFrame timeout')), 15000);
+
+        // Clear container and create player
+        const container = document.getElementById('yt-duration-player');
+        container.innerHTML = '';
+
+        player = new YT.Player(container, {
+          width: '1', height: '1',
+          videoId: videoId,
+          playerVars: { autoplay: 0, controls: 0, fs: 0, rel: 0 },
+          events: {
+            onReady(e) {
+              const secs = e.target.getDuration();
+              done(secs > 0 ? Math.round(secs) : null);
+            },
+            onError(e) { done(null); reject(new Error('YT error ' + e.data)); }
+          }
+        });
+      });
+    }
+
     const videoUrlInput = document.querySelector('input[name="video_url"]');
     let durationFetchTimeout = null;
     let lastFetchedUrl = ''; // Track last fetched URL to avoid duplicate requests
@@ -1888,15 +1937,43 @@
           }
 
           // Show loading indicator
-          if (loadingIndicator) {
-            loadingIndicator.style.display = 'flex';
-          }
+          if (loadingIndicator) loadingIndicator.style.display = 'flex';
 
           const currentToken = ++youtubeRequestToken;
           youtubeInFlightUrl = url;
 
-          // Send request to backend to get duration
+          const applyDuration = (secs, source) => {
+            if (currentToken !== youtubeRequestToken) return false;
+            const fmt = formatDurationSeconds(secs);
+            const inp = document.getElementById('durationInput');
+            inp.value = fmt;
+            inp.dispatchEvent(new Event('input'));
+            lockDurationInput();
+            if (lastSuccessUrl !== url) {
+              showDurationSuccess('تم استخراج المدة: ' + fmt);
+              lastSuccessUrl = url;
+            }
+            lastFetchedUrl = url;
+            lastWarningUrl = '';
+            return true;
+          };
+
           try {
+            // ── Step 1: YouTube IFrame API (browser-side, bypasses bot detection) ──
+            let iframeSecs = null;
+            try {
+              await Promise.race([ytApiReady, new Promise((_,r) => setTimeout(r, 3000, 'api-timeout'))]);
+              iframeSecs = await getYouTubeDurationViaIframe(videoId);
+            } catch (_) { /* IFrame failed, fall through to server */ }
+
+            if (iframeSecs && iframeSecs > 0) {
+              applyDuration(iframeSecs, 'iframe');
+              return;
+            }
+
+            // ── Step 2: Server-side (Data API v3 → Innertube → yt-dlp) ──
+            if (currentToken !== youtubeRequestToken) return;
+
             const response = await fetch('{{ route("teacher.api.youtube-duration") }}', {
               method: 'POST',
               headers: {
@@ -1907,24 +1984,13 @@
             });
 
             const data = await response.json();
-            if (currentToken !== youtubeRequestToken) {
-              return;
-            }
+            if (currentToken !== youtubeRequestToken) return;
 
-            if (data.success && data.duration) {
-              const inp = document.getElementById('durationInput');
-              inp.value = data.duration;
-              inp.dispatchEvent(new Event('input')); // update budget tracker
-              lockDurationInput();
-              if (lastSuccessUrl !== url) {
-                showDurationSuccess(data.message);
-                lastSuccessUrl = url;
-              }
-              lastFetchedUrl = url;
-              lastWarningUrl = '';
+            if (data.success && data.duration && data.durationSeconds) {
+              applyDuration(data.durationSeconds, 'server');
             } else {
               if (lastWarningUrl !== url) {
-                showDurationWarning(data.hint || data.error || 'تعذر استخراج المدة — أدخلها يدويًا في حقل المدة');
+                showDurationWarning(data.hint || 'تعذّر استخراج المدة — أدخلها يدوياً');
                 lastWarningUrl = url;
               }
               unlockDurationInput();
@@ -1932,22 +1998,17 @@
               lastSuccessUrl = '';
             }
           } catch (error) {
-            console.log('خطأ في الطلب:', error);
+            console.log('YouTube duration error:', error);
             if (lastWarningUrl !== url) {
-              showDurationWarning('خطأ في الاتصال - يمكنك إدخال المدة يدوياً');
+              showDurationWarning('خطأ في الاتصال — أدخل المدة يدوياً');
               lastWarningUrl = url;
             }
             unlockDurationInput();
             lastFetchedUrl = '';
             lastSuccessUrl = '';
           } finally {
-            if (currentToken === youtubeRequestToken) {
-              youtubeInFlightUrl = '';
-            }
-            // Hide loading indicator
-            if (loadingIndicator) {
-              loadingIndicator.style.display = 'none';
-            }
+            if (currentToken === youtubeRequestToken) youtubeInFlightUrl = '';
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
           }
         } else {
           if (lastWarningUrl !== url) {
