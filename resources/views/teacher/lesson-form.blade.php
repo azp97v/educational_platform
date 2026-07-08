@@ -1148,8 +1148,13 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">مدة الدرس (دقائق:ثواني) <span style="font-size: 11px; color: var(--text-muted);">(سيتم ملء تلقائية)</span></label>
-                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}$" title="صيغة صحيحة: دقائق:ثواني (مثال 5:30)">
+                <label class="form-label">مدة الدرس (دقائق:ثواني) <span style="font-size: 11px; color: var(--text-muted);">(تُستخرج تلقائياً من الملف)</span></label>
+                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="صيغة صحيحة: دقائق:ثواني (مثال 5:30)">
+                @error('duration')
+                  <div style="color:var(--danger);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:4px;">
+                    <i class="ri-error-warning-line"></i> {{ $message }}
+                  </div>
+                @enderror
               </div>
 
               <div class="form-group">
@@ -2111,6 +2116,130 @@
   </script>
 @include('components.notification-bell')
     @include('components.account-theme-foot')
+
+@php
+  $hasBudget = isset($totalSeconds) && $totalSeconds > 0;
+@endphp
+
+@if($hasBudget)
+{{-- ══ Duration Tracker Card ═══════════════════════════════════════ --}}
+<div id="durationTracker" style="
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 9000;
+  background: var(--theme-surface, #1a1a1a);
+  border: 1px solid var(--border, #333);
+  border-radius: 16px;
+  padding: 16px 20px;
+  min-width: 230px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  font-family: 'Tajawal', sans-serif;
+  transition: box-shadow 0.3s, border-color 0.3s;
+  direction: rtl;
+">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <i class="ri-timer-2-line" style="font-size:18px;color:var(--gold, #C6A675);"></i>
+    <span style="font-size:13px;font-weight:700;color:var(--text-primary);">ميزانية وقت المسار</span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+      <span style="color:var(--text-secondary);">الإجمالي</span>
+      <span id="dtTotal" style="font-weight:700;color:var(--text-primary);">—</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+      <span style="color:var(--text-secondary);">المستخدم</span>
+      <span id="dtUsed" style="font-weight:700;color:#FF9F40;">—</span>
+    </div>
+    <div style="height:1px;background:var(--border);margin:2px 0;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+      <span style="font-weight:700;color:var(--text-primary);">المتبقي</span>
+      <span id="dtRemain" style="font-weight:800;color:var(--success, #34C759);">—</span>
+    </div>
+  </div>
+
+  {{-- Progress bar --}}
+  <div style="margin-top:12px;background:var(--border);border-radius:8px;height:6px;overflow:hidden;">
+    <div id="dtBar" style="height:100%;border-radius:8px;background:linear-gradient(90deg,#34C759,#C6A675);width:0%;transition:width 0.4s,background 0.4s;"></div>
+  </div>
+
+  <div id="dtWarning" style="display:none;margin-top:10px;background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.3);border-radius:8px;padding:8px 10px;font-size:11px;color:#FF3B30;display:none;align-items:center;gap:6px;">
+    <i class="ri-error-warning-line"></i>
+    <span id="dtWarningText">مدة الدرس تتجاوز الوقت المتبقي</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  const TOTAL_SECS  = {{ (int)$totalSeconds }};
+  const USED_SECS   = {{ (int)$usedSeconds }};
+
+  function secsToHuman(s) {
+    if (s <= 0) return '0 د';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    let parts = [];
+    if (h > 0) parts.push(h + ' س');
+    if (m > 0) parts.push(m + ' د');
+    if (sec > 0 && h === 0) parts.push(sec + ' ث');
+    return parts.join(' ') || '0 د';
+  }
+
+  function parseDuration(val) {
+    if (!val) return 0;
+    const parts = val.trim().split(':').map(Number);
+    if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+    if (parts.length === 2) return parts[0]*60 + parts[1];
+    return 0;
+  }
+
+  function updateTracker(newLessonSecs) {
+    const used      = USED_SECS + newLessonSecs;
+    const remaining = TOTAL_SECS - used;
+    const pct       = Math.min(100, Math.round((used / TOTAL_SECS) * 100));
+    const exceeded  = remaining < 0;
+
+    document.getElementById('dtTotal').textContent  = secsToHuman(TOTAL_SECS);
+    document.getElementById('dtUsed').textContent   = secsToHuman(used);
+    document.getElementById('dtRemain').textContent = exceeded ? ('تجاوز بـ ' + secsToHuman(-remaining)) : secsToHuman(remaining);
+    document.getElementById('dtRemain').style.color = exceeded ? '#FF3B30' : '#34C759';
+
+    const bar = document.getElementById('dtBar');
+    bar.style.width = pct + '%';
+    bar.style.background = exceeded
+      ? 'linear-gradient(90deg,#FF3B30,#FF9500)'
+      : pct > 80
+        ? 'linear-gradient(90deg,#FF9F40,#C6A675)'
+        : 'linear-gradient(90deg,#34C759,#C6A675)';
+
+    const warn = document.getElementById('dtWarning');
+    if (exceeded) {
+      warn.style.display = 'flex';
+      document.getElementById('dtWarningText').textContent =
+        'تتجاوز الوقت المتبقي! لا يمكن حفظ الدرس إلا بتعديل مدة المسار.';
+      document.getElementById('durationTracker').style.borderColor = 'rgba(255,59,48,0.5)';
+    } else {
+      warn.style.display = 'none';
+      document.getElementById('durationTracker').style.borderColor = 'var(--border)';
+    }
+  }
+
+  // Initialize with current duration value
+  const dInput = document.getElementById('durationInput');
+  updateTracker(parseDuration(dInput ? dInput.value : ''));
+
+  // Update on input change
+  if (dInput) {
+    dInput.addEventListener('input', function() {
+      updateTracker(parseDuration(this.value));
+    });
+  }
+})();
+</script>
+@endif
+
 </body>
 </html>
 

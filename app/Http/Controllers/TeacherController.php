@@ -172,10 +172,48 @@ class TeacherController extends Controller
     private function courseValidationRules(): array
     {
         return [
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration'    => 'nullable|integer',
+            'name'          => 'required|string|max:255',
+            'description'   => 'nullable|string',
+            'category'      => 'nullable|string|max:100',
+            'level'         => 'nullable|in:beginner,intermediate,advanced',
+            'duration'      => 'nullable|integer|min:1',
+            'duration_unit' => 'nullable|in:hours,days,months',
+            'max_students'  => 'nullable|integer|min:1',
+            'start_date'    => 'nullable|date',
+            'end_date'      => 'nullable|date|after_or_equal:start_date',
         ];
+    }
+
+    private function parseLessonDurationToSeconds(?string $duration): int
+    {
+        if (!$duration) return 0;
+        $parts = array_map('intval', explode(':', $duration));
+        return match(count($parts)) {
+            3 => $parts[0] * 3600 + $parts[1] * 60 + $parts[2],
+            2 => $parts[0] * 60 + $parts[1],
+            default => 0,
+        };
+    }
+
+    private function coursePathTotalSeconds(Course $course): int
+    {
+        if (!$course->duration) return 0;
+        return (int)$course->duration * match($course->duration_unit ?? 'hours') {
+            'months' => 2592000,
+            'days'   => 86400,
+            default  => 3600,
+        };
+    }
+
+    private function formatSecondsHuman(int $secs): string
+    {
+        if ($secs <= 0) return '0 دقيقة';
+        $h = intdiv($secs, 3600);
+        $m = intdiv($secs % 3600, 60);
+        $parts = [];
+        if ($h > 0) $parts[] = "{$h} ساعة";
+        if ($m > 0) $parts[] = "{$m} دقيقة";
+        return implode(' و', $parts) ?: '0 دقيقة';
     }
 
     private function lessonValidationRules(): array
@@ -267,9 +305,17 @@ class TeacherController extends Controller
         // Get the lesson count for auto-incrementing order
         $nextOrder = $course->lessons()->count() + 1;
 
+        $totalSeconds     = $this->coursePathTotalSeconds($course);
+        $usedSeconds      = $course->lessons()->get()
+                                ->sum(fn($l) => $this->parseLessonDurationToSeconds($l->duration));
+        $remainingSeconds = max(0, $totalSeconds - $usedSeconds);
+
         return view('teacher.lesson-form', [
-            'course' => $course,
-            'nextOrder' => $nextOrder
+            'course'           => $course,
+            'nextOrder'        => $nextOrder,
+            'totalSeconds'     => $totalSeconds,
+            'usedSeconds'      => $usedSeconds,
+            'remainingSeconds' => $remainingSeconds,
         ]);
     }
 
@@ -280,7 +326,12 @@ class TeacherController extends Controller
         }
 
         $course = $lesson->course;
-        return view('teacher.lesson-form', compact('lesson', 'course'));
+        $totalSeconds     = $this->coursePathTotalSeconds($course);
+        $usedSeconds      = $course->lessons()->where('id', '!=', $lesson->id)->get()
+                                ->sum(fn($l) => $this->parseLessonDurationToSeconds($l->duration));
+        $remainingSeconds = max(0, $totalSeconds - $usedSeconds);
+
+        return view('teacher.lesson-form', compact('lesson', 'course', 'totalSeconds', 'usedSeconds', 'remainingSeconds'));
     }
 
     public function showCreateExamPage()
@@ -434,6 +485,36 @@ class TeacherController extends Controller
         return redirect(route('teacher.questions.manage'))->with('success', 'تم الرد على السؤال بنجاح');
     }
 
+    public function deleteStudentQuestion(\App\Models\StudentQuestion $question)
+    {
+        $userCourses = Auth::user()->courses()->pluck('id');
+        if (!$userCourses->contains($question->course_id)) abort(403);
+        $question->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteInquiry(\App\Models\StudentInquiry $inquiry)
+    {
+        $userCourses = Auth::user()->courses()->pluck('id');
+        if (!$userCourses->contains($inquiry->course_id)) abort(403);
+        $inquiry->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function clearAnsweredQuestions()
+    {
+        $courseIds = Auth::user()->courses()->pluck('id');
+        \App\Models\StudentQuestion::whereIn('course_id', $courseIds)->where('status', '!=', 'pending')->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function clearAnsweredInquiries()
+    {
+        $courseIds = Auth::user()->courses()->pluck('id');
+        \App\Models\StudentInquiry::whereIn('course_id', $courseIds)->where('status', 'answered')->delete();
+        return response()->json(['success' => true]);
+    }
+
     public function answerInquiry(Request $request, \App\Models\StudentInquiry $inquiry)
     {
         $userCourses = Auth::user()->courses()->pluck('id');
@@ -498,6 +579,19 @@ class TeacherController extends Controller
 
         // Enforce dynamic lesson order on create (server-side source of truth)
         $validated['order'] = ((int) $course->lessons()->max('order')) + 1;
+
+        // Enforce path duration budget (only when course has a duration set)
+        if ($course->duration && !empty($validated['duration'])) {
+            $totalSecs = $this->coursePathTotalSeconds($course);
+            $usedSecs  = $course->lessons()->get()->sum(fn($l) => $this->parseLessonDurationToSeconds($l->duration));
+            $newSecs   = $this->parseLessonDurationToSeconds($validated['duration']);
+            $remaining = $totalSecs - $usedSecs;
+            if ($newSecs > $remaining) {
+                return back()->withErrors([
+                    'duration' => 'مدة الدرس (' . $validated['duration'] . ') تتجاوز الوقت المتبقي للمسار (' . $this->formatSecondsHuman(max(0, $remaining)) . '). عدّل بيانات المسار لزيادة المدة الكلية.',
+                ])->withInput();
+            }
+        }
 
         // Clear content fields that don't match the selected lesson type
         $lessonType = $validated['lesson_type'];
@@ -610,6 +704,21 @@ class TeacherController extends Controller
         // Remove helper fields
         unset($validated['video_file_path']);
         unset($validated['audio_file_path']);
+
+        // Enforce path duration budget on update too
+        $course = $lesson->course;
+        if ($course->duration && !empty($validated['duration'])) {
+            $totalSecs = $this->coursePathTotalSeconds($course);
+            $usedSecs  = $course->lessons()->where('id', '!=', $lesson->id)->get()
+                             ->sum(fn($l) => $this->parseLessonDurationToSeconds($l->duration));
+            $newSecs   = $this->parseLessonDurationToSeconds($validated['duration']);
+            $remaining = $totalSecs - $usedSecs;
+            if ($newSecs > $remaining) {
+                return back()->withErrors([
+                    'duration' => 'مدة الدرس (' . $validated['duration'] . ') تتجاوز الوقت المتبقي للمسار (' . $this->formatSecondsHuman(max(0, $remaining)) . '). عدّل بيانات المسار لزيادة المدة الكلية.',
+                ])->withInput();
+            }
+        }
 
         $lesson->update($validated);
         return redirect()->route('teacher.show', $lesson->course)->with('success', 'تم تحديث الدرس بنجاح.');
@@ -1824,6 +1933,17 @@ class TeacherController extends Controller
         if (!$enrollment->student) {
             return redirect()->back()
                 ->with('error', 'الطالب غير موجود');
+        }
+
+        // ✅ فحص الحد الأقصى للطلاب
+        $course = $enrollment->course;
+        if ($course->max_students) {
+            $approvedCount = \App\Models\CourseEnrollment::where('course_id', $course->id)
+                ->where('status', 'approved')->count();
+            if ($approvedCount >= $course->max_students) {
+                return redirect()->back()->with('error',
+                    "وصل مسار \"{$course->name}\" إلى الحد الأقصى ({$course->max_students} طالب). لإضافة المزيد، عدّل بيانات المسار وزد الحد الأقصى.");
+            }
         }
 
         // ✅ تحديث حالة الالتحاق

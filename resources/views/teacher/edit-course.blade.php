@@ -964,17 +964,36 @@
               <div class="form-hint">اشرح محتوى المسار والأهداف بشكل واضح</div>
             </div>
 
-            <!-- Duration -->
+            <!-- Duration + Unit -->
             <div class="form-group">
-              <label>المدة المتوقعة (ساعات)</label>
-              <input
-                type="number"
-                name="duration"
-                placeholder="مثلاً: 20"
-                min="1"
-                value="{{ old('duration', $course->duration) }}"
-                
-              >
+              <label>المدة الكلية للمسار <span style="font-size:11px;color:var(--text-muted);">(الدروس تُخصم منها)</span></label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="number" name="duration" placeholder="مثلاً: 3" min="1" value="{{ old('duration', $course->duration) }}" style="flex:1;">
+                <select name="duration_unit" style="width:130px;">
+                  <option value="hours" {{ old('duration_unit', $course->duration_unit ?? 'hours') === 'hours' ? 'selected' : '' }}>ساعات</option>
+                  <option value="days"  {{ old('duration_unit', $course->duration_unit) === 'days'  ? 'selected' : '' }}>أيام</option>
+                  <option value="months" {{ old('duration_unit', $course->duration_unit) === 'months' ? 'selected' : '' }}>شهور</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Max Students -->
+            <div class="form-group">
+              <label>الحد الأقصى للطلاب</label>
+              <input type="number" name="max_students" placeholder="∞ بلا حد" min="1" value="{{ old('max_students', $course->max_students) }}">
+              <div class="form-hint">الطلاب الحاليون: {{ $course->enrolledStudents()->count() }}</div>
+            </div>
+
+            <!-- Dates -->
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <div class="form-group" style="flex:1;min-width:140px;">
+                <label><i class="ri-calendar-check-line" style="color:var(--gold-dark);margin-left:4px;"></i> تاريخ البدء</label>
+                <input type="date" name="start_date" value="{{ old('start_date', $course->start_date) }}" style="direction:ltr;text-align:right;">
+              </div>
+              <div class="form-group" style="flex:1;min-width:140px;">
+                <label><i class="ri-calendar-close-line" style="color:var(--danger);margin-left:4px;"></i> تاريخ الانتهاء</label>
+                <input type="date" name="end_date" value="{{ old('end_date', $course->end_date) }}" style="direction:ltr;text-align:right;">
+              </div>
             </div>
 
             <!-- Form Actions -->
