@@ -1737,9 +1737,12 @@ class TeacherController extends Controller
 
         // All failures return HTTP 200 so the browser never logs a red "Failed to load"
         // error — the JSON `success` flag is what the frontend inspects.
+        // Try Innertube first (no external process, fast), then yt-dlp as fallback.
         try {
-            $durationSeconds = $this->extractYouTubeDurationWithYoutubeDl($videoId)
-                            ?? $this->extractYouTubeDurationViaAPI($videoId);
+            $durationSeconds = $this->extractYouTubeDurationViaAPI($videoId)
+                            ?? $this->extractYouTubeDurationWithYoutubeDl($videoId);
+
+            \Log::info('YouTube duration result', ['videoId' => $videoId, 'seconds' => $durationSeconds]);
 
             if ($durationSeconds === null) {
                 return response()->json([
@@ -1759,7 +1762,7 @@ class TeacherController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::warning('YouTube duration extraction failed: ' . $e->getMessage());
+            \Log::warning('YouTube duration extraction exception: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'manual'  => true,
@@ -1788,24 +1791,27 @@ class TeacherController extends Controller
         if (!$command) return null;
 
         try {
-            $url    = 'https://www.youtube.com/watch?v=' . escapeshellarg($videoId);
+            $videoUrl = 'https://www.youtube.com/watch?v=' . $videoId;
             $output = [];
             $ret    = 0;
-            exec("{$command} --no-warnings --print duration_string -x --skip-download " . escapeshellarg("https://www.youtube.com/watch?v={$videoId}") . " 2>/dev/null", $output, $ret);
+            // Use timeout 20 so PHP-FPM is never stuck waiting on yt-dlp
+            exec('timeout 20 ' . $command . ' --no-warnings --print duration_string --skip-download ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output, $ret);
+            \Log::info('yt-dlp exec', ['ret' => $ret, 'output' => $output]);
             if ($ret === 0 && !empty($output)) {
-                // duration_string returns HH:MM:SS or MM:SS
                 $parts = explode(':', trim(implode('', $output)));
                 if (count($parts) === 3) return ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
                 if (count($parts) === 2) return ((int)$parts[0] * 60) + (int)$parts[1];
             }
-            // Fallback: dump-json
+            // Fallback: dump-json (slower but catches edge cases)
             $output2 = [];
-            exec("{$command} --no-warnings --dump-json " . escapeshellarg("https://www.youtube.com/watch?v={$videoId}") . " 2>/dev/null", $output2, $ret);
+            exec('timeout 20 ' . $command . ' --no-warnings --dump-json ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output2, $ret);
             if ($ret === 0 && !empty($output2)) {
                 $json = json_decode(implode('', $output2), true);
                 if (isset($json['duration']) && is_numeric($json['duration'])) return (int)$json['duration'];
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            \Log::warning('yt-dlp exception: ' . $e->getMessage());
+        }
 
         return null;
     }
@@ -1815,19 +1821,19 @@ class TeacherController extends Controller
      */
     private function extractYouTubeDurationViaAPI($videoId)
     {
-        // ANDROID client is less restricted than WEB client
+        // TVHTML5 is the most reliable unauthenticated client as of mid-2025.
+        // ANDROID now returns FAILED_PRECONDITION without an auth token.
         $clients = [
-            [
-                'clientName'       => 'ANDROID',
-                'clientVersion'    => '19.09.37',
-                'androidSdkVersion'=> 30,
-                'userAgent'        => 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
-            ],
             [
                 'clientName'    => 'TVHTML5',
                 'clientVersion' => '7.20220325',
                 'clientScreen'  => 'WATCH',
                 'userAgent'     => 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1',
+            ],
+            [
+                'clientName'    => 'WEB_EMBEDDED_PLAYER',
+                'clientVersion' => '2.20240726.00.00',
+                'userAgent'     => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36',
             ],
         ];
 
@@ -1867,9 +1873,14 @@ class TeacherController extends Controller
             if ($httpCode === 200 && $response) {
                 $data = json_decode($response, true);
                 $len  = $data['videoDetails']['lengthSeconds'] ?? null;
+                \Log::info('Innertube response', ['client' => $client['clientName'], 'http' => $httpCode, 'len' => $len]);
                 if ($len !== null && is_numeric($len) && (int)$len > 0) return (int)$len;
+            } else {
+                \Log::info('Innertube non-200', ['client' => $client['clientName'] ?? '?', 'http' => $httpCode, 'body' => substr($response ?? '', 0, 200)]);
             }
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+            \Log::warning('Innertube exception: ' . $e->getMessage());
+        }
 
         return null;
     }
