@@ -1841,12 +1841,7 @@
   $canCompleteInitial = ($currentProgressPct >= 90) || $isLessonCompleted;
 ?>
 let userNotes = [];
-let userQuestions = @json($lessonQuestions->map(fn($q) => [
-  'id'   => $q->id,
-  'text' => $q->question_text,
-  'time' => $q->created_at->format('Y-m-d H:i'),
-  'status' => $q->status,
-]));
+let userQuestions = {!! json_encode($lessonQuestions->map(function($q){ return ['id'=>$q->id,'text'=>$q->question_text,'time'=>$q->created_at->format('Y-m-d H:i'),'status'=>$q->status]; })->values()) !!};
 let isBookmarked = false;
 let currentRating = 0;
 let isDarkMode = true;
