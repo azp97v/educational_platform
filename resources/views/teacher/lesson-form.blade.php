@@ -1719,17 +1719,23 @@
     function clearVideoFile() {
       document.getElementById('videoFile').value = '';
       document.getElementById('videoItem').style.display = 'none';
-      document.getElementById('videoFilePathInput').value = ''; // Clear file path
+      document.getElementById('videoFilePathInput').value = '';
       clearFileFromStorage('video');
-      unlockDurationInput();
+      // Clear duration and keep locked — type is still video-upload, needs re-upload
+      const dur = document.getElementById('durationInput');
+      if (dur) { dur.value = ''; dur.dispatchEvent(new Event('input')); }
+      lockDurationInput();
     }
 
     function clearAudioFile() {
       document.getElementById('audioFile').value = '';
       document.getElementById('audioItem').style.display = 'none';
-      document.getElementById('audioFilePathInput').value = ''; // Clear file path
+      document.getElementById('audioFilePathInput').value = '';
       clearFileFromStorage('audio');
-      unlockDurationInput();
+      // Clear duration and keep locked — type is still audio-upload, needs re-upload
+      const dur = document.getElementById('durationInput');
+      if (dur) { dur.value = ''; dur.dispatchEvent(new Event('input')); }
+      lockDurationInput();
     }
 
     // ===== Upload Success/Error Messages =====
