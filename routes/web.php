@@ -120,10 +120,10 @@ Route::get('/features-guide', function () {
 })->name('features-guide');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
-Route::get('/login-new', function () { return view('auth.login-new'); })->name('login.new')->middleware('guest');
+Route::get('/login-new', function () { return redirect()->route('login'); })->name('login.new')->middleware('guest');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register')->middleware('guest');
-Route::get('/register-new', [\App\Http\Controllers\EmailVerificationController::class, 'showRegister'])->name('register.new')->middleware('guest');
+Route::get('/register-new', function () { return redirect()->route('register'); })->name('register.new')->middleware('guest');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,5');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
