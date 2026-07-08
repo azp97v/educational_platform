@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   @include('components.account-theme-head')
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تسجيل الدخول | جمعية إجلال</title>
+  <title>تسجيل الدخول | منصة إجلال التعليمية</title>
+  <meta name="description" content="سجّل دخولك إلى منصة إجلال التعليمية للوصول إلى دوراتك ومحتواك التعليمي.">
+  <meta name="robots" content="noindex, follow">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Josefin+Slab:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 

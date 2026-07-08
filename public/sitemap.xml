@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- الصفحة الرئيسية -->
+  <url>
+    <loc>https://edu.ejlalmakkah.org.sa/</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://edu.ejlalmakkah.org.sa/"/>
+  </url>
+
+  <!-- صفحة الهبوط -->
+  <url>
+    <loc>https://edu.ejlalmakkah.org.sa/landing</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- تسجيل الدخول -->
+  <url>
+    <loc>https://edu.ejlalmakkah.org.sa/login</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- إنشاء حساب -->
+  <url>
+    <loc>https://edu.ejlalmakkah.org.sa/register</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- دليل المميزات -->
+  <url>
+    <loc>https://edu.ejlalmakkah.org.sa/features-guide</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+</urlset>

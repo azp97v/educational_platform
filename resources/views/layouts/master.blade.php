@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="@yield('description', 'منصة إجلال التعليمية - نظام تعليمي ذكي')">
+    <meta name="description" content="@yield('description', 'منصة إجلال التعليمية - نظام تعليمي ذكي من جمعية إجلال مكة المكرمة')">
+    <meta name="robots" content="@yield('robots', 'noindex, nofollow')">
     <title>@yield('title', 'إجلال') - منصة إجلال التعليمية</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo/logo.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <meta property="og:site_name" content="منصة إجلال التعليمية">
+    <meta property="og:title" content="@yield('title', 'إجلال') - منصة إجلال التعليمية">
+    <meta property="og:description" content="@yield('description', 'منصة إجلال التعليمية - نظام تعليمي ذكي من جمعية إجلال مكة المكرمة')">
+    <meta property="og:image" content="{{ asset('images/logo/logo.png') }}">
+    <meta property="og:type" content="website">
 
     <!-- ًںŒ™ Load Theme ASAP (prevent flash) -->
     <script>
