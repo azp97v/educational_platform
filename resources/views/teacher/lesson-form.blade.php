@@ -951,9 +951,24 @@
         .hamburger-btn { width: 36px; height: 36px; }
         .content { padding: 0 8px 8px !important; }
     }
+  /* Duration input locked state — clearly non-editable */
+  #durationInput[readonly] {
+    cursor: not-allowed !important;
+    background: rgba(128,128,128,0.12) !important;
+    border-color: rgba(128,128,128,0.3) !important;
+    color: var(--text-muted, #888) !important;
+  }
+  #durationInput[readonly]:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: rgba(128,128,128,0.3) !important;
+  }
+  #durationInput[readonly].has-value {
+    background: rgba(52,199,89,0.10) !important;
+    border-color: rgba(52,199,89,0.5) !important;
+    color: var(--text-primary) !important;
+  }
   </style>
-<!-- YouTube IFrame Player API for client-side duration extraction (no bot-detection) -->
-<script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
   <!-- Invisible YouTube player used only to read duration -->
@@ -1153,7 +1168,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" id="durationLabel">مدة الدرس (دقائق:ثواني) <span id="durationHint" style="font-size: 11px; color: var(--text-muted);">(تُستخرج تلقائياً من الملف)</span></label>
-                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="تُستخرج المدة تلقائياً من الملف المرفوع" readonly style="cursor:not-allowed;background:var(--bg-secondary,rgba(0,0,0,0.04))">
+                <input type="text" id="durationInput" name="duration" class="form-input{{ ($lesson->duration ?? old('duration')) ? ' has-value' : '' }}" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="تُستخرج المدة تلقائياً — الحقل مقفل" readonly>
                 @error('duration')
                   <div style="color:var(--danger);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:4px;">
                     <i class="ri-error-warning-line"></i> {{ $message }}
@@ -1873,7 +1888,7 @@
           val !== null ? resolve(val) : reject(new Error('dur=0'));
         };
 
-        const timer = setTimeout(() => done(null) || reject(new Error('IFrame timeout')), 15000);
+        const timer = setTimeout(() => done(null) || reject(new Error('IFrame timeout')), 20000);
 
         // Clear container and create player
         const container = document.getElementById('yt-duration-player');
@@ -1947,6 +1962,7 @@
             const fmt = formatDurationSeconds(secs);
             const inp = document.getElementById('durationInput');
             inp.value = fmt;
+            inp.classList.add('has-value');
             inp.dispatchEvent(new Event('input'));
             lockDurationInput();
             if (lastSuccessUrl !== url) {
@@ -1962,7 +1978,8 @@
             // ── Step 1: YouTube IFrame API (browser-side, bypasses bot detection) ──
             let iframeSecs = null;
             try {
-              await Promise.race([ytApiReady, new Promise((_,r) => setTimeout(r, 3000, 'api-timeout'))]);
+              // Wait up to 10s for YouTube IFrame API to load (longer for slow connections)
+              await Promise.race([ytApiReady, new Promise((_,r) => setTimeout(() => r(new Error('api-timeout')), 10000))]);
               iframeSecs = await getYouTubeDurationViaIframe(videoId);
             } catch (_) { /* IFrame failed, fall through to server */ }
 
@@ -1989,21 +2006,20 @@
             if (data.success && data.duration && data.durationSeconds) {
               applyDuration(data.durationSeconds, 'server');
             } else {
+              // Keep field locked — duration must come from auto-extraction
               if (lastWarningUrl !== url) {
-                showDurationWarning(data.hint || 'تعذّر استخراج المدة — أدخلها يدوياً');
+                showDurationWarning('تعذّر استخراج المدة تلقائياً. يمكن حفظ الدرس بدون مدة أو تجربة رابط آخر.');
                 lastWarningUrl = url;
               }
-              unlockDurationInput();
               lastFetchedUrl = '';
               lastSuccessUrl = '';
             }
           } catch (error) {
             console.log('YouTube duration error:', error);
             if (lastWarningUrl !== url) {
-              showDurationWarning('خطأ في الاتصال — أدخل المدة يدوياً');
+              showDurationWarning('تعذّر الاتصال. يمكن حفظ الدرس بدون مدة.');
               lastWarningUrl = url;
             }
-            unlockDurationInput();
             lastFetchedUrl = '';
             lastSuccessUrl = '';
           } finally {
@@ -2088,13 +2104,14 @@
     function lockDurationInput() {
       const input = document.getElementById('durationInput');
       input.readOnly = true;
-      input.style.cursor = 'not-allowed';
-      input.style.backgroundColor = input.value
-        ? 'rgba(52, 199, 89, 0.10)'
-        : 'var(--bg-secondary, rgba(0,0,0,0.04))';
-      input.style.borderColor = input.value ? 'var(--success)' : '';
+      // CSS class drives all visual lock styling (see <style> block above)
+      input.classList.toggle('has-value', !!input.value);
+      // Clear any inline styles that might fight the CSS
+      input.style.cursor = '';
+      input.style.backgroundColor = '';
+      input.style.borderColor = '';
       input.style.color = '';
-      input.title = 'تُستخرج المدة تلقائياً من الملف المرفوع';
+      input.title = 'تُستخرج المدة تلقائياً — الحقل مقفل';
 
       // Show lock icon in label
       const label = document.getElementById('durationLabel');
@@ -2124,7 +2141,8 @@
     function unlockDurationInput() {
       const input = document.getElementById('durationInput');
       input.readOnly = false;
-      input.style.cursor = 'text';
+      input.classList.remove('has-value');
+      input.style.cursor = '';
       input.style.backgroundColor = '';
       input.style.borderColor = '';
       input.title = 'أدخل المدة يدوياً بصيغة دقائق:ثواني (مثال: 5:30)';
@@ -2349,6 +2367,8 @@
 </script>
 @endif
 
+<!-- YouTube IFrame Player API — loaded last so onYouTubeIframeAPIReady is always defined first -->
+<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
 
