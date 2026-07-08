@@ -1793,7 +1793,7 @@ class TeacherController extends Controller
             $output = [];
             $ret    = 0;
             // Use timeout 20 so PHP-FPM is never stuck waiting on yt-dlp
-            exec('timeout 20 ' . $command . ' --no-warnings --print duration_string --skip-download ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output, $ret);
+            exec('timeout 30 ' . $command . ' --no-warnings --print duration_string --skip-download ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output, $ret);
             \Log::warning('yt-dlp exec', ['ret' => $ret, 'output' => $output]);
             if ($ret === 0 && !empty($output)) {
                 $parts = explode(':', trim(implode('', $output)));
@@ -1802,7 +1802,7 @@ class TeacherController extends Controller
             }
             // Fallback: dump-json (slower but catches edge cases)
             $output2 = [];
-            exec('timeout 20 ' . $command . ' --no-warnings --dump-json ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output2, $ret);
+            exec('timeout 30 ' . $command . ' --no-warnings --dump-json ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output2, $ret);
             if ($ret === 0 && !empty($output2)) {
                 $json = json_decode(implode('', $output2), true);
                 if (isset($json['duration']) && is_numeric($json['duration'])) return (int)$json['duration'];
@@ -1819,14 +1819,19 @@ class TeacherController extends Controller
      */
     private function extractYouTubeDurationViaAPI($videoId)
     {
-        // TVHTML5 is the most reliable unauthenticated client as of mid-2025.
-        // ANDROID now returns FAILED_PRECONDITION without an auth token.
+        // Try multiple clients — some videos are only accessible by specific clients.
+        // ANDROID requires auth token → removed. IOS returns HTTP 400 from this server.
         $clients = [
             [
                 'clientName'    => 'TVHTML5',
                 'clientVersion' => '7.20220325',
                 'clientScreen'  => 'WATCH',
                 'userAgent'     => 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1',
+            ],
+            [
+                'clientName'    => 'WEB',
+                'clientVersion' => '2.20240726.00.00',
+                'userAgent'     => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
             ],
             [
                 'clientName'    => 'WEB_EMBEDDED_PLAYER',

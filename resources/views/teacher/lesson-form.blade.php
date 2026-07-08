@@ -1149,7 +1149,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" id="durationLabel">مدة الدرس (دقائق:ثواني) <span id="durationHint" style="font-size: 11px; color: var(--text-muted);">(تُستخرج تلقائياً من الملف)</span></label>
-                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="تُستخرج المدة تلقائياً من الملف المرفوع" readonly style="opacity:0.8;cursor:default;">
+                <input type="text" id="durationInput" name="duration" class="form-input" placeholder="مثال: 5:30" value="{{ $lesson->duration ?? old('duration') }}" pattern="^\d{1,3}:\d{2}(:\d{2})?$" title="تُستخرج المدة تلقائياً من الملف المرفوع" readonly style="cursor:not-allowed;background:var(--bg-secondary,rgba(0,0,0,0.04))">
                 @error('duration')
                   <div style="color:var(--danger);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:4px;">
                     <i class="ri-error-warning-line"></i> {{ $message }}
@@ -1642,7 +1642,9 @@
         // Extract duration and lock field
         try {
           const durationFormatted = await extractDurationFromFile(file);
-          document.getElementById('durationInput').value = durationFormatted;
+          const inp = document.getElementById('durationInput');
+          inp.value = durationFormatted;
+          inp.dispatchEvent(new Event('input')); // update budget tracker
           lockDurationInput();
           showDurationSuccess(`تم استخراج المدة تلقائياً: ${durationFormatted}`);
         } catch (error) {
@@ -1910,7 +1912,9 @@
             }
 
             if (data.success && data.duration) {
-              document.getElementById('durationInput').value = data.duration;
+              const inp = document.getElementById('durationInput');
+              inp.value = data.duration;
+              inp.dispatchEvent(new Event('input')); // update budget tracker
               lockDurationInput();
               if (lastSuccessUrl !== url) {
                 showDurationSuccess(data.message);
@@ -2022,46 +2026,59 @@
     // Lock/Unlock duration input
     function lockDurationInput() {
       const input = document.getElementById('durationInput');
-      // Use readonly instead of disabled to allow form submission
       input.readOnly = true;
-      input.style.opacity = '0.8';
-      input.style.cursor = 'default';
-      input.style.backgroundColor = input.value ? 'rgba(52, 199, 89, 0.08)' : '';
+      input.style.cursor = 'not-allowed';
+      input.style.backgroundColor = input.value
+        ? 'rgba(52, 199, 89, 0.10)'
+        : 'var(--bg-secondary, rgba(0,0,0,0.04))';
+      input.style.borderColor = input.value ? 'var(--success)' : '';
+      input.style.color = '';
       input.title = 'تُستخرج المدة تلقائياً من الملف المرفوع';
+
+      // Show lock icon in label
+      const label = document.getElementById('durationLabel');
+      if (label && !label.querySelector('.lock-icon')) {
+        const ico = document.createElement('i');
+        ico.className = 'ri-lock-line lock-icon';
+        ico.style.cssText = 'font-size:13px;color:var(--text-muted);margin-right:4px;vertical-align:middle;';
+        label.prepend(ico);
+      }
 
       // Update hint text
       const hint = document.getElementById('durationHint');
-      if (hint) hint.textContent = '(تُستخرج تلقائياً من الملف)';
+      if (hint) hint.textContent = input.value ? '(مُستخرجة تلقائياً)' : '(تُستخرج تلقائياً من الملف)';
 
-      // Add visual indicator only when value is present
+      // Remove old indicator; add success one only when value present
       const existing = input.parentElement.querySelector('.auto-filled-indicator');
-      if (input.value && !existing) {
+      if (existing) existing.remove();
+      if (input.value) {
         const indicator = document.createElement('div');
         indicator.className = 'auto-filled-indicator';
         indicator.innerHTML = '<i class="ri-check-line"></i> تم ملؤها تلقائياً من الفيديو';
         indicator.style.cssText = 'font-size:11px;color:var(--success);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px;';
         input.parentElement.appendChild(indicator);
-      } else if (!input.value && existing) {
-        existing.remove();
       }
     }
 
     function unlockDurationInput() {
       const input = document.getElementById('durationInput');
       input.readOnly = false;
-      input.style.opacity = '1';
       input.style.cursor = 'text';
       input.style.backgroundColor = '';
+      input.style.borderColor = '';
       input.title = 'أدخل المدة يدوياً بصيغة دقائق:ثواني (مثال: 5:30)';
       input.placeholder = 'مثال: 5:30';
+
+      // Remove lock icon from label
+      const label = document.getElementById('durationLabel');
+      label?.querySelector('.lock-icon')?.remove();
 
       // Update hint text
       const hint = document.getElementById('durationHint');
       if (hint) hint.textContent = '(أدخل المدة يدوياً)';
 
-      // Remove indicator
-      const indicator = input.parentElement.querySelector('.auto-filled-indicator');
-      if (indicator) indicator.remove();
+      // Remove auto-fill indicator
+      input.parentElement.querySelector('.auto-filled-indicator')?.remove();
     }
 
     // ===== Duration Success/Warning Messages =====
