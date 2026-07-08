@@ -13199,7 +13199,7 @@ this.messageInput = '';
 this.showEmojiPicker = false;
 this.cancelRecording(true);
 if (window.innerWidth <= 1080) this.showSidebar = false;
-this.$nextTick(() => this.scrollFeedToBottom());
+this.$nextTick(() => this.scrollToBottom(true));
 },
 
 loadSavedMessages() {
