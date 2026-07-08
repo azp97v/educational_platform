@@ -510,61 +510,99 @@
                         <div class="form-row">
                             <!-- Category -->
                             <div class="form-group">
-                                <label>
-                                    <span class="required">*</span>
-                                    الفئة
-                                </label>
-                                <select name="category" required >
+                                <label>الفئة</label>
+                                <select name="category">
                                     <option value="">اختر فئة...</option>
-                                    <option value="programming">البرمجة</option>
-                                    <option value="design">التصميم</option>
-                                    <option value="business">الأعمال</option>
-                                    <option value="language">اللغات</option>
-                                    <option value="science">العلوم</option>
-                                    <option value="other">أخرى</option>
+                                    <optgroup label="الدراسات الإسلامية">
+                                        <option value="quran" {{ old('category')=='quran'?'selected':'' }}>القرآن الكريم والتجويد</option>
+                                        <option value="fiqh" {{ old('category')=='fiqh'?'selected':'' }}>الفقه والشريعة</option>
+                                        <option value="hadith" {{ old('category')=='hadith'?'selected':'' }}>الحديث والسيرة</option>
+                                        <option value="aqeedah" {{ old('category')=='aqeedah'?'selected':'' }}>العقيدة والتوحيد</option>
+                                    </optgroup>
+                                    <optgroup label="اللغة والأدب">
+                                        <option value="arabic" {{ old('category')=='arabic'?'selected':'' }}>اللغة العربية</option>
+                                        <option value="language" {{ old('category')=='language'?'selected':'' }}>اللغات الأجنبية</option>
+                                        <option value="literature" {{ old('category')=='literature'?'selected':'' }}>الأدب والنصوص</option>
+                                    </optgroup>
+                                    <optgroup label="العلوم والتقنية">
+                                        <option value="math" {{ old('category')=='math'?'selected':'' }}>الرياضيات</option>
+                                        <option value="science" {{ old('category')=='science'?'selected':'' }}>العلوم الطبيعية</option>
+                                        <option value="programming" {{ old('category')=='programming'?'selected':'' }}>البرمجة والتقنية</option>
+                                    </optgroup>
+                                    <optgroup label="العلوم الإنسانية">
+                                        <option value="history" {{ old('category')=='history'?'selected':'' }}>التاريخ والجغرافيا</option>
+                                        <option value="social" {{ old('category')=='social'?'selected':'' }}>الدراسات الاجتماعية</option>
+                                        <option value="education" {{ old('category')=='education'?'selected':'' }}>التربية وعلم النفس</option>
+                                    </optgroup>
+                                    <optgroup label="المهارات العملية">
+                                        <option value="business" {{ old('category')=='business'?'selected':'' }}>الأعمال والإدارة</option>
+                                        <option value="design" {{ old('category')=='design'?'selected':'' }}>التصميم والفنون</option>
+                                        <option value="health" {{ old('category')=='health'?'selected':'' }}>الصحة واللياقة</option>
+                                    </optgroup>
+                                    <option value="other" {{ old('category')=='other'?'selected':'' }}>أخرى</option>
                                 </select>
                             </div>
 
                             <!-- Level -->
                             <div class="form-group">
-                                <label>
-                                    <span class="required">*</span>
-                                    المستوى
-                                </label>
-                                <select name="level" required >
+                                <label>المستوى</label>
+                                <select name="level">
                                     <option value="">اختر مستوى...</option>
-                                    <option value="beginner">مبتدئ</option>
-                                    <option value="intermediate">متوسط</option>
-                                    <option value="advanced">متقدم</option>
+                                    <option value="beginner" {{ old('level')=='beginner'?'selected':'' }}>مبتدئ</option>
+                                    <option value="intermediate" {{ old('level')=='intermediate'?'selected':'' }}>متوسط</option>
+                                    <option value="advanced" {{ old('level')=='advanced'?'selected':'' }}>متقدم</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Row: Duration & Students -->
+                        <!-- Row: Duration + Unit -->
                         <div class="form-row">
-                            <!-- Duration -->
-                            <div class="form-group">
-                                <label>المدة المتوقعة (ساعات)</label>
-                                <input
-                                    type="number"
-                                    name="duration"
-                                    placeholder="مثلاً: 20"
-                                    min="1"
-                                    value="{{ old('duration') }}"
-                                    
-                                >
+                            <div class="form-group" style="flex:2;">
+                                <label>المدة الكلية للمسار <span style="font-size:11px;color:var(--text-muted);">(الدروس ستُخصم منها)</span></label>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <input
+                                        type="number"
+                                        name="duration"
+                                        id="courseDuration"
+                                        placeholder="مثلاً: 3"
+                                        min="1"
+                                        value="{{ old('duration') }}"
+                                        style="flex:1;"
+                                    >
+                                    <select name="duration_unit" id="courseDurationUnit" style="width:130px;">
+                                        <option value="hours" {{ old('duration_unit','hours')=='hours'?'selected':'' }}>ساعات</option>
+                                        <option value="days" {{ old('duration_unit')=='days'?'selected':'' }}>أيام</option>
+                                        <option value="months" {{ old('duration_unit')=='months'?'selected':'' }}>شهور</option>
+                                    </select>
+                                </div>
+                                <div class="form-hint">الفصل الدراسي = 4 شهور مثلاً | الدورة القصيرة = ساعات أو أيام</div>
                             </div>
 
                             <!-- Max Students -->
-                            <div class="form-group">
+                            <div class="form-group" style="flex:1;">
                                 <label>الحد الأقصى للطلاب</label>
                                 <input
                                     type="number"
                                     name="max_students"
-                                    placeholder="بدون حد أقصى"
+                                    placeholder="∞ بلا حد"
                                     min="1"
                                     value="{{ old('max_students') }}"
                                 >
+                                <div class="form-hint">يُطبَّق عند القبول</div>
+                            </div>
+                        </div>
+
+                        <!-- Row: Start & End Dates (optional calendar) -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><i class="ri-calendar-check-line" style="color:var(--gold-dark);margin-left:4px;"></i> تاريخ بدء المسار</label>
+                                <input type="date" name="start_date" value="{{ old('start_date') }}" style="direction:ltr;text-align:right;">
+                                <div class="form-hint">اختياري — للمسارات ذات الجدول الزمني المحدد</div>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="ri-calendar-close-line" style="color:var(--danger);margin-left:4px;"></i> تاريخ انتهاء المسار</label>
+                                <input type="date" name="end_date" value="{{ old('end_date') }}" style="direction:ltr;text-align:right;">
+                                <div class="form-hint">اختياري — يُستخدم كمرجع للطلاب</div>
                             </div>
                         </div>
 

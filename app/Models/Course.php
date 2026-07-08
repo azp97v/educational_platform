@@ -38,7 +38,13 @@ class Course extends Model
         'name',
         'description',
         'image_url',
+        'category',
+        'level',
         'duration',
+        'duration_unit',
+        'max_students',
+        'start_date',
+        'end_date',
         'status',
     ];
 

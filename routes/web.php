@@ -528,6 +528,10 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     // Management Pages
     Route::get('/questions-manage', [TeacherController::class, 'showQuestionsPage'])->name('teacher.questions.manage');
     Route::post('/questions/{question}/answer', [TeacherController::class, 'answerStudentQuestion'])->name('teacher.questions.answer');
+    Route::delete('/questions/{question}', [TeacherController::class, 'deleteStudentQuestion'])->name('teacher.questions.delete');
+    Route::delete('/questions/answered/bulk-clear', [TeacherController::class, 'clearAnsweredQuestions'])->name('teacher.questions.clear-answered');
+    Route::delete('/inquiries/{inquiry}', [TeacherController::class, 'deleteInquiry'])->name('teacher.inquiries.delete');
+    Route::delete('/inquiries/answered/bulk-clear', [TeacherController::class, 'clearAnsweredInquiries'])->name('teacher.inquiries.clear-answered');
 
     // Analytics & Reports
     Route::get('/analytics', [TeacherController::class, 'analytics'])->name('teacher.analytics');

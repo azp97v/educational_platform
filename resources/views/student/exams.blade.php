@@ -617,7 +617,7 @@
 
     <div class="exams-grid">
       @foreach($availableExams as $exam)
-        <div class="exam-card">
+        <div class="exam-card" data-href="{{ route('student.exam.show', $exam['id']) }}" style="cursor:pointer;">
           <span class="status-badge status-available">
             <i class="ri-check-circle-line"></i> متاح
           </span>
@@ -875,6 +875,15 @@
 
 @include('components.notification-bell')
     @include('components.account-theme-foot')
+<script>
+  // Make entire exam card clickable (like lesson cards)
+  document.querySelectorAll('.exam-card[data-href]').forEach(function(card) {
+    card.addEventListener('click', function(e) {
+      if (e.target.closest('a, button, input, select, textarea, form')) return;
+      window.location.href = this.dataset.href;
+    });
+  });
+</script>
 </body>
 </html>
 

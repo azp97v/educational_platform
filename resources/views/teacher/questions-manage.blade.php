@@ -1160,17 +1160,38 @@
         </div>
       </div>
 
+      {{-- ══ Toolbar: Search + Filter + Bulk Actions ══════════════════ --}}
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:28px;padding:14px 16px;background:var(--theme-surface);border:1px solid var(--border);border-radius:14px;">
+        <div style="position:relative;flex:1;min-width:200px;">
+          <i class="ri-search-line" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+          <input id="qmSearch" type="text" placeholder="ابحث في الأسئلة والاستفسارات..." style="width:100%;padding:9px 38px 9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--theme-input-bg,var(--theme-page-bg));color:var(--text-primary);font-family:inherit;font-size:13px;outline:none;transition:border-color 0.2s;" oninput="qmApplyFilters()">
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="qm-filter-btn active" data-filter="all" onclick="qmSetFilter('all')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--gold-light,rgba(198,166,117,0.15));color:var(--gold-dark,#8D7252);font-size:12px;font-weight:700;cursor:pointer;">الكل</button>
+          <button class="qm-filter-btn" data-filter="pending" onclick="qmSetFilter('pending')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">معلقة فقط</button>
+          <button class="qm-filter-btn" data-filter="answered" onclick="qmSetFilter('answered')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">مجاب عليها</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-right:auto;">
+          <button onclick="qmClearAnswered('questions')" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,59,48,0.3);background:rgba(255,59,48,0.08);color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="حذف جميع الأسئلة المجاب عليها">
+            <i class="ri-delete-bin-2-line"></i> مسح أسئلة مجابة
+          </button>
+          <button onclick="qmClearAnswered('inquiries')" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,59,48,0.3);background:rgba(255,59,48,0.08);color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="حذف جميع الاستفسارات المجاب عليها">
+            <i class="ri-delete-bin-2-line"></i> مسح استفسارات مجابة
+          </button>
+        </div>
+      </div>
+
       <!-- Pending -->
       @if($pendingQuestions->count() > 0)
-        <div style="margin-bottom: 40px;">
+        <div style="margin-bottom: 40px;" class="qm-section" data-type="pending">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
             <i class="ri-time-line" style="font-size: 20px; color: #FF9F40;"></i>
             <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary);">الأسئلة المعلقة</h2>
-            <span style="background: rgba(255,159,64,0.15); color: #FF9F40; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;">{{ $pendingQuestions->total() }}</span>
+            <span style="background: rgba(255,159,64,0.15); color: #FF9F40; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;" id="pendingQCount">{{ $pendingQuestions->total() }}</span>
           </div>
           <div class="inquiries-container">
             @foreach($pendingQuestions as $question)
-              <div class="inquiry-card">
+              <div class="inquiry-card qm-card" data-status="pending" data-search="{{ strtolower($question->student->name . ' ' . $question->question_text) }}" data-id="{{ $question->id }}" data-type-item="question">
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($question->student->avatar_url)
@@ -1207,7 +1228,7 @@
       @endif
 
       @if($pendingInquiries->count() > 0)
-        <div style="margin-bottom: 40px;">
+        <div style="margin-bottom: 40px;" class="qm-section" data-type="pending">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
             <i class="ri-time-line" style="font-size: 20px; color: #FF9F40;"></i>
             <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary);">الاستفسارات المعلقة</h2>
@@ -1215,7 +1236,7 @@
           </div>
           <div class="inquiries-container">
             @foreach($pendingInquiries as $inquiry)
-              <div class="inquiry-card">
+              <div class="inquiry-card qm-card" data-status="pending" data-search="{{ strtolower($inquiry->student->name . ' ' . $inquiry->question_text) }}" data-id="{{ $inquiry->id }}" data-type-item="inquiry">
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($inquiry->student->avatar_url)
@@ -1263,7 +1284,7 @@
           </div>
           <div class="inquiries-container">
             @foreach($answeredQuestions as $question)
-              <div class="inquiry-card answered">
+              <div class="inquiry-card answered qm-card" data-status="answered" data-search="{{ strtolower($question->student->name . ' ' . $question->question_text) }}" data-id="{{ $question->id }}" data-type-item="question">
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($question->student->avatar_url)
@@ -1277,6 +1298,9 @@
                     <div class="inquiry-date"><i class="ri-calendar-line"></i> {{ $question->created_at->format('d/m/Y H:i') }}</div>
                   </div>
                   <span class="inquiry-status answered"><i class="ri-check-double-line"></i> مجاب عليه</span>
+                  <button class="qm-delete-btn" data-id="{{ $question->id }}" data-type="question" title="حذف" style="background:none;border:none;color:rgba(255,59,48,0.6);cursor:pointer;padding:4px;border-radius:6px;transition:color 0.2s,background 0.2s;" onmouseenter="this.style.color='#FF3B30';this.style.background='rgba(255,59,48,0.1)'" onmouseleave="this.style.color='rgba(255,59,48,0.6)';this.style.background='none'">
+                    <i class="ri-delete-bin-2-line" style="font-size:16px;"></i>
+                  </button>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
                   <div class="inquiry-course" style="flex: 1; margin: 0;">
@@ -1296,7 +1320,7 @@
       @endif
 
       @if($answeredInquiries->count() > 0)
-        <div>
+        <div class="qm-section" data-type="answered">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
             <i class="ri-checkbox-circle-line" style="font-size: 20px; color: var(--success);"></i>
             <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary);">الاستفسارات المجابة</h2>
@@ -1304,7 +1328,7 @@
           </div>
           <div class="inquiries-container">
             @foreach($answeredInquiries as $inquiry)
-              <div class="inquiry-card answered">
+              <div class="inquiry-card answered qm-card" data-status="answered" data-search="{{ strtolower($inquiry->student->name . ' ' . $inquiry->question_text) }}" data-id="{{ $inquiry->id }}" data-type-item="inquiry">
                 <div class="inquiry-header">
                   <div class="inquiry-icon-wrapper">
                     @if($inquiry->student->avatar_url)
@@ -1318,6 +1342,9 @@
                     <div class="inquiry-date"><i class="ri-calendar-line"></i> {{ $inquiry->created_at->format('d/m/Y H:i') }}</div>
                   </div>
                   <span class="inquiry-status answered"><i class="ri-check-double-line"></i> مجاب عليه</span>
+                  <button class="qm-delete-btn" data-id="{{ $inquiry->id }}" data-type="inquiry" title="حذف" style="background:none;border:none;color:rgba(255,59,48,0.6);cursor:pointer;padding:4px;border-radius:6px;transition:color 0.2s,background 0.2s;" onmouseenter="this.style.color='#FF3B30';this.style.background='rgba(255,59,48,0.1)'" onmouseleave="this.style.color='rgba(255,59,48,0.6)';this.style.background='none'">
+                    <i class="ri-delete-bin-2-line" style="font-size:16px;"></i>
+                  </button>
                 </div>
                 <div class="inquiry-course" style="margin: 10px 0;">
                   <i class="ri-book-line"></i> <strong>{{ $inquiry->lesson->name ?? $inquiry->lesson->title ?? 'درس غير معروف' }}</strong>
@@ -1593,6 +1620,79 @@
 
 </script>
     @include('components.account-theme-foot')
+<script>
+// ══ Questions Management: Search / Filter / Delete ══════════════════
+const QM_CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+let qmActiveFilter = 'all';
+
+function qmSetFilter(f) {
+  qmActiveFilter = f;
+  document.querySelectorAll('.qm-filter-btn').forEach(b => {
+    const isActive = b.dataset.filter === f;
+    b.style.background = isActive ? 'var(--gold-light,rgba(198,166,117,0.15))' : 'transparent';
+    b.style.color      = isActive ? 'var(--gold-dark,#8D7252)' : 'var(--text-secondary)';
+    b.classList.toggle('active', isActive);
+  });
+  qmApplyFilters();
+}
+
+function qmApplyFilters() {
+  const q = (document.getElementById('qmSearch')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('.qm-card').forEach(card => {
+    const matchSearch  = !q || (card.dataset.search || '').includes(q);
+    const matchFilter  = qmActiveFilter === 'all' || card.dataset.status === qmActiveFilter;
+    card.style.display = (matchSearch && matchFilter) ? '' : 'none';
+  });
+  // Show/hide section headers when all cards inside are hidden
+  document.querySelectorAll('.qm-section').forEach(sec => {
+    const visible = [...sec.querySelectorAll('.qm-card')].some(c => c.style.display !== 'none');
+    sec.style.display = visible ? '' : 'none';
+  });
+}
+
+function qmDeleteCard(id, type, btn) {
+  const card = btn.closest('.qm-card');
+  if (!confirm('هل تريد حذف هذا العنصر نهائياً؟')) return;
+  const url = type === 'question'
+    ? `/teacher/questions/${id}`
+    : `/teacher/inquiries/${id}`;
+  fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': QM_CSRF, 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        card.style.transition = 'opacity 0.35s,transform 0.35s';
+        card.style.opacity = '0'; card.style.transform = 'scale(0.95)';
+        setTimeout(() => { card.remove(); qmApplyFilters(); }, 350);
+      }
+    })
+    .catch(() => alert('حدث خطأ، يرجى المحاولة مجدداً'));
+}
+
+function qmClearAnswered(type) {
+  const label = type === 'questions' ? 'الأسئلة المجابة' : 'الاستفسارات المجابة';
+  if (!confirm(`سيتم حذف جميع ${label} نهائياً. هل أنت متأكد؟`)) return;
+  const url = type === 'questions'
+    ? '/teacher/questions/answered/bulk-clear'
+    : '/teacher/inquiries/answered/bulk-clear';
+  fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': QM_CSRF, 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        document.querySelectorAll(`.qm-card[data-status="answered"][data-type-item="${type === 'questions' ? 'question' : 'inquiry'}"]`).forEach(c => c.remove());
+        qmApplyFilters();
+      }
+    })
+    .catch(() => alert('حدث خطأ، يرجى المحاولة مجدداً'));
+}
+
+// Attach delete buttons
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.qm-delete-btn');
+  if (!btn) return;
+  e.stopPropagation();
+  qmDeleteCard(btn.dataset.id, btn.dataset.type, btn);
+});
+</script>
 </body>
 </html>
 
