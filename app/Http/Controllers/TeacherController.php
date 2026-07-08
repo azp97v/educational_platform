@@ -1735,39 +1735,36 @@ class TeacherController extends Controller
             ], 400);
         }
 
+        // All failures return HTTP 200 so the browser never logs a red "Failed to load"
+        // error — the JSON `success` flag is what the frontend inspects.
         try {
-            // Try to get duration using youtube-dl if available
-            $durationSeconds = $this->extractYouTubeDurationWithYoutubeDl($videoId);
-
-            if ($durationSeconds === null) {
-                // Fallback: try with direct API call
-                $durationSeconds = $this->extractYouTubeDurationViaAPI($videoId);
-            }
+            $durationSeconds = $this->extractYouTubeDurationWithYoutubeDl($videoId)
+                            ?? $this->extractYouTubeDurationViaAPI($videoId);
 
             if ($durationSeconds === null) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'تعذر استخراج مدة فيديو YouTube تلقائيًا.',
-                    'hint' => 'تأكد من أن الرابط صحيح ومتاح للعامة، أو أدخل المدة يدويًا.'
-                ], 400);
+                    'manual'  => true,
+                    'hint'    => 'أدخل مدة الفيديو يدويًا في حقل المدة أدناه.',
+                ]);
             }
 
-            // Convert seconds to MM:SS format
             $durationFormatted = $this->formatDuration($durationSeconds);
 
             return response()->json([
-                'success' => true,
-                'duration' => $durationFormatted,
+                'success'         => true,
+                'duration'        => $durationFormatted,
                 'durationSeconds' => $durationSeconds,
-                'message' => "تم استخراج مدة الفيديو بنجاح: {$durationFormatted}"
+                'message'         => "تم استخراج المدة: {$durationFormatted}",
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('YouTube duration extraction failed: ' . $e->getMessage());
+            \Log::warning('YouTube duration extraction failed: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'error' => 'حدث خطأ أثناء قراءة بيانات الفيديو'
-            ], 500);
+                'manual'  => true,
+                'hint'    => 'أدخل مدة الفيديو يدويًا في حقل المدة أدناه.',
+            ]);
         }
     }
 
