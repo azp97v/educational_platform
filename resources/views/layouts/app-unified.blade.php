@@ -311,17 +311,24 @@
             return els;
         }
 
-        function clearHighlights(els) {
-            (els || getSearchableEls()).forEach(el => {
-                el.style.display = '';
-                el.classList.remove('search-highlight');
+        function clearHighlights() {
+            // Query without offsetParent filter so hidden elements are also reset
+            const seen = new Set();
+            SELECTORS.forEach(sel => {
+                document.querySelectorAll('.content ' + sel).forEach(el => {
+                    if (!seen.has(el)) {
+                        seen.add(el);
+                        el.style.display = '';
+                        el.classList.remove('search-highlight');
+                    }
+                });
             });
         }
 
         window.runPageSearch = function(query) {
             if (_clearTimer) clearTimeout(_clearTimer);
+            if (!query || !query.trim()) { clearHighlights(); return; }
             const els = getSearchableEls();
-            if (!query || !query.trim()) { clearHighlights(els); return; }
             const q = query.trim().toLowerCase();
             let firstMatch = null;
             els.forEach(el => {
