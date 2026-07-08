@@ -287,6 +287,7 @@
     @endif
     @yield('scripts')
 
+    <style>.search-hidden{display:none!important}</style>
     <script>
     // Generic page search — runs when topbar fires window.runPageSearch(query)
     (function() {
@@ -296,45 +297,38 @@
             '.stat-card', 'section', 'article',
         ];
         let _clearTimer = null;
+        let _allEls = null; // cached on first search so we can restore hidden ones
 
-        function getSearchableEls() {
+        function getAllEls() {
+            if (_allEls) return _allEls;
             const seen = new Set();
             const els = [];
             SELECTORS.forEach(sel => {
                 document.querySelectorAll('.content ' + sel).forEach(el => {
-                    if (!seen.has(el) && el.offsetParent !== null) {
-                        seen.add(el);
-                        els.push(el);
-                    }
+                    if (!seen.has(el)) { seen.add(el); els.push(el); }
                 });
             });
+            _allEls = els;
             return els;
         }
 
-        function clearHighlights() {
-            // Query without offsetParent filter so hidden elements are also reset
-            const seen = new Set();
-            SELECTORS.forEach(sel => {
-                document.querySelectorAll('.content ' + sel).forEach(el => {
-                    if (!seen.has(el)) {
-                        seen.add(el);
-                        el.style.display = '';
-                        el.classList.remove('search-highlight');
-                    }
-                });
+        function clearSearch() {
+            if (!_allEls) return;
+            _allEls.forEach(el => {
+                el.classList.remove('search-hidden', 'search-highlight');
             });
         }
 
         window.runPageSearch = function(query) {
             if (_clearTimer) clearTimeout(_clearTimer);
-            if (!query || !query.trim()) { clearHighlights(); return; }
-            const els = getSearchableEls();
+            if (!query || !query.trim()) { clearSearch(); return; }
             const q = query.trim().toLowerCase();
+            const els = getAllEls();
             let firstMatch = null;
             els.forEach(el => {
                 const text = el.innerText || el.textContent || '';
                 const matches = text.toLowerCase().includes(q);
-                el.style.display = matches ? '' : 'none';
+                el.classList.toggle('search-hidden', !matches);
                 el.classList.remove('search-highlight');
                 if (matches && !firstMatch) firstMatch = el;
             });
