@@ -2030,13 +2030,12 @@ $initialMessagesJson = $messages->map(fn ($message) => [
     {
         $url = route('profile.card', $user);
 
-        $result = \Endroid\QrCode\Builder\Builder::create()
-            ->writer(new \Endroid\QrCode\Writer\PngWriter())
-            ->data($url)
-            ->size(320)
-            ->margin(10)
-            ->errorCorrectionLevel(\Endroid\QrCode\ErrorCorrectionLevel::High)
-            ->build();
+        $result = (new \Endroid\QrCode\Builder\Builder(
+            data: $url,
+            size: 320,
+            margin: 10,
+            errorCorrectionLevel: \Endroid\QrCode\ErrorCorrectionLevel::High,
+        ))->build();
 
         return response($result->getString(), 200)
             ->header('Content-Type', $result->getMimeType())
