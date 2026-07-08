@@ -1,2 +1,24 @@
 User-agent: *
-Disallow:
+Allow: /
+Allow: /landing
+Allow: /login
+Allow: /register
+Allow: /features-guide
+
+# Block authenticated/private areas
+Disallow: /dashboard
+Disallow: /student/
+Disallow: /teacher/
+Disallow: /admin/
+Disallow: /messaging
+Disallow: /storage/message-attachment/
+Disallow: /storage/message-audio/
+Disallow: /health
+Disallow: /u/
+
+# Block internal/utility routes
+Disallow: /forgot-password
+Disallow: /reset-password/
+Disallow: /verification/
+
+Sitemap: https://edu.ejlalmakkah.org.sa/sitemap.xml

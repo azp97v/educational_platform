@@ -3,7 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إجلال — منصة التعليم الذكية</title>
+
+  {{-- ══ SEO: Primary ══════════════════════════════════════════════ --}}
+  <title>منصة إجلال التعليمية | دورات تدريبية وتعليم ذكي - جمعية إجلال مكة</title>
+  <meta name="description" content="منصة إجلال التعليمية — منصة تعليمية ذكية من جمعية إجلال مكة المكرمة، تقدم دورات تدريبية وتعليمية تفاعلية عبر الإنترنت. سجّل الآن وابدأ رحلتك التعليمية.">
+  <meta name="keywords" content="منصة إجلال التعليمية، منصة إجلال الذكية، جمعية إجلال مكة، دورات تدريبية مكة، تعليم إلكتروني، تعلم عن بعد، منصة تعليمية، إجلال مكة المكرمة، دورات تعليمية، تعليم ذكي">
+  <meta name="author" content="جمعية إجلال مكة المكرمة">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://edu.ejlalmakkah.org.sa/">
+
+  {{-- ══ SEO: Open Graph (Facebook / WhatsApp / LinkedIn) ══════════ --}}
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://edu.ejlalmakkah.org.sa/">
+  <meta property="og:site_name" content="منصة إجلال التعليمية">
+  <meta property="og:title" content="منصة إجلال التعليمية | دورات تدريبية وتعليم ذكي">
+  <meta property="og:description" content="منصة تعليمية ذكية من جمعية إجلال مكة المكرمة، تقدم دورات تدريبية وتعليمية تفاعلية عبر الإنترنت. سجّل الآن وابدأ رحلتك التعليمية.">
+  <meta property="og:image" content="https://edu.ejlalmakkah.org.sa/images/logo/logo.png">
+  <meta property="og:image:alt" content="شعار منصة إجلال التعليمية">
+  <meta property="og:locale" content="ar_SA">
+
+  {{-- ══ SEO: Twitter Card ═══════════════════════════════════════════ --}}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="منصة إجلال التعليمية | دورات تدريبية وتعليم ذكي">
+  <meta name="twitter:description" content="منصة تعليمية ذكية من جمعية إجلال مكة المكرمة، تقدم دورات تدريبية وتعليمية تفاعلية عبر الإنترنت.">
+  <meta name="twitter:image" content="https://edu.ejlalmakkah.org.sa/images/logo/logo.png">
+
+  {{-- ══ SEO: JSON-LD Structured Data ══════════════════════════════ --}}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "منصة إجلال التعليمية",
+    "alternateName": ["منصة إجلال الذكية", "جمعية إجلال مكة"],
+    "url": "https://edu.ejlalmakkah.org.sa",
+    "logo": "https://edu.ejlalmakkah.org.sa/images/logo/logo.png",
+    "description": "منصة تعليمية ذكية من جمعية إجلال مكة المكرمة تقدم دورات تدريبية وتعليمية تفاعلية عبر الإنترنت",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "مكة المكرمة",
+      "addressCountry": "SA"
+    },
+    "sameAs": [],
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://edu.ejlalmakkah.org.sa/courses?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
   @include('components.account-theme-head')
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
