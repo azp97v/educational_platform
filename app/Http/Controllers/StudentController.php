@@ -666,7 +666,13 @@ class StudentController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('student.lesson', compact('lesson', 'lessonNotes', 'lessonsWithProgress', 'currentProgress'));
+        $lessonQuestions = StudentInquiry::where('lesson_id', $lesson->id)
+            ->where('student_id', $user->id)
+            ->where('inquiry_type', 'question')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('student.lesson', compact('lesson', 'lessonNotes', 'lessonQuestions', 'lessonsWithProgress', 'currentProgress'));
     }
 
     public function watchLesson(Lesson $lesson)
@@ -732,7 +738,13 @@ class StudentController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return view('student.lesson', compact('lesson', 'lessonsWithProgress', 'lessonNotes', 'currentProgress'));
+            $lessonQuestions = StudentInquiry::where('lesson_id', $lesson->id)
+                ->where('student_id', $user->id)
+                ->where('inquiry_type', 'question')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return view('student.lesson', compact('lesson', 'lessonsWithProgress', 'lessonNotes', 'lessonQuestions', 'currentProgress'));
         } catch (\Throwable $e) {
             \Log::error('watchLesson failed: ' . $e->getMessage(), [
                 'lesson_id' => $lesson->id,

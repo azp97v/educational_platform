@@ -1586,6 +1586,14 @@
       </div>
       <div id="notesList" style="display: flex; flex-direction: column; gap: 0.8rem;"></div>
     </div>
+
+    <!-- Questions List -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">
+        <i class="ri-question-answer-line"></i> أسئلتك
+      </div>
+      <div id="questionsList" style="display: flex; flex-direction: column; gap: 0.8rem;"></div>
+    </div>
   </div>
 
   <!-- LEFT: PLAYER SECTION -->
@@ -1833,6 +1841,12 @@
   $canCompleteInitial = ($currentProgressPct >= 90) || $isLessonCompleted;
 ?>
 let userNotes = [];
+let userQuestions = @json($lessonQuestions->map(fn($q) => [
+  'id'   => $q->id,
+  'text' => $q->question_text,
+  'time' => $q->created_at->format('Y-m-d H:i'),
+  'status' => $q->status,
+]));
 let isBookmarked = false;
 let currentRating = 0;
 let isDarkMode = true;
@@ -1866,6 +1880,7 @@ const playback = {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadUserNotes();
+  displayQuestions();
   loadBookmarkStatus();
   loadSavedRating();
 
@@ -2433,6 +2448,27 @@ function displayNotes() {
   }
 }
 
+function displayQuestions() {
+  const list = document.getElementById('questionsList');
+  if (!list) return;
+  if (userQuestions.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--light-gray); font-size: 0.85rem;"><i class="ri-question-line" style="font-size: 1.8rem; opacity: 0.4; margin-bottom: 0.5rem; display: block;"></i>لا توجد أسئلة</div>';
+    return;
+  }
+  const statusLabel = { pending: 'قيد الانتظار', answered: 'تمت الإجابة', closed: 'مغلق' };
+  const statusColor = { pending: '#c6a675', answered: '#34c759', closed: '#888' };
+  list.innerHTML = userQuestions.map(q => {
+    const st = q.status || 'pending';
+    return `<div class="notes-item">
+      <div class="notes-time">${q.time}</div>
+      <div class="notes-text">${escapeHtml(q.text)}</div>
+      <div style="margin-top:0.35rem;">
+        <span style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:20px;background:${statusColor[st] || '#888'}22;color:${statusColor[st] || '#888'};font-weight:600;">${statusLabel[st] || st}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -2659,8 +2695,14 @@ function submitQuestion() {
   })
   .then(data => {
     closeQuestionModal();
-      document.getElementById('questionText').value = '';
-      showNotification('تم إرسال سؤالك للمعلم بنجاح.', 'success');
+    userQuestions.unshift({
+      id: data.inquiry_id,
+      text: question,
+      time: new Date().toLocaleString('ar-SA'),
+      status: 'pending',
+    });
+    displayQuestions();
+    showNotification('تم إرسال سؤالك للمعلم بنجاح.', 'success');
   })
   .catch(error => {
     console.error('Error:', error);
