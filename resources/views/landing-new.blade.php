@@ -30,6 +30,7 @@
 
   {{-- ══ SEO: JSON-LD Structured Data ══════════════════════════════ --}}
   <script type="application/ld+json">
+  @verbatim
   {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
@@ -50,6 +51,7 @@
       "query-input": "required name=search_term_string"
     }
   }
+  @endverbatim
   </script>
 
   @include('components.account-theme-head')
