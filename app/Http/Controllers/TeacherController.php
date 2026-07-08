@@ -1718,21 +1718,19 @@ class TeacherController extends Controller
             'url' => 'required|url',
         ]);
 
-        $url = $request->input('url');
+        $url = trim($request->input('url'));
 
-        // Extract video ID from YouTube URL - supports all formats
-        // https://youtube.com/watch?v=xxxx
-        // https://www.youtube.com/watch?v=xxxx
-        // https://youtu.be/xxxx
-        // https://www.youtube.com/embed/xxxx
-        // https://youtube.com/watch?v=xxxx&t=10s (with timestamps)
-        if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/', $url, $matches)) {
+        // Broad YouTube video-ID extraction — covers watch, short-link, embed, Shorts, live
+        if (preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_\-]{11})/', $url, $matches)) {
             $videoId = $matches[1];
         } else {
+            // Return 200 so no red console error; log URL for debugging
+            \Log::warning('YouTube regex miss', ['url' => $url]);
             return response()->json([
                 'success' => false,
-                'error' => 'رابط YouTube غير صالح. استخدم رابطًا مباشرًا مثل:\n- https://youtube.com/watch?v=xxxxx\n- https://youtu.be/xxxxx\n- https://www.youtube.com/embed/xxxxx'
-            ], 400);
+                'manual'  => true,
+                'hint'    => 'رابط YouTube غير مدعوم. أدخل المدة يدوياً.',
+            ]);
         }
 
         // All failures return HTTP 200 so the browser never logs a red "Failed to load"
@@ -1742,7 +1740,7 @@ class TeacherController extends Controller
             $durationSeconds = $this->extractYouTubeDurationViaAPI($videoId)
                             ?? $this->extractYouTubeDurationWithYoutubeDl($videoId);
 
-            \Log::info('YouTube duration result', ['videoId' => $videoId, 'seconds' => $durationSeconds]);
+            \Log::warning('YouTube duration result', ['videoId' => $videoId, 'url' => $url, 'seconds' => $durationSeconds]);
 
             if ($durationSeconds === null) {
                 return response()->json([
@@ -1796,7 +1794,7 @@ class TeacherController extends Controller
             $ret    = 0;
             // Use timeout 20 so PHP-FPM is never stuck waiting on yt-dlp
             exec('timeout 20 ' . $command . ' --no-warnings --print duration_string --skip-download ' . escapeshellarg($videoUrl) . ' 2>/dev/null', $output, $ret);
-            \Log::info('yt-dlp exec', ['ret' => $ret, 'output' => $output]);
+            \Log::warning('yt-dlp exec', ['ret' => $ret, 'output' => $output]);
             if ($ret === 0 && !empty($output)) {
                 $parts = explode(':', trim(implode('', $output)));
                 if (count($parts) === 3) return ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
@@ -1873,10 +1871,10 @@ class TeacherController extends Controller
             if ($httpCode === 200 && $response) {
                 $data = json_decode($response, true);
                 $len  = $data['videoDetails']['lengthSeconds'] ?? null;
-                \Log::info('Innertube response', ['client' => $client['clientName'], 'http' => $httpCode, 'len' => $len]);
+                \Log::warning('Innertube response', ['client' => $client['clientName'], 'http' => $httpCode, 'len' => $len]);
                 if ($len !== null && is_numeric($len) && (int)$len > 0) return (int)$len;
             } else {
-                \Log::info('Innertube non-200', ['client' => $client['clientName'] ?? '?', 'http' => $httpCode, 'body' => substr($response ?? '', 0, 200)]);
+                \Log::warning('Innertube non-200', ['client' => $client['clientName'] ?? '?', 'http' => $httpCode, 'body' => substr($response ?? '', 0, 200)]);
             }
         } catch (\Exception $e) {
             \Log::warning('Innertube exception: ' . $e->getMessage());
