@@ -12,11 +12,11 @@ class NoCacheHeaders
     {
         $response = $next($request);
 
-        if ($response->headers->get('Content-Type') && str_contains($response->headers->get('Content-Type'), 'text/html')) {
-            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
-            $response->headers->set('Pragma', 'no-cache');
-            $response->headers->set('Expires', '0');
-        }
+        // Prevent browser caching of ALL dynamic responses (HTML, JSON, redirects)
+        // Static files (css/js/images) are served by nginx directly and bypass PHP
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
 
         return $response;
     }
