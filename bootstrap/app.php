@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\UpdateUserActivity::class);
         $middleware->append(\App\Http\Middleware\NormalizeMojibakeEncoding::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        $middleware->append(\App\Http\Middleware\NoCacheHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, \Illuminate\Http\Request $request) {
