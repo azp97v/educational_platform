@@ -28,4 +28,6 @@
     })();
 </script>
 @php($accountThemeCssVersion = @filemtime(public_path('css/account-theme-unified.css')) ?: time())
+@php($mobileResponsiveCssVersion = @filemtime(public_path('css/mobile-responsive.css')) ?: time())
 <link rel="stylesheet" href="{{ asset('css/account-theme-unified.css') }}?v={{ $accountThemeCssVersion }}">
+<link rel="stylesheet" href="{{ asset('css/mobile-responsive.css') }}?v={{ $mobileResponsiveCssVersion }}">

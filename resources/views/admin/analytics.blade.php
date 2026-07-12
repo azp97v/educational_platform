@@ -4,6 +4,7 @@
 @section('page_subtitle', 'قراءة تشغيلية وتعليمية دقيقة')
 
 @php
+    use Illuminate\Support\Js;
     $total       = max(1, (int) $kpis['total_users']);
     $adminsPct   = round(($roleDistribution['admins']   / $total) * 100);
     $teachersPct = round(($roleDistribution['teachers'] / $total) * 100);
@@ -132,10 +133,10 @@
         new Chart(regCtx, {
             type: 'line',
             data: {
-                labels: {{ json_encode($chartLabels) }},
+                labels: {{ Js::from($chartLabels) }},
                 datasets: [{
                     label: 'تسجيلات جديدة',
-                    data: {{ json_encode($chartCounts) }},
+                    data: {{ Js::from($chartCounts) }},
                     borderColor: accent,
                     backgroundColor: 'rgba(198,166,117,0.13)',
                     borderWidth: 2.5,
@@ -164,7 +165,7 @@
             data: {
                 labels: ['مشرفون', 'معلمون', 'طلاب'],
                 datasets: [{
-                    data: [{{ $roleDistribution['admins'] }}, {{ $roleDistribution['teachers'] }}, {{ $roleDistribution['students'] }}],
+                    data: [{{ (int) $roleDistribution['admins'] }}, {{ (int) $roleDistribution['teachers'] }}, {{ (int) $roleDistribution['students'] }}],
                     backgroundColor: ['#C6A675','#6B4422','#F0DDB8'],
                     borderWidth: 2,
                     borderColor: isDark ? '#1a1410' : '#f4f0ea',

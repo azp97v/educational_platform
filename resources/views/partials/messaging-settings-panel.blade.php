@@ -543,14 +543,6 @@
 
                     <div class="settings-inline-card">
                         <div class="settings-inline-card__copy">
-                            <strong>المحتوى الحساس</strong>
-                            <small>السماح بإرفاق محتوى مموّه يحتاج نقرة لإظهاره</small>
-                        </div>
-                        <button class="sp-toggle" :class="{on: settingsChats.allowSensitiveContent}" @click="settingsChats.allowSensitiveContent=!settingsChats.allowSensitiveContent; saveMessagingSettings();"></button>
-                    </div>
-
-                    <div class="settings-inline-card">
-                        <div class="settings-inline-card__copy">
                             <strong>إظهار وسم المجلد</strong>
                             <small>عرض اسم المجلد بجانب المحادثة في القائمة</small>
                         </div>

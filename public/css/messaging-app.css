@@ -384,6 +384,15 @@
         }
         .reply small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .92; }
         .txt { font-size: 15px; line-height: 1.6; word-break: break-word; overflow-wrap: anywhere; }
+        .txt--encrypted-fallback {
+            font-style: italic;
+            opacity: 0.75;
+            background: rgba(198, 166, 117, 0.10);
+            border: 1px dashed rgba(198, 166, 117, 0.30);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13.5px;
+        }
         .media {
             margin-top: 3px; border-radius: 12px; overflow: hidden; border: 1px solid var(--theme-border);
             cursor: pointer; position: relative;
@@ -2275,6 +2284,7 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
 }
 .svf-emoji-bar .sro-react-btn {
     font-size: 30px;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne Color", system-ui, sans-serif;
     cursor: pointer;
     border: none;
     background: none;
