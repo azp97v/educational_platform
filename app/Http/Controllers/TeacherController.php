@@ -184,6 +184,7 @@ class TeacherController extends Controller
             'start_date'          => 'nullable|date',
             'end_date'            => 'nullable|date|after_or_equal:start_date',
             'sequential_lessons'  => 'nullable|boolean',
+            'course_type'         => 'nullable|in:actual,training',
         ];
     }
 

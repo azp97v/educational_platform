@@ -534,6 +534,16 @@
                             </div>
                         </div>
 
+                        <!-- Course Type -->
+                        <div class="form-group">
+                            <label><i class="ri-award-line" style="color:var(--gold-dark);margin-left:4px;"></i> نوع المسار</label>
+                            <select name="course_type">
+                                <option value="actual" {{ old('course_type','actual')=='actual'?'selected':'' }}>فعلي — شهادة إتمام</option>
+                                <option value="training" {{ old('course_type')=='training'?'selected':'' }}>تدريبي — شهادة مشاركة</option>
+                            </select>
+                            <div class="form-hint">يُحدد نوع الشهادة الموصى بها في نظام الشهادات تلقائياً</div>
+                        </div>
+
                         <!-- Row: Duration + Unit -->
                         <div class="form-row">
                             <div class="form-group" style="flex:2;">

@@ -425,7 +425,15 @@ class CertificateDesignerController extends Controller
             }
         }
 
-        return view('teacher.certificates.gallery', compact('student', 'uploadedTemplates', 'courseCompleted'));
+        $courseType = null;
+        if ($student->course) {
+            $courseRecord = Course::where('name', $student->course)
+                ->where('instructor_id', auth()->id())
+                ->first(['course_type']);
+            $courseType = $courseRecord?->course_type;
+        }
+
+        return view('teacher.certificates.gallery', compact('student', 'uploadedTemplates', 'courseCompleted', 'courseType'));
     }
 
     // ─── Preset Preview ─────────────────────────────────────────
@@ -550,7 +558,14 @@ class CertificateDesignerController extends Controller
         $templates = auth()->user()->customTemplates()->latest()->take(6)->get();
         $editingTemplate = null;
         $preset = request()->query('preset');
-        $presetData = $preset ? $this->presetDefaults($preset) : [];
+        $courseType = request()->query('course_type');
+        if ($preset) {
+            $presetData = $this->presetDefaults($preset);
+        } elseif ($courseType === 'training') {
+            $presetData = ['title' => 'شهادة مشاركة', 'subtitle' => 'في دورة تدريبية مميزة'];
+        } else {
+            $presetData = [];
+        }
         return view('teacher.certificates.custom-create', compact('student', 'templates', 'editingTemplate', 'presetData'));
     }
 

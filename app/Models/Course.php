@@ -48,6 +48,7 @@ class Course extends Model
         'end_date',
         'status',
         'sequential_lessons',
+        'course_type',
     ];
 
     protected $casts = [
