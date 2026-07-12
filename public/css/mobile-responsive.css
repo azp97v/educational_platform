@@ -10,11 +10,13 @@
      6. Tap highlight الأزرق الافتراضي
    ============================================================================ */
 
-/* ── 1) منع horizontal scroll غير المتعمّد + momentum scroll لطيف ── */
-html, body {
+/* ── 1) منع horizontal scroll غير المتعمّد ──
+   ملاحظة حرجة: overflow-x فقط على body، ليس على html
+   لأن ذلك يكسر scroll-behavior: smooth ويسبب حظر التمرير في بعض الصفحات */
+body {
+    max-width: 100vw;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
 }
 
 /* ── 2) Safe area insets لأجهزة iPhone بـnotch ── */

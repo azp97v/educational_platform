@@ -251,15 +251,15 @@
     <p>دليل تفصيلي لجميع الميزات والأدوات المتاحة للطلاب والمعلمين والإدارة. اختر القسم الذي يهمّك من الأعلى.</p>
 </div>
 
-<nav class="fg-nav" aria-label="التنقّل السريع">
-    <a href="#students">للطلاب</a>
-    <a href="#teachers">للمعلمين</a>
-    <a href="#admin">للإدارة</a>
-    <a href="#messaging">المراسلة</a>
-    <a href="#calls">المكالمات</a>
-    <a href="#exams">الاختبارات والشهادات</a>
-    <a href="#gamification">النقاط والإنجازات</a>
-    <a href="#account">الحساب والإعدادات</a>
+<nav class="fg-nav" aria-label="التنقّل السريع" data-fg-nav>
+    <a href="#students" data-fg-jump>للطلاب</a>
+    <a href="#teachers" data-fg-jump>للمعلمين</a>
+    <a href="#admin" data-fg-jump>للإدارة</a>
+    <a href="#messaging" data-fg-jump>المراسلة</a>
+    <a href="#calls" data-fg-jump>المكالمات</a>
+    <a href="#exams" data-fg-jump>الاختبارات والشهادات</a>
+    <a href="#gamification" data-fg-jump>النقاط والإنجازات</a>
+    <a href="#account" data-fg-jump>الحساب والإعدادات</a>
 </nav>
 
 <div class="fg-container">
@@ -566,6 +566,25 @@
     </div>
 
 </div>
+
+<script>
+    (function () {
+        // Smooth scroll دون تغيير URL أو hash — الصفحة تبقى /features-guide
+        const nav = document.querySelector('[data-fg-nav]');
+        if (!nav) return;
+        nav.addEventListener('click', function (e) {
+            const link = e.target.closest('[data-fg-jump]');
+            if (!link) return;
+            e.preventDefault();
+            const targetId = link.getAttribute('href').slice(1);
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            const stickyOffset = document.querySelector('.fg-nav').offsetHeight + 8;
+            const targetY = target.getBoundingClientRect().top + window.pageYOffset - stickyOffset;
+            window.scrollTo({ top: targetY, behavior: 'smooth' });
+        });
+    })();
+</script>
 
 </body>
 </html>
