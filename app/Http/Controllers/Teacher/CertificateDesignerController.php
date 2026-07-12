@@ -807,6 +807,57 @@ class CertificateDesignerController extends Controller
         }
     }
 
+    // ─── Bulk Email ─────────────────────────────────────────────
+
+    public function bulkSendEmail(Request $request)
+    {
+        $request->validate([
+            'course'       => 'required|string|max:200',
+            'template_num' => 'required|in:1,2,3,4,5',
+        ]);
+
+        $students = CertificateStudent::where('user_id', auth()->id())
+            ->where('course', $request->course)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->get();
+
+        if ($students->isEmpty()) {
+            return back()->with('error', 'لا يوجد مستفيدون بعناوين بريد في هذا المسار.');
+        }
+
+        $imageName = 'qw' . $request->template_num . '.jpeg';
+        $imagePath = public_path('image/' . $imageName);
+        if (!file_exists($imagePath)) {
+            return back()->with('error', 'قالب الشهادة المختار غير موجود.');
+        }
+
+        @set_time_limit(0);
+        @ini_set('memory_limit', '512M');
+
+        $base64Image = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($imagePath));
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($students as $student) {
+            try {
+                Mail::to($student->email)->send(new \App\Mail\CertificateMail($student, $request->template_num, $base64Image));
+                $sent++;
+            } catch (\Exception $e) {
+                Log::error("Bulk certificate email failed for {$student->email}: " . $e->getMessage());
+                $failed++;
+            }
+        }
+
+        $msg = "تم إرسال {$sent} شهادة بنجاح";
+        if ($failed > 0) {
+            $msg .= " — فشل إرسال {$failed}";
+        }
+
+        return back()->with('success', $msg);
+    }
+
     // ─── Preset Defaults ────────────────────────────────────────
 
     private function presetDefaults($preset): array
