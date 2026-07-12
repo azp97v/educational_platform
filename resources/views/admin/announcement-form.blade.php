@@ -49,15 +49,24 @@
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div>
+                    <label>مكان الظهور <span style="color:#f87171">*</span></label>
+                    <select name="scope" required style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;">
+                        @foreach(['dashboard'=>'الصفحة الرئيسية فقط','site_wide'=>'كل صفحات الموقع'] as $val => $lbl)
+                            <option value="{{ $val }}" {{ old('scope', $announcement?->scope ?? 'dashboard') === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label>تاريخ انتهاء الصلاحية (اختياري)</label>
                     <input type="datetime-local" name="expires_at" value="{{ old('expires_at', $announcement?->expires_at?->format('Y-m-d\TH:i')) }}">
                 </div>
-                <div style="display:flex;align-items:center;gap:10px;padding-top:24px;">
-                    <input type="checkbox" name="is_active" value="1" id="is_active"
-                        {{ old('is_active', $announcement?->is_active ?? true) ? 'checked' : '' }}
-                        style="accent-color:#C6A675;width:16px;height:16px;">
-                    <label for="is_active" style="font-weight:600;cursor:pointer;">نشر الإعلان فوراً</label>
-                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;">
+                <input type="checkbox" name="is_active" value="1" id="is_active"
+                    {{ old('is_active', $announcement?->is_active ?? true) ? 'checked' : '' }}
+                    style="accent-color:#C6A675;width:16px;height:16px;">
+                <label for="is_active" style="font-weight:600;cursor:pointer;">نشر الإعلان فوراً</label>
             </div>
 
             <div style="display:flex;gap:10px;margin-top:8px;">

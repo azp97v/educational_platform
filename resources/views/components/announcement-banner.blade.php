@@ -2,88 +2,152 @@
 @php
     try {
         $__role = auth()->user()->role ?? 'student';
-        $__announcements = \App\Models\Announcement::active()
-            ->forRole($__role)
-            ->orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get(['id', 'title', 'body', 'type']);
+        $__routeName = optional(request()->route())->getName() ?? '';
+        // اعتبر الصفحة "لوحة تحكم" إذا كانت من مسارات الداشبورد الرئيسية
+        $__isDashboard = in_array($__routeName, [
+            'home', 'dashboard', 'landing',
+            'student.index', 'teacher.dashboard', 'teacher.dashboard.full', 'admin.index',
+        ], true);
+        $__annQuery = \App\Models\Announcement::active()->forRole($__role);
+        if (!$__isDashboard) {
+            $__annQuery->where('scope', 'site_wide');
+        }
+        $__announcements = $__annQuery->orderBy('created_at', 'desc')->limit(10)->get(['id', 'title', 'body', 'type']);
     } catch (\Throwable $e) {
         $__announcements = collect();
     }
 @endphp
 
 @if($__announcements->isNotEmpty())
-<div id="ann-stack" style="position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;flex-direction:column;gap:0;pointer-events:none;">
-    @foreach($__announcements as $ann)
-    @php
-        $annColors = [
-            'info'    => ['bg' => '#1d4ed8', 'border' => '#3b82f6', 'icon' => 'ri-information-line',  'light' => '#eff6ff'],
-            'success' => ['bg' => '#065f46', 'border' => '#10b981', 'icon' => 'ri-checkbox-circle-line','light' => '#ecfdf5'],
-            'warning' => ['bg' => '#92400e', 'border' => '#f59e0b', 'icon' => 'ri-error-warning-line', 'light' => '#fffbeb'],
-            'danger'  => ['bg' => '#991b1b', 'border' => '#ef4444', 'icon' => 'ri-close-circle-line',  'light' => '#fef2f2'],
-        ];
-        $ac = $annColors[$ann->type] ?? $annColors['info'];
-    @endphp
-    <div id="ann-{{ $ann->id }}"
-         data-ann-id="{{ $ann->id }}"
-         style="background:{{ $ac['bg'] }};border-bottom:2px solid {{ $ac['border'] }};color:#fff;padding:10px 20px;display:flex;align-items:center;gap:12px;pointer-events:all;animation:ann-slide-down .35s ease;font-family:inherit;">
-        <i class="{{ $ac['icon'] }}" style="font-size:18px;flex-shrink:0;opacity:.9;"></i>
-        <div style="flex:1;min-width:0;">
-            <span style="font-weight:700;font-size:13px;">{{ $ann->title }}</span>
-            @if($ann->body)
-                <span style="font-size:12px;opacity:.85;margin-right:8px;">— {{ Str::limit($ann->body, 120) }}</span>
-            @endif
-        </div>
-        <button onclick="annDismiss({{ $ann->id }})"
-                title="إغلاق"
-                style="background:rgba(255,255,255,.15);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;transition:background .15s;"
-                onmouseover="this.style.background='rgba(255,255,255,.3)'"
-                onmouseout="this.style.background='rgba(255,255,255,.15)'">
-            <i class="ri-close-line"></i>
-        </button>
+<div class="ann-strip" data-ann-strip role="status" aria-live="polite">
+    <div class="ann-strip__track" data-ann-track>
+        @foreach($__announcements as $ann)
+            @php
+                $iconMap = [
+                    'info'    => 'ri-information-line',
+                    'success' => 'ri-checkbox-circle-line',
+                    'warning' => 'ri-error-warning-line',
+                    'danger'  => 'ri-close-circle-line',
+                ];
+                $ic = $iconMap[$ann->type] ?? $iconMap['info'];
+            @endphp
+            <span class="ann-strip__item ann-strip__item--{{ $ann->type ?: 'info' }}">
+                <i class="{{ $ic }}" aria-hidden="true"></i>
+                <strong>{{ $ann->title }}</strong>
+                @if($ann->body)
+                    <span class="ann-strip__sep">—</span>
+                    <span class="ann-strip__body">{{ \Illuminate\Support\Str::limit($ann->body, 180) }}</span>
+                @endif
+            </span>
+            <span class="ann-strip__gap" aria-hidden="true">•</span>
+        @endforeach
+        {{-- تكرار السلسلة مرة أخرى لضمان تدفق سلس بلا فجوات في الـmarquee --}}
+        @foreach($__announcements as $ann)
+            @php
+                $iconMap = [
+                    'info'    => 'ri-information-line',
+                    'success' => 'ri-checkbox-circle-line',
+                    'warning' => 'ri-error-warning-line',
+                    'danger'  => 'ri-close-circle-line',
+                ];
+                $ic = $iconMap[$ann->type] ?? $iconMap['info'];
+            @endphp
+            <span class="ann-strip__item ann-strip__item--{{ $ann->type ?: 'info' }}" aria-hidden="true">
+                <i class="{{ $ic }}"></i>
+                <strong>{{ $ann->title }}</strong>
+                @if($ann->body)
+                    <span class="ann-strip__sep">—</span>
+                    <span class="ann-strip__body">{{ \Illuminate\Support\Str::limit($ann->body, 180) }}</span>
+                @endif
+            </span>
+            <span class="ann-strip__gap" aria-hidden="true">•</span>
+        @endforeach
     </div>
-    @endforeach
 </div>
 
 <style>
-@keyframes ann-slide-down {
-    from { transform: translateY(-100%); opacity: 0; }
-    to   { transform: translateY(0);     opacity: 1; }
+.ann-strip {
+    /* شريط أنيق مندمج داخل تدفّق المستند — لا يغطّي أي عنصر */
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    background: var(--ann-bg, rgba(198, 166, 117, 0.10));
+    border-bottom: 1px solid var(--ann-border, rgba(198, 166, 117, 0.22));
+    color: var(--ann-text, inherit);
+    font-family: inherit;
+    height: 38px;
+    line-height: 38px;
+    z-index: 1;
+    contain: content;
+}
+[data-theme="dark"] .ann-strip {
+    --ann-bg: rgba(198, 166, 117, 0.08);
+    --ann-border: rgba(198, 166, 117, 0.18);
+    --ann-text: #d9c4a6;
+}
+[data-theme="light"] .ann-strip,
+:not([data-theme]) .ann-strip {
+    --ann-bg: rgba(141, 114, 82, 0.06);
+    --ann-border: rgba(141, 114, 82, 0.18);
+    --ann-text: #5a3f26;
+}
+.ann-strip__track {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    white-space: nowrap;
+    animation: ann-marquee 42s linear infinite;
+    will-change: transform;
+    padding-inline: 20px;
+}
+.ann-strip:hover .ann-strip__track,
+.ann-strip:focus-within .ann-strip__track {
+    animation-play-state: paused;
+}
+.ann-strip__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+.ann-strip__item i { font-size: 15px; opacity: 0.85; }
+.ann-strip__item strong { font-weight: 700; }
+.ann-strip__sep { opacity: 0.55; margin: 0 2px; }
+.ann-strip__body { opacity: 0.85; font-weight: 500; }
+.ann-strip__gap { opacity: 0.35; font-weight: 700; }
+
+/* ألوان دقيقة حسب النوع بدون كسر الثيم */
+.ann-strip__item--success i { color: #16a34a; }
+.ann-strip__item--warning i { color: #d97706; }
+.ann-strip__item--danger  i { color: #dc2626; }
+.ann-strip__item--info    i { color: #C6A675; }
+
+@keyframes ann-marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* اتجاه RTL: نتحرّك من اليمين إلى اليسار طبيعياً */
+[dir="rtl"] .ann-strip__track { animation-name: ann-marquee-rtl; }
+@keyframes ann-marquee-rtl {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* الاستجابة للموبايل */
+@media (max-width: 768px) {
+    .ann-strip { height: 34px; line-height: 34px; }
+    .ann-strip__track { animation-duration: 30s; gap: 10px; padding-inline: 12px; }
+    .ann-strip__item { font-size: 12px; }
+    .ann-strip__body { display: none; } /* على الموبايل نُبقي العنوان فقط */
+}
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+    .ann-strip__track { animation: none; padding-inline: 20px; }
 }
 </style>
-
-<script>
-(function() {
-    var dismissed = JSON.parse(localStorage.getItem('ann-dismissed') || '{}');
-    document.querySelectorAll('[data-ann-id]').forEach(function(el) {
-        var id = el.getAttribute('data-ann-id');
-        if (dismissed[id]) el.style.display = 'none';
-    });
-    var stack = document.getElementById('ann-stack');
-    if (stack && stack.querySelectorAll('[data-ann-id]:not([style*="display: none"])').length === 0) {
-        stack.style.display = 'none';
-    }
-})();
-
-function annDismiss(id) {
-    var el = document.getElementById('ann-' + id);
-    if (el) {
-        el.style.transition = 'opacity .25s, transform .25s';
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-8px)';
-        setTimeout(function() {
-            el.style.display = 'none';
-            var dismissed = JSON.parse(localStorage.getItem('ann-dismissed') || '{}');
-            dismissed[id] = Date.now();
-            localStorage.setItem('ann-dismissed', JSON.stringify(dismissed));
-            // Hide stack if all dismissed
-            var stack = document.getElementById('ann-stack');
-            if (stack && stack.querySelectorAll('[data-ann-id]:not([style*="display: none"])').length === 0) {
-                stack.style.display = 'none';
-            }
-        }, 260);
-    }
-}
-</script>
 @endif
 @endauth

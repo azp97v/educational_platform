@@ -1950,7 +1950,6 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                 'sendWithEnter' => true,
                 'reduceMotion' => false,
                 'defaultTheme' => '',
-                'allowSensitiveContent' => false,
                 'nameColor' => '',
                 'fontFamily' => 'default',
                 'autoNightMode' => false,

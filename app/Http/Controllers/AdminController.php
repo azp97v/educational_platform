@@ -602,6 +602,7 @@ class AdminController extends Controller
             'body'        => 'required|string',
             'type'        => 'required|in:info,success,warning,danger',
             'target_role' => 'required|in:all,admin,teacher,student',
+            'scope'       => 'required|in:dashboard,site_wide',
             'is_active'   => 'boolean',
             'expires_at'  => 'nullable|date|after:now',
         ]);
@@ -626,6 +627,7 @@ class AdminController extends Controller
             'body'        => 'required|string',
             'type'        => 'required|in:info,success,warning,danger',
             'target_role' => 'required|in:all,admin,teacher,student',
+            'scope'       => 'required|in:dashboard,site_wide',
             'is_active'   => 'boolean',
             'expires_at'  => 'nullable|date',
         ]);

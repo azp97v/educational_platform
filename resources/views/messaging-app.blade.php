@@ -628,7 +628,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 <div class="pinned-list-card">
 <div class="pinned-list-item" v-for="msg in pinnedMessagesForCurrentChat" :key="'pin-'+msg.id" @click="jumpToPinnedMessage(msg); pinnedListOpen = false">
 <i class="ri-pushpin-2-fill"></i>
-<span class="pinned-list-text">@{{ msg.content || (msg.messageType === 'image' ? 'صورة' : msg.messageType === 'video' ? 'فيديو' : msg.messageType === 'audio' ? 'رسالة صوتية' : 'مرفق') }}</span>
+<span class="pinned-list-text">@{{ isStillEncrypted(msg.content) ? '🔒 رسالة مشفّرة' : (msg.content || (msg.messageType === 'image' ? 'صورة' : msg.messageType === 'video' ? 'فيديو' : msg.messageType === 'audio' ? 'رسالة صوتية' : 'مرفق')) }}</span>
 <button class="pinned-list-unpin" @click.stop="messageContextMessage = msg; contextPin()"><i class="ri-close-line"></i></button>
 </div>
 </div>
@@ -762,7 +762,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 </div>
 </div>
 
-<div class="txt" v-if="message.content && message.messageType === 'text'">@{{ message.content }}</div>
+<div class="txt" v-if="message.content && message.messageType === 'text'" :class="{ 'txt--encrypted-fallback': isStillEncrypted(message.content) }">@{{ isStillEncrypted(message.content) ? '🔒 رسالة مشفّرة — الطرف الآخر لم يشارك مفتاح التشفير بعد' : message.content }}</div>
 
 <div class="sticker-bubble" v-if="(message.messageType === 'sticker_static' || message.messageType === 'sticker_animated') && !brokenMediaByMessageId[message.id]" @click="openStickerViewer(message)">
 <img v-if="message.messageType === 'sticker_static'" :src="message.attachmentUrl" :alt="message.attachmentName" class="sticker-bubble-media" v-on:error="markMediaAsBroken(message)">
@@ -1007,11 +1007,6 @@ class="reaction-chip" :class="{ mine: r.myReaction }"
 <div class="chip-head">
 
 <span>@{{ t.attachments }} (@{{ pendingAttachments.length }})</span>
-
-<label v-if="settingsChats.allowSensitiveContent" style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;margin-inline-end:auto;">
-<input type="checkbox" v-model="pendingAttachmentsSensitive" style="cursor:pointer;">
-محتوى +18
-</label>
 
 <button @click="clearAllAttachments"><i class="ri-delete-bin-6-line"></i></button>
 
@@ -1668,7 +1663,7 @@ key="mic-action"
 <button class="sro-react-btn" v-for="e in statusEmojiList" :key="e" @mousedown.prevent @click="sendQuickStatusReaction(e)">@{{ e }}</button>
 </div>
 <div class="svf-reply-wrap">
-<input class="status-reply-input" v-model="statusReplyText" placeholder="اكتب ردًا على الحالة..." @focus="onReplyInputFocus" @blur="onReplyInputBlur" @keydown.enter.prevent.stop="replyToStatus">
+<input class="status-reply-input" v-model="statusReplyText" placeholder="اكتب ردًا على الحالة..." @focus="onReplyInputFocus" @blur="onReplyInputBlur" @keydown.esc.prevent.stop="closeReplyPanel" @keydown.enter.prevent.stop="replyToStatus">
 <button class="svf-like-btn" @mousedown.prevent @click="toggleStatusLike" :class="{ liked: statusLiked, 'like-animating': statusLikeAnimating }" title="إعجاب"><i class="ri-heart-3-fill" v-if="statusLiked"></i><i class="ri-heart-3-line" v-else></i></button>
 <button class="svf-emoji-btn" @mousedown.prevent @click="toggleFullEmoji" title="مكتبة الإيموجي"><i class="ri-emotion-happy-line"></i></button>
 <button class="svf-send-btn" @mousedown.prevent @click="replyToStatus"><i class="ri-send-plane-fill"></i></button>
@@ -4398,8 +4393,6 @@ recordingStream: null,
 
 pendingAttachments: [],
 
-pendingAttachmentsSensitive: false,
-
 revealedSensitiveIds: new Set(),
 
 replyingToMessage: null,
@@ -5265,7 +5258,7 @@ folderChatPickerId: null,
 
 settingsLanguageChoice: 'ar',
 
-settingsChats: { sendWithEnter: true, reduceMotion: false, defaultTheme: '', fontFamily: 'default', autoNightMode: false, doubleClickAction: 'reply', allowSensitiveContent: false, nameColor: '', tabsPosition: 'left', spellcheckEnabled: true, showFolderTags: false, showUnreadInTitle: false },
+settingsChats: { sendWithEnter: true, reduceMotion: false, defaultTheme: '', fontFamily: 'default', autoNightMode: false, doubleClickAction: 'reply', nameColor: '', tabsPosition: 'left', spellcheckEnabled: true, showFolderTags: false, showUnreadInTitle: false },
 
 baseDocumentTitle: document.title,
 
@@ -7698,7 +7691,6 @@ fd.append('recipient_id', this.selectedContact.id);
 fd.append('file', file);
 
 if (this.replyingToMessage?.id) fd.append('reply_to', this.replyingToMessage.id);
-if (this.pendingAttachmentsSensitive) fd.append('is_sensitive', '1');
 
 const itemIndex = this.pendingAttachments.findIndex(a => a.file === file);
 
@@ -8846,7 +8838,6 @@ clearAllAttachments() {
 this.pendingAttachments.forEach(i => { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
 
 this.pendingAttachments = [];
-this.pendingAttachmentsSensitive = false;
 
 },
 
@@ -10785,6 +10776,10 @@ const importedKey = await window.crypto.subtle.importKey(
 window._e2ePartnerKey = importedKey;
 this.e2ePartnerHasKey = true;
 this.e2eEnabled = true;
+// إعادة فك تشفير الرسائل المحمّلة سابقاً — يحلّ سباق تحميل الرسائل قبل مفتاح الشريك
+if (this.messages && this.messages.length) {
+    this._decryptConversationMessages();
+}
 } catch (_) { this.e2eEnabled = false; this.e2ePartnerHasKey = false; }
 },
 
@@ -10820,6 +10815,11 @@ window._e2eKeyPair.privateKey,
 const plain = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sharedKey, ct);
 return new TextDecoder().decode(plain);
 } catch (_) { return '[رسالة مشفرة — يتعذر فكّ التشفير]'; }
+},
+
+// يفحص إذا كان محتوى الرسالة لا يزال بصيغة e2e المشفّرة (لم يُفكّ)
+isStillEncrypted(content) {
+    return typeof content === 'string' && content.startsWith('e2e:');
 },
 
 _openE2EDB() {
@@ -16077,6 +16077,7 @@ if (v && !v.paused) v.pause();
 onReplyInputBlur() {
 this.statusReplyFocused = false;
 if (this.showStatusFullEmoji) return;
+this.showQuickEmojiBar = false;
 this.statusPaused = false;
 const v = this.$refs.statusViewerVideo;
 if (v && this.currentStatus?.type === 'video') v.play().catch(() => {});
@@ -16590,7 +16591,6 @@ chats: {
     fontFamily: this.settingsChats.fontFamily,
     autoNightMode: this.settingsChats.autoNightMode,
     doubleClickAction: this.settingsChats.doubleClickAction,
-    allowSensitiveContent: this.settingsChats.allowSensitiveContent,
     nameColor: this.settingsChats.nameColor || '',
     tabsPosition: this.settingsChats.tabsPosition || 'left',
     spellcheckEnabled: this.settingsChats.spellcheckEnabled !== false,
