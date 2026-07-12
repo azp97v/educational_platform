@@ -996,6 +996,20 @@
               </div>
             </div>
 
+            <!-- Category -->
+            <div class="form-group">
+              <label>
+                <i class="ri-price-tag-3-line" style="color:var(--gold-dark);margin-left:4px;"></i> الفئة
+                <a href="{{ route('teacher.categories') }}" style="font-size:12px;color:var(--gold);margin-right:6px;" title="إدارة الفئات"><i class="ri-settings-3-line"></i></a>
+              </label>
+              <select name="category_id">
+                <option value="">بدون فئة</option>
+                @foreach($categories as $cat)
+                  <option value="{{ $cat->id }}" {{ old('category_id', $course->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                @endforeach
+              </select>
+            </div>
+
             <!-- Sequential Lessons -->
             <div class="form-group" style="margin-top:8px;">
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">

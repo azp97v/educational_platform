@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Exam;
@@ -166,7 +167,8 @@ class TeacherController extends Controller
 
     public function createCourse()
     {
-        return view('teacher.create-course');
+        $categories = Category::orderBy('name')->get();
+        return view('teacher.create-course', compact('categories'));
     }
 
     private function courseValidationRules(): array
@@ -174,7 +176,7 @@ class TeacherController extends Controller
         return [
             'name'                => 'required|string|max:255',
             'description'         => 'nullable|string',
-            'category'            => 'nullable|string|max:100',
+            'category_id'         => 'nullable|exists:categories,id',
             'level'               => 'nullable|in:beginner,intermediate,advanced',
             'duration'            => 'nullable|integer|min:1',
             'duration_unit'       => 'nullable|in:hours,days,months',
@@ -545,7 +547,8 @@ class TeacherController extends Controller
         if ($course->instructor_id !== Auth::id()) {
             abort(403, 'Unauthorized');
         }
-        return view('teacher.edit-course', compact('course'));
+        $categories = Category::orderBy('name')->get();
+        return view('teacher.edit-course', compact('course', 'categories'));
     }
 
     public function updateCourse(Request $request, Course $course)
@@ -569,6 +572,54 @@ class TeacherController extends Controller
 
         $course->delete();
         return redirect()->route('teacher.courses')->with('success', 'تم حذف المسار بنجاح');
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Category Management
+    // ──────────────────────────────────────────────────────
+
+    public function categoriesIndex()
+    {
+        $categories = Category::withCount('courses')->orderBy('name')->get();
+        return view('teacher.categories', compact('categories'));
+    }
+
+    public function categoryStore(Request $request)
+    {
+        $request->validate(['name' => 'required|string|max:100|unique:categories,name']);
+
+        $name = trim($request->input('name'));
+        $slug = \Illuminate\Support\Str::slug($name, '-', null);
+        if (empty($slug)) {
+            $slug = 'cat-' . uniqid();
+        }
+        // Ensure slug uniqueness
+        $base = $slug;
+        $i = 1;
+        while (Category::where('slug', $slug)->exists()) {
+            $slug = $base . '-' . $i++;
+        }
+
+        Category::create(['name' => $name, 'slug' => $slug]);
+        return back()->with('success', 'تمت إضافة الفئة بنجاح');
+    }
+
+    public function categoryUpdate(Request $request, Category $category)
+    {
+        $request->validate([
+            'name' => 'required|string|max:100|unique:categories,name,' . $category->id,
+        ]);
+        $category->update(['name' => trim($request->input('name'))]);
+        return back()->with('success', 'تم تعديل اسم الفئة');
+    }
+
+    public function categoryDestroy(Category $category)
+    {
+        if ($category->courses()->exists()) {
+            return back()->with('error', 'لا يمكن حذف فئة مرتبطة بمسارات — قم بتغيير فئة المسارات أولاً');
+        }
+        $category->delete();
+        return back()->with('success', 'تم حذف الفئة بنجاح');
     }
 
     public function addLesson(Request $request, Course $course)

@@ -39,6 +39,7 @@ class Course extends Model
         'description',
         'image_url',
         'category',
+        'category_id',
         'level',
         'duration',
         'duration_unit',
@@ -57,6 +58,16 @@ class Course extends Model
     public function instructor()
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    public function categoryModel()
+    {
+        return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    public function getCategoryNameAttribute(): string
+    {
+        return $this->categoryModel?->name ?? $this->category ?? '';
     }
 
     public function lessons()
