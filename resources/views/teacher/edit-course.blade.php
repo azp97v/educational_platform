@@ -999,7 +999,6 @@
             <!-- Sequential Lessons -->
             <div class="form-group" style="margin-top:8px;">
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
-                <input type="hidden" name="sequential_lessons" value="0">
                 <input type="checkbox" name="sequential_lessons" value="1"
                   {{ old('sequential_lessons', $course->sequential_lessons) ? 'checked' : '' }}
                   style="width:18px;height:18px;accent-color:var(--gold);cursor:pointer;">
