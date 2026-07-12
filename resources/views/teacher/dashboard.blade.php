@@ -16,8 +16,6 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html { overflow-x: hidden; }
-
     body {
       font-family: 'Tajawal', sans-serif;
       position: relative;
