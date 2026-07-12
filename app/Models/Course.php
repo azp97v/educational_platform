@@ -46,6 +46,11 @@ class Course extends Model
         'start_date',
         'end_date',
         'status',
+        'sequential_lessons',
+    ];
+
+    protected $casts = [
+        'sequential_lessons' => 'boolean',
     ];
 
     // العلاقات
