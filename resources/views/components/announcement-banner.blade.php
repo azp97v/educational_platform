@@ -149,5 +149,22 @@
     .ann-strip__track { animation: none; padding-inline: 20px; }
 }
 </style>
+
+<script>
+// نقل شريط الإعلانات إلى بداية <body> حتى لو أُدرج البانر ضمن الـfooter
+(function () {
+    function moveToTop() {
+        var strip = document.querySelector('.ann-strip[data-ann-strip]');
+        if (!strip || !document.body) return;
+        if (document.body.firstElementChild === strip) return;
+        document.body.insertBefore(strip, document.body.firstElementChild);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', moveToTop);
+    } else {
+        moveToTop();
+    }
+})();
+</script>
 @endif
 @endauth
