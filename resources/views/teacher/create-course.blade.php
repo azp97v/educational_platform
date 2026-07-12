@@ -385,6 +385,9 @@
       <a href="{{ route('teacher.courses') }}" class="nav-btn active" id="nb-courses">
         <i class="ri-book-2-line"></i><span>المسارات</span>
       </a>
+      <a href="{{ route('teacher.categories') }}" class="nav-btn" id="nb-categories">
+        <i class="ri-price-tag-3-line"></i><span>الفئات</span>
+      </a>
       <a href="{{ route('teacher.enrollment.requests') }}" class="nav-btn" id="nb-enrollment">
         <i class="ri-user-add-line"></i><span>طلبات الالتحاق</span>
       </a>

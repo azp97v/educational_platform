@@ -685,6 +685,9 @@
         <a href="{{ route('teacher.courses') }}" class="nav-btn">
           <i class="ri-book-2-line"></i><span>المسارات</span>
         </a>
+        <a href="{{ route('teacher.categories') }}" class="nav-btn">
+          <i class="ri-price-tag-3-line"></i><span>الفئات</span>
+        </a>
         <a href="{{ route('teacher.exams') }}" class="nav-btn active">
           <i class="ri-file-list-line"></i><span>الاختبارات</span>
         </a>

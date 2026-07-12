@@ -477,6 +477,9 @@
       <button class="nav-btn" data-href="{{ route('teacher.index') }}">
         <i class="ri-book-2-line"></i><span>المسارات</span>
       </button>
+      <button class="nav-btn" data-href="{{ route('teacher.categories') }}">
+        <i class="ri-price-tag-3-line"></i><span>الفئات</span>
+      </button>
       <button class="nav-btn" data-href="{{ route('teacher.exams') }}">
         <i class="ri-file-list-line"></i><span>الاختبارات</span>
       </button>
