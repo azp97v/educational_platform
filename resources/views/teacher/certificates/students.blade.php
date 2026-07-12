@@ -106,12 +106,35 @@
 
         .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
 
-        .status-dot {
-            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-            margin-left: 6px;
+        /* Certificate badge */
+        .cert-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            white-space: nowrap;
         }
-        .status-dot.has { background: var(--theme-success); }
-        .status-dot.none { background: var(--theme-danger); }
+        .cert-badge-has {
+            background: rgba(198,166,117,.15); color: var(--theme-gold);
+            border: 1px solid rgba(198,166,117,.35);
+        }
+        .cert-badge-none {
+            background: var(--theme-surface-2); color: var(--text-muted);
+            border: 1px solid var(--theme-border-light);
+        }
+
+        /* Completion pill */
+        .pct-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            white-space: nowrap;
+        }
+        .pct-done  { background: rgba(52,199,89,.15);  color: #34c759; border: 1px solid rgba(52,199,89,.3); }
+        .pct-mid   { background: rgba(255,159,10,.15); color: #ff9f0a; border: 1px solid rgba(255,159,10,.3); }
+        .pct-low   { background: rgba(255,59,48,.12);  color: var(--theme-danger); border: 1px solid rgba(255,59,48,.25); }
+        .pct-none  { color: var(--text-muted); font-size: 13px; }
+
+        /* Row tint for students with certificates */
+        tr.tr-has-cert td { background: rgba(198,166,117,.04); }
+        tr.tr-has-cert:hover td { background: var(--theme-gold-soft); }
 
         .empty-state {
             text-align: center; padding: 60px 20px; color: var(--text-secondary);
@@ -181,8 +204,12 @@
                 <div class="lbl">المسارات المختلفة</div>
             </div>
             <div class="stat-box">
-                <div class="num">{{ $students->total() > 0 ? rand(0, $students->total()) : 0 }}</div>
-                <div class="lbl">صدرت لهم شهادات</div>
+                <div class="num">{{ $withCertCount }}</div>
+                <div class="lbl">صدرت لهم شهادة</div>
+            </div>
+            <div class="stat-box">
+                <div class="num">{{ $students->total() - $withCertCount }}</div>
+                <div class="lbl">لم تصدر بعد</div>
             </div>
         </div>
 
@@ -205,8 +232,15 @@
                 <label>حالة الشهادة</label>
                 <select name="cert_status">
                     <option value="">الكل</option>
-                    <option value="has" {{ request('cert_status') === 'has' ? 'selected' : '' }}>صدرت له شهادة</option>
-                    <option value="none" {{ request('cert_status') === 'none' ? 'selected' : '' }}>لم تصدر له شهادة</option>
+                    <option value="has"  {{ request('cert_status') === 'has'  ? 'selected' : '' }}>✓ صدرت له شهادة</option>
+                    <option value="none" {{ request('cert_status') === 'none' ? 'selected' : '' }}>✗ لم تصدر بعد</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>إكمال المسار</label>
+                <select name="completion">
+                    <option value="">الكل</option>
+                    <option value="done" {{ request('completion') === 'done' ? 'selected' : '' }}>✓ أكمل المسار (100%)</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -251,6 +285,7 @@
                             <th>المسار</th>
                             <th>التاريخ</th>
                             <th>التقدير</th>
+                            <th title="نسبة إكمال الطالب للمسار في المنصة">إكمال المسار</th>
                             <th>الشهادة</th>
                             <th>إجراءات</th>
                         </tr>
@@ -258,9 +293,18 @@
                     <tbody>
                         @foreach($students as $i => $s)
                             @php
-                                $hasCert = $s->customTemplates()->where('user_id', auth()->id())->exists();
+                                $hasCert  = $s->custom_templates_count > 0;
+                                $cData    = $completionData[$s->id] ?? null;
+                                $pct      = $cData ? $cData['pct'] : null;
+                                $pctClass = match(true) {
+                                    $pct === null     => 'pct-none',
+                                    $pct >= 100       => 'pct-done',
+                                    $pct >= 50        => 'pct-mid',
+                                    default           => 'pct-low',
+                                };
                             @endphp
-                            <tr data-href="{{ route('teacher.certificates.student.profile', $s) }}">
+                            <tr data-href="{{ route('teacher.certificates.student.profile', $s) }}"
+                                class="{{ $hasCert ? 'tr-has-cert' : '' }}">
                                 <td onclick="event.stopPropagation()">
                                     <input type="checkbox" class="student-chk" value="{{ $s->id }}"
                                            style="width:16px;height:16px;cursor:pointer;accent-color:var(--theme-gold);">
@@ -270,15 +314,39 @@
                                     <a href="{{ route('teacher.certificates.student.profile', $s) }}"
                                        style="color:var(--text-primary);text-decoration:none;font-weight:600;">
                                         {{ $s->name }}
+                                        @if(!$s->recipient_user_id)
+                                            <span style="font-size:10px;color:var(--text-muted);font-weight:400;"> خارجي</span>
+                                        @endif
                                     </a>
                                 </td>
                                 <td style="direction:ltr;text-align:right;font-size:12px;">{{ $s->email }}</td>
-                                <td><span class="tag-pill">{{ $s->course }}</span></td>
-                                <td style="font-size:12px;">{{ $s->course_date->format('Y-m-d') }}</td>
-                                <td>{{ $s->degree }}</td>
+                                <td><span class="tag-pill">{{ $s->course ?? '—' }}</span></td>
+                                <td style="font-size:12px;">{{ $s->course_date?->format('Y-m-d') ?? '—' }}</td>
+                                <td>{{ $s->degree ?? '—' }}</td>
                                 <td>
-                                    <span class="status-dot {{ $hasCert ? 'has' : 'none' }}"></span>
-                                    {{ $hasCert ? 'صدرت' : '—' }}
+                                    @if($pct !== null)
+                                        <span class="pct-pill {{ $pctClass }}">
+                                            @if($pct >= 100)<i class="ri-checkbox-circle-line"></i>@endif
+                                            {{ $pct }}%
+                                            @if($cData) <span style="font-weight:400;opacity:.7;">({{ $cData['done'] }}/{{ $cData['total'] }})</span>@endif
+                                        </span>
+                                    @elseif(!$s->recipient_user_id)
+                                        <span class="pct-none" title="طالب خارجي — لا يوجد حساب في المنصة">—</span>
+                                    @else
+                                        <span class="pct-none" title="المسار غير مرتبط بنظام المنصة">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($hasCert)
+                                        <span class="cert-badge cert-badge-has">
+                                            <i class="ri-award-fill"></i>
+                                            صدرت ({{ $s->custom_templates_count }})
+                                        </span>
+                                    @else
+                                        <span class="cert-badge cert-badge-none">
+                                            <i class="ri-award-line"></i> —
+                                        </span>
+                                    @endif
                                 </td>
                                 <td>
                                     <div class="actions-cell">
