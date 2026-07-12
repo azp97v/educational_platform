@@ -182,16 +182,16 @@
           @csrf @method('PUT')
           <input type="text" name="name" value="{{ $cat->name }}" maxlength="100" required>
           <button type="submit" class="btn-save">حفظ</button>
-          <button type="button" class="btn-cancel" onclick="cancelEdit({{ $cat->id }})">إلغاء</button>
+          <button type="button" class="btn-cancel js-cancel" data-id="{{ $cat->id }}">إلغاء</button>
         </form>
 
         <div class="cat-row-actions">
-          <button class="btn-icon btn-edit" onclick="startEdit({{ $cat->id }})" title="تعديل">
+          <button class="btn-icon btn-edit js-edit" data-id="{{ $cat->id }}" title="تعديل">
             <i class="ri-edit-line"></i>
           </button>
           @if($cat->courses_count === 0)
-            <form action="{{ route('teacher.categories.destroy', $cat->id) }}" method="POST"
-                  onsubmit="return confirm('حذف الفئة «{{ addslashes($cat->name) }}»؟')">
+            <form class="js-del-form" action="{{ route('teacher.categories.destroy', $cat->id) }}" method="POST"
+                  data-name="{{ $cat->name }}">
               @csrf @method('DELETE')
               <button type="submit" class="btn-icon btn-del" title="حذف">
                 <i class="ri-delete-bin-line"></i>
@@ -216,13 +216,32 @@
 </div>
 
 <script>
-function startEdit(id) {
-  const row = document.getElementById('cat-' + id);
-  row.classList.add('editing');
-  row.querySelector('.cat-edit-form input').focus();
-}
-function cancelEdit(id) {
-  document.getElementById('cat-' + id).classList.remove('editing');
-}
+document.addEventListener('DOMContentLoaded', function () {
+  // Edit buttons
+  document.querySelectorAll('.js-edit').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = document.getElementById('cat-' + btn.dataset.id);
+      row.classList.add('editing');
+      row.querySelector('.cat-edit-form input').focus();
+    });
+  });
+
+  // Cancel buttons
+  document.querySelectorAll('.js-cancel').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById('cat-' + btn.dataset.id).classList.remove('editing');
+    });
+  });
+
+  // Delete forms — require explicit confirmation
+  document.querySelectorAll('.js-del-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (confirm('حذف الفئة «' + form.dataset.name + '»؟')) {
+        form.submit();
+      }
+    });
+  });
+});
 </script>
 @endsection
