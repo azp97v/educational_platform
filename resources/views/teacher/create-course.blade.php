@@ -510,36 +510,12 @@
                         <div class="form-row">
                             <!-- Category -->
                             <div class="form-group">
-                                <label>الفئة</label>
-                                <select name="category">
+                                <label>الفئة <a href="{{ route('teacher.categories') }}" style="font-size:12px;color:var(--gold);margin-right:6px;" title="إدارة الفئات"><i class="ri-settings-3-line"></i></a></label>
+                                <select name="category_id">
                                     <option value="">اختر فئة...</option>
-                                    <optgroup label="الدراسات الإسلامية">
-                                        <option value="quran" {{ old('category')=='quran'?'selected':'' }}>القرآن الكريم والتجويد</option>
-                                        <option value="fiqh" {{ old('category')=='fiqh'?'selected':'' }}>الفقه والشريعة</option>
-                                        <option value="hadith" {{ old('category')=='hadith'?'selected':'' }}>الحديث والسيرة</option>
-                                        <option value="aqeedah" {{ old('category')=='aqeedah'?'selected':'' }}>العقيدة والتوحيد</option>
-                                    </optgroup>
-                                    <optgroup label="اللغة والأدب">
-                                        <option value="arabic" {{ old('category')=='arabic'?'selected':'' }}>اللغة العربية</option>
-                                        <option value="language" {{ old('category')=='language'?'selected':'' }}>اللغات الأجنبية</option>
-                                        <option value="literature" {{ old('category')=='literature'?'selected':'' }}>الأدب والنصوص</option>
-                                    </optgroup>
-                                    <optgroup label="العلوم والتقنية">
-                                        <option value="math" {{ old('category')=='math'?'selected':'' }}>الرياضيات</option>
-                                        <option value="science" {{ old('category')=='science'?'selected':'' }}>العلوم الطبيعية</option>
-                                        <option value="programming" {{ old('category')=='programming'?'selected':'' }}>البرمجة والتقنية</option>
-                                    </optgroup>
-                                    <optgroup label="العلوم الإنسانية">
-                                        <option value="history" {{ old('category')=='history'?'selected':'' }}>التاريخ والجغرافيا</option>
-                                        <option value="social" {{ old('category')=='social'?'selected':'' }}>الدراسات الاجتماعية</option>
-                                        <option value="education" {{ old('category')=='education'?'selected':'' }}>التربية وعلم النفس</option>
-                                    </optgroup>
-                                    <optgroup label="المهارات العملية">
-                                        <option value="business" {{ old('category')=='business'?'selected':'' }}>الأعمال والإدارة</option>
-                                        <option value="design" {{ old('category')=='design'?'selected':'' }}>التصميم والفنون</option>
-                                        <option value="health" {{ old('category')=='health'?'selected':'' }}>الصحة واللياقة</option>
-                                    </optgroup>
-                                    <option value="other" {{ old('category')=='other'?'selected':'' }}>أخرى</option>
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 

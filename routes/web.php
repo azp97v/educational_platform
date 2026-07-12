@@ -495,6 +495,12 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     Route::put('/courses/{course}', [TeacherController::class, 'updateCourse'])->name('teacher.update');
     Route::delete('/courses/{course}', [TeacherController::class, 'deleteCourse'])->name('teacher.delete');
 
+    // Category Management Routes
+    Route::get('/categories', [TeacherController::class, 'categoriesIndex'])->name('teacher.categories');
+    Route::post('/categories', [TeacherController::class, 'categoryStore'])->name('teacher.categories.store');
+    Route::put('/categories/{category}', [TeacherController::class, 'categoryUpdate'])->name('teacher.categories.update');
+    Route::delete('/categories/{category}', [TeacherController::class, 'categoryDestroy'])->name('teacher.categories.destroy');
+
     // Lessons Routes - Form Pages
     Route::get('/lessons/create', [TeacherController::class, 'showLessonForm'])->name('teacher.lesson.create');
     Route::get('/lessons/{lesson}/edit', [TeacherController::class, 'editLesson'])->name('teacher.lesson.edit');

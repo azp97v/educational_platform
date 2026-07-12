@@ -74,6 +74,9 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
             <a href="{{ route('teacher.courses') }}" class="nav-btn {{ request()->routeIs('teacher.courses') ? 'active' : '' }}" id="nb-courses">
                 <i class="ri-book-2-line"></i><span>المسارات</span>
             </a>
+            <a href="{{ route('teacher.categories') }}" class="nav-btn {{ request()->routeIs('teacher.categories*') ? 'active' : '' }}" id="nb-categories">
+                <i class="ri-price-tag-3-line"></i><span>الفئات</span>
+            </a>
             <a href="{{ route('teacher.enrollment.requests') }}" class="nav-btn {{ request()->routeIs('teacher.enrollment.requests') ? 'active' : '' }}" id="nb-enrollment">
                 <i class="ri-user-add-line"></i><span>طلبات الالتحاق</span>
             </a>
