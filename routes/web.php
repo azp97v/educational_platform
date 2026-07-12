@@ -682,6 +682,9 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
         // Email
         Route::post('/students/{student}/send-email/{templateNum}', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'sendEmail'])->name('email');
         Route::post('/students/{student}/custom/{template}/send-email', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'sendCustomEmail'])->name('custom.email');
+
+        // Bulk Email
+        Route::post('/bulk-send-email', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'bulkSendEmail'])->name('bulk.email');
     });
 });
 

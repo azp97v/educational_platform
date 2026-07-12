@@ -153,7 +153,10 @@
                 <h1><i class="ri-award-line"></i> المستفيدون من الشهادات</h1>
                 <div class="sub">إدارة الطلاب المستفيدين من شهادات الإنجاز — {{ $students->total() }} مستفيد</div>
             </div>
-            <div style="display:flex;gap:10px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-gold-light" id="openBulkModalBtn">
+                    <i class="ri-send-plane-line"></i> إرسال جماعي
+                </button>
                 <a href="{{ route('teacher.certificates.students.create') }}" class="btn btn-primary">
                     <i class="ri-user-add-line"></i> إضافة مستفيد
                 </a>
@@ -300,6 +303,70 @@
         @endif
     </div>
 
+    <!-- Bulk Send Modal -->
+    <div class="delete-modal-overlay" id="bulkModal">
+        <div class="delete-modal-card" style="max-width:520px;text-align:right;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="font-size:18px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                    <i class="ri-send-plane-line" style="color:var(--theme-gold);"></i>
+                    إرسال جماعي للشهادات
+                </h3>
+                <button onclick="closeBulkModal()" style="background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;line-height:1;">&times;</button>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
+                اختر المسار والقالب ثم اضغط إرسال — سيصل البريد لجميع المستفيدين في ذلك المسار الذين لديهم عنوان بريد إلكتروني.
+            </p>
+
+            <form action="{{ route('teacher.certificates.bulk.email') }}" method="POST" id="bulkSendForm" onsubmit="return confirmBulkSend(event)">
+                @csrf
+
+                {{-- Course selector --}}
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:6px;">
+                        المسار
+                    </label>
+                    <select name="course" id="bulkCourseSelect" required
+                            style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--theme-border);
+                                   background:var(--theme-surface-2);color:var(--text-primary);
+                                   font-family:Tajawal,sans-serif;font-size:14px;outline:none;">
+                        <option value="">— اختر المسار —</option>
+                        @foreach($allCourses as $c)
+                            <option value="{{ $c }}">{{ $c }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Template selector --}}
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:10px;">
+                        قالب الشهادة
+                    </label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        @foreach([1=>'الكلاسيكي',2=>'العصري',3=>'الذهبي',4=>'الدرع',5=>'الأكاديمي'] as $num => $label)
+                        <label style="flex:1;min-width:80px;cursor:pointer;">
+                            <input type="radio" name="template_num" value="{{ $num }}" {{ $num === 1 ? 'checked' : '' }}
+                                   style="display:none;" class="template-radio">
+                            <div class="tpl-opt" data-num="{{ $num }}"
+                                 style="border:2px solid var(--theme-border);border-radius:12px;padding:10px 6px;
+                                        text-align:center;transition:all .2s;background:var(--theme-surface-2);">
+                                <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">{{ $num }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ $label }}</div>
+                            </div>
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" onclick="closeBulkModal()" class="btn btn-outline">إلغاء</button>
+                    <button type="submit" class="btn btn-primary" id="bulkSendBtn">
+                        <i class="ri-send-plane-line"></i> إرسال الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Delete Confirmation Modal -->
     <div class="delete-modal-overlay" id="deleteModal">
         <div class="delete-modal-card">
@@ -346,10 +413,48 @@
         @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
     </style>
     <script>
+        /* ── Bulk Send Modal ── */
+        function openBulkModal()  { document.getElementById('bulkModal').classList.add('show'); }
+        function closeBulkModal() { document.getElementById('bulkModal').classList.remove('show'); }
+
+        function confirmBulkSend(e) {
+            const course = document.getElementById('bulkCourseSelect').value;
+            if (!course) { alert('يرجى اختيار المسار أولاً'); e.preventDefault(); return false; }
+            if (!confirm('سيتم إرسال الشهادة لجميع مستفيدي «' + course + '».\nهل تريد المتابعة؟')) {
+                e.preventDefault(); return false;
+            }
+            document.getElementById('bulkSendBtn').disabled = true;
+            document.getElementById('bulkSendBtn').innerHTML = '<i class="ri-loader-4-line"></i> جارٍ الإرسال...';
+            return true;
+        }
+
+        /* ── Delete Modal ── */
         function closeDeleteModal() {
             document.getElementById('deleteModal').classList.remove('show');
         }
         document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('openBulkModalBtn').addEventListener('click', openBulkModal);
+            document.getElementById('bulkModal').addEventListener('click', function(e) {
+                if (e.target === this) closeBulkModal();
+            });
+
+            /* Template radio visual */
+            document.querySelectorAll('.template-radio').forEach(function(r) {
+                r.addEventListener('change', function() {
+                    document.querySelectorAll('.tpl-opt').forEach(function(d) {
+                        d.style.borderColor = 'var(--theme-border)';
+                        d.style.background  = 'var(--theme-surface-2)';
+                    });
+                    var opt = document.querySelector('.tpl-opt[data-num="' + this.value + '"]');
+                    if (opt) {
+                        opt.style.borderColor = 'var(--theme-gold)';
+                        opt.style.background  = 'var(--theme-gold-soft)';
+                    }
+                });
+            });
+            // highlight default selected
+            var checked = document.querySelector('.template-radio:checked');
+            if (checked) checked.dispatchEvent(new Event('change'));
             document.querySelectorAll('tr[data-href]').forEach(function (tr) {
                 tr.addEventListener('click', function (e) {
                     if (e.target.closest('a') || e.target.closest('button')) return;
