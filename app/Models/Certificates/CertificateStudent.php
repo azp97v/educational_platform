@@ -31,6 +31,6 @@ class CertificateStudent extends Model
 
     public function customTemplates(): HasMany
     {
-        return $this->hasMany(CustomTemplate::class, 'user_id', 'user_id');
+        return $this->hasMany(CustomTemplate::class, 'certificate_student_id');
     }
 }

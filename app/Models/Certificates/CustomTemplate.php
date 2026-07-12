@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CustomTemplate extends Model
 {
     protected $fillable = [
-        'user_id', 'name', 'recipient_name',
+        'user_id', 'certificate_student_id', 'name', 'recipient_name',
         'title', 'subtitle', 'body_text',
         'primary_color', 'secondary_color', 'accent_color',
         'background_type', 'background_image', 'logo_image',
@@ -38,5 +38,10 @@ class CustomTemplate extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function certificateStudent(): BelongsTo
+    {
+        return $this->belongsTo(CertificateStudent::class);
     }
 }

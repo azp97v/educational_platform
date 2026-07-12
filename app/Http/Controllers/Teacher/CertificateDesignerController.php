@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateCertificatePdfJob;
 use App\Mail\CertificateMail;
-    use App\Models\Certificate;
-    use App\Models\Certificates\CertificateStudent;
-    use App\Models\Certificates\CustomTemplate;
-    use App\Models\PdfGeneration;
-    use App\Models\Course;
-    use App\Models\User;
-    use Illuminate\Http\JsonResponse;
+use App\Models\Certificate;
+use App\Models\Certificates\CertificateStudent;
+use App\Models\Certificates\CustomTemplate;
+use App\Models\PdfGeneration;
+use App\Models\Course;
+use App\Models\User;
+use App\Models\UserProgress;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -40,31 +41,52 @@ class CertificateDesignerController extends Controller
 
     public function students(Request $request)
     {
-        $query = CertificateStudent::where('user_id', auth()->id());
+        $teacherId = auth()->id();
+        $query = CertificateStudent::where('user_id', $teacherId);
 
-        // Filter by course
+        // Filter: course
         if ($request->filled('course')) {
             $query->where('course', $request->course);
         }
 
-        // Filter by certificate status
+        // Filter: certificate status (now uses correct FK-based relationship)
         if ($request->filled('cert_status')) {
             if ($request->cert_status === 'has') {
-                $studentIds = CertificateStudent::where('user_id', auth()->id())
-                    ->whereHas('customTemplates', function ($q) {
-                        $q->where('user_id', auth()->id());
-                    })->pluck('id');
-                $query->whereIn('id', $studentIds);
+                $query->whereHas('customTemplates');
             } elseif ($request->cert_status === 'none') {
-                $studentIds = CertificateStudent::where('user_id', auth()->id())
-                    ->whereDoesntHave('customTemplates', function ($q) {
-                        $q->where('user_id', auth()->id());
-                    })->pluck('id');
-                $query->whereIn('id', $studentIds);
+                $query->whereDoesntHave('customTemplates');
             }
         }
 
-        // Search
+        // Filter: course completion (100% only — computes in PHP for flexibility)
+        if ($request->filled('completion') && $request->completion === 'done') {
+            $candidates = CertificateStudent::where('user_id', $teacherId)
+                ->whereNotNull('recipient_user_id')
+                ->whereNotNull('course')
+                ->get(['id', 'recipient_user_id', 'course']);
+
+            $courseNames = $candidates->pluck('course')->filter()->unique();
+            $courseMap = Course::whereIn('name', $courseNames)
+                ->withCount('lessons')
+                ->get()
+                ->keyBy('name');
+
+            $completedIds = [];
+            foreach ($candidates as $c) {
+                $course = $courseMap->get($c->course);
+                if (!$course || $course->lessons_count === 0) continue;
+                $done = UserProgress::where('user_id', $c->recipient_user_id)
+                    ->whereHas('lesson', fn($q) => $q->where('course_id', $course->id))
+                    ->where('status', 'completed')
+                    ->count();
+                if ($done >= $course->lessons_count) {
+                    $completedIds[] = $c->id;
+                }
+            }
+            $query->whereIn('id', $completedIds);
+        }
+
+        // Filter: search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -76,17 +98,47 @@ class CertificateDesignerController extends Controller
 
         // Sort
         $sortField = $request->get('sort', 'created_at');
-        $sortDir = $request->get('dir', 'desc');
+        $sortDir   = $request->get('dir', 'desc');
         if (in_array($sortField, ['name', 'email', 'course', 'course_date', 'degree', 'created_at'])) {
             $query->orderBy($sortField, $sortDir === 'asc' ? 'asc' : 'desc');
         }
 
-        $students = $query->paginate(20)->withQueryString();
-        $courses = auth()->user()->courses()->where('status', 'published')->pluck('name', 'id');
-        $allCourses = CertificateStudent::where('user_id', auth()->id())
-            ->select('course')->distinct()->pluck('course');
+        $students = $query->withCount('customTemplates')->paginate(20)->withQueryString();
 
-        return view('teacher.certificates.students', compact('students', 'courses', 'allCourses'));
+        // Completion data for current page (for display column)
+        $pageCoursenames = $students->pluck('course')->filter()->unique();
+        $pageCourseMap = Course::whereIn('name', $pageCoursenames)
+            ->withCount('lessons')
+            ->get()
+            ->keyBy('name');
+
+        $completionData = [];
+        foreach ($students as $s) {
+            if (!$s->recipient_user_id || !$s->course) continue;
+            $course = $pageCourseMap->get($s->course);
+            if (!$course || $course->lessons_count === 0) continue;
+            $done = UserProgress::where('user_id', $s->recipient_user_id)
+                ->whereHas('lesson', fn($q) => $q->where('course_id', $course->id))
+                ->where('status', 'completed')
+                ->count();
+            $completionData[$s->id] = [
+                'total' => $course->lessons_count,
+                'done'  => $done,
+                'pct'   => (int) round($done / $course->lessons_count * 100),
+            ];
+        }
+
+        // Real stats
+        $withCertCount = CertificateStudent::where('user_id', $teacherId)
+            ->whereHas('customTemplates')
+            ->count();
+
+        $allCourses = CertificateStudent::where('user_id', $teacherId)
+            ->select('course')->distinct()->orderBy('course')->pluck('course')->filter();
+
+        return view('teacher.certificates.students', compact(
+            'students', 'allCourses', 'completionData', 'withCertCount'
+        ));
     }
 
     public function createStudent()
@@ -343,7 +395,19 @@ class CertificateDesignerController extends Controller
     public function gallery(CertificateStudent $student)
     {
         abort_if($student->user_id !== auth()->id(), 403);
-        $uploadedTemplates = auth()->user()->customTemplates()->latest()->get();
+
+        // Load templates for this specific student (FK-based), plus legacy templates
+        // matched by recipient_name that weren't backfilled
+        $uploadedTemplates = CustomTemplate::where('user_id', auth()->id())
+            ->where(function ($q) use ($student) {
+                $q->where('certificate_student_id', $student->id)
+                  ->orWhere(function ($q2) use ($student) {
+                      $q2->whereNull('certificate_student_id')
+                         ->where('recipient_name', $student->name);
+                  });
+            })
+            ->latest()
+            ->get();
 
         // Check if the linked system user has completed the course (null = cannot determine)
         $courseCompleted = null;
@@ -470,7 +534,9 @@ class CertificateDesignerController extends Controller
             'background_image' => $request->file('template_image')->store('custom_templates', 'public'),
         ];
 
-        auth()->user()->customTemplates()->create($templateData + ['is_issued' => false]);
+        auth()->user()->customTemplates()->create(
+            $templateData + ['is_issued' => false, 'certificate_student_id' => $student->id]
+        );
 
         return redirect()->route('teacher.certificates.gallery', $student)
             ->with('success', 'تم رفع القالب بنجاح');
@@ -559,7 +625,9 @@ class CertificateDesignerController extends Controller
             $templateData['background_image'] = $request->file('background_image')->store('custom_templates', 'public');
         }
 
-        $template = auth()->user()->customTemplates()->create($templateData + ['is_issued' => false]);
+        $template = auth()->user()->customTemplates()->create(
+            $templateData + ['is_issued' => false, 'certificate_student_id' => $student->id]
+        );
 
         return redirect()->route('teacher.certificates.custom.show', [$student, $template])
             ->with('success', 'تم حفظ القالب بنجاح');
