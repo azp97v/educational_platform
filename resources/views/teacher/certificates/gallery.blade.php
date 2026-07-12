@@ -117,6 +117,29 @@
 
         .flash { padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; font-weight: 600; }
         .flash-success { background: var(--theme-success-soft, rgba(52,199,89,0.12)); color: var(--theme-success); border: 1px solid var(--theme-success-border, rgba(52,199,89,0.2)); }
+
+        /* ── Course-type info banner ── */
+        .type-banner {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 18px; border-radius: 14px; margin-bottom: 20px;
+            font-size: 13px; font-weight: 600;
+        }
+        .type-banner.actual  { background: rgba(198,166,117,0.12); border: 1px solid rgba(198,166,117,0.3); color: var(--theme-gold); }
+        .type-banner.training { background: rgba(45,164,191,0.10); border: 1px solid rgba(45,164,191,0.3); color: #2dd4bf; }
+        .type-banner i { font-size: 18px; flex-shrink: 0; }
+
+        /* ── Recommended badge overlaid on preset card image ── */
+        .template-card { position: relative; }
+        .recommended-badge {
+            position: absolute; top: 10px; right: 10px; z-index: 2;
+            padding: 3px 10px; border-radius: 999px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.2px;
+            border: 1px solid rgba(255,255,255,0.25);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+        .recommended-badge.actual-rec  { background: rgba(198,166,117,0.92); color: #1a1200; }
+        .recommended-badge.training-rec { background: rgba(45,212,191,0.88); color: #003330; }
     </style>
 </head>
 <body>
@@ -151,6 +174,18 @@
         </div>
         @endif
 
+        @if($courseType)
+        <div class="type-banner {{ $courseType }}">
+            @if($courseType === 'actual')
+                <i class="ri-graduation-cap-line"></i>
+                <span>هذا مسار <strong>فعلي</strong> — القوالب الموصى بها موسومة بـ <strong>موصى به</strong> وتستخدم عنوان "شهادة إتمام"</span>
+            @else
+                <i class="ri-user-received-line"></i>
+                <span>هذا مسار <strong>تدريبي</strong> — القوالب الموصى بها موسومة بـ <strong>موصى به</strong> وتستخدم عنوان "شهادة مشاركة"</span>
+            @endif
+        </div>
+        @endif
+
         <div class="page-title">
             <h1>اختر قالب الشهادة</h1>
             <p>إصدار شهادة للمستفيد: <span class="badge">{{ $student->name }}</span></p>
@@ -170,7 +205,7 @@
                 <a href="{{ route('teacher.certificates.custom.upload.view', $student) }}" class="btn btn-primary">
                     <i class="ri-upload-line"></i> رفع قالب
                 </a>
-                <a href="{{ route('teacher.certificates.custom.create', $student) }}" class="btn btn-gold">
+                <a href="{{ route('teacher.certificates.custom.create', $student) }}{{ $courseType ? '?course_type='.$courseType : '' }}" class="btn btn-gold">
                     <i class="ri-pencil-ruler-2-line"></i> إنشاء قالب مخصص
                 </a>
             </div>
@@ -219,22 +254,27 @@
 
         <!-- Preset Templates -->
         @php
+            // 4th element: 'actual' | 'training' | 'both'
             $presets = [
-                1 => ['qw1.jpeg', 'القالب الكلاسيكي', 'يتميز بزخارف رسمية وخلفية تقليدية.'],
-                2 => ['qw2.jpeg', 'القالب العصري', 'تصميم بسيط وألوان هادئة للشركات الناشئة.'],
-                3 => ['qw3.jpeg', 'القالب الذهبي', 'تصميم فاخر مخصص للمناسبات الخاصة والجوائز.'],
-                4 => ['qw4.jpeg', 'الدرع الرقمي', 'تصميم مستقبلي بنمط تقني عالي.'],
-                5 => ['qw5.jpeg', 'القالب الكلاسيكي', 'تصميم كلاسيكي بوقار مؤسسي.'],
-                6 => ['qw6.jpeg', 'الإبداع الهندسي', 'زخارف هندسية متداخلة تعبر عن الدقة.'],
-                7 => ['qw7.jpeg', 'الوسام المهني', 'تصميم رصين يركز على الكفاءة والخبرة.'],
-                8 => ['qw8.jpeg', 'الطراز الأكاديمي', 'خلفية بنقوش خفيفة توحي بالعراقة العلمية.'],
-                9 => ['qw9.jpeg', 'مودرن جرافيك', 'تصميم معاصر يجمع بين الأناقة والابتكار.'],
+                1 => ['qw1.jpeg', 'القالب الكلاسيكي', 'يتميز بزخارف رسمية وخلفية تقليدية.', 'actual'],
+                2 => ['qw2.jpeg', 'القالب العصري', 'تصميم بسيط وألوان هادئة للشركات الناشئة.', 'training'],
+                3 => ['qw3.jpeg', 'القالب الذهبي', 'تصميم فاخر مخصص للمناسبات الخاصة والجوائز.', 'both'],
+                4 => ['qw4.jpeg', 'الدرع الرقمي', 'تصميم مستقبلي بنمط تقني عالي.', 'actual'],
+                5 => ['qw5.jpeg', 'القالب الأكاديمي', 'تصميم كلاسيكي بوقار مؤسسي.', 'actual'],
+                6 => ['qw6.jpeg', 'الإبداع الهندسي', 'زخارف هندسية متداخلة تعبر عن الدقة.', 'actual'],
+                7 => ['qw7.jpeg', 'الوسام المهني', 'تصميم رصين يركز على الكفاءة والخبرة.', 'training'],
+                8 => ['qw8.jpeg', 'الطراز الأكاديمي', 'خلفية بنقوش خفيفة توحي بالعراقة العلمية.', 'actual'],
+                9 => ['qw9.jpeg', 'مودرن جرافيك', 'تصميم معاصر يجمع بين الأناقة والابتكار.', 'both'],
             ];
         @endphp
         <div class="section-title">القوالب الجاهزة</div>
         <div class="grid">
             @foreach($presets as $num => $p)
+                @php $isRecommended = $courseType && ($p[3] === 'both' || $p[3] === $courseType); @endphp
                 <div class="template-card">
+                    @if($isRecommended)
+                        <div class="recommended-badge {{ $courseType }}-rec">موصى به</div>
+                    @endif
                     <img src="{{ asset('image/'.$p[0]) }}" alt="{{ $p[1] }}">
                     <div class="body">
                         <h5>{{ $p[1] }}</h5>

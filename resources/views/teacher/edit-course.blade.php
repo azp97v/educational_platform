@@ -1010,6 +1010,16 @@
               </select>
             </div>
 
+            <!-- Course Type -->
+            <div class="form-group">
+                <label><i class="ri-award-line" style="color:var(--gold-dark);margin-left:4px;"></i> نوع المسار</label>
+                <select name="course_type">
+                    <option value="actual" {{ old('course_type', $course->course_type ?? 'actual')=='actual'?'selected':'' }}>فعلي — شهادة إتمام</option>
+                    <option value="training" {{ old('course_type', $course->course_type)=='training'?'selected':'' }}>تدريبي — شهادة مشاركة</option>
+                </select>
+                <div class="form-hint">يُحدد نوع الشهادة الموصى بها في نظام الشهادات تلقائياً</div>
+            </div>
+
             <!-- Sequential Lessons -->
             <div class="form-group" style="margin-top:8px;">
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
