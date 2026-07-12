@@ -241,7 +241,7 @@ class TeacherController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $validated['status'] = 'published';
-        $validated['sequential_lessons'] = $request->boolean('sequential_lessons');
+        $validated['sequential_lessons'] = $request->has('sequential_lessons');
         $course = $user->courses()->create($validated);
 
         $students = $user->students()->where('role', 'student')->get();
@@ -555,7 +555,7 @@ class TeacherController extends Controller
         }
 
         $validated = $request->validate($this->courseValidationRules());
-        $validated['sequential_lessons'] = $request->boolean('sequential_lessons');
+        $validated['sequential_lessons'] = $request->has('sequential_lessons');
 
         $course->update($validated);
         return redirect()->route('teacher.show', $course)->with('success', 'تم تحديث المسار');
