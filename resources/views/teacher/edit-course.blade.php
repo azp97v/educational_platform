@@ -996,6 +996,23 @@
               </div>
             </div>
 
+            <!-- Sequential Lessons -->
+            <div class="form-group" style="margin-top:8px;">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
+                <input type="hidden" name="sequential_lessons" value="0">
+                <input type="checkbox" name="sequential_lessons" value="1"
+                  {{ old('sequential_lessons', $course->sequential_lessons) ? 'checked' : '' }}
+                  style="width:18px;height:18px;accent-color:var(--gold);cursor:pointer;">
+                <span>
+                  <i class="ri-lock-line" style="color:var(--gold-dark);margin-left:4px;"></i>
+                  <strong>فتح الدروس بالترتيب</strong>
+                  <span style="color:var(--text-muted);font-size:13px;display:block;margin-top:2px;">
+                    لا يمكن للطالب الوصول إلى الدرس التالي إلا بعد إكمال الدرس السابق
+                  </span>
+                </span>
+              </label>
+            </div>
+
             <!-- Form Actions -->
             <div class="form-actions" style="gap: 8px; margin-top: 30px;">
               <button type="submit" class="btn btn-primary">

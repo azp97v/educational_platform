@@ -172,15 +172,16 @@ class TeacherController extends Controller
     private function courseValidationRules(): array
     {
         return [
-            'name'          => 'required|string|max:255',
-            'description'   => 'nullable|string',
-            'category'      => 'nullable|string|max:100',
-            'level'         => 'nullable|in:beginner,intermediate,advanced',
-            'duration'      => 'nullable|integer|min:1',
-            'duration_unit' => 'nullable|in:hours,days,months',
-            'max_students'  => 'nullable|integer|min:1',
-            'start_date'    => 'nullable|date',
-            'end_date'      => 'nullable|date|after_or_equal:start_date',
+            'name'                => 'required|string|max:255',
+            'description'         => 'nullable|string',
+            'category'            => 'nullable|string|max:100',
+            'level'               => 'nullable|in:beginner,intermediate,advanced',
+            'duration'            => 'nullable|integer|min:1',
+            'duration_unit'       => 'nullable|in:hours,days,months',
+            'max_students'        => 'nullable|integer|min:1',
+            'start_date'          => 'nullable|date',
+            'end_date'            => 'nullable|date|after_or_equal:start_date',
+            'sequential_lessons'  => 'nullable|boolean',
         ];
     }
 
@@ -240,6 +241,7 @@ class TeacherController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $validated['status'] = 'published';
+        $validated['sequential_lessons'] = $request->boolean('sequential_lessons');
         $course = $user->courses()->create($validated);
 
         $students = $user->students()->where('role', 'student')->get();
@@ -553,6 +555,7 @@ class TeacherController extends Controller
         }
 
         $validated = $request->validate($this->courseValidationRules());
+        $validated['sequential_lessons'] = $request->boolean('sequential_lessons');
 
         $course->update($validated);
         return redirect()->route('teacher.show', $course)->with('success', 'تم تحديث المسار');

@@ -710,11 +710,6 @@ class StudentController extends Controller
 
             $allLessons = $course->lessons()->orderBy('order')->get();
 
-            $currentProgress = $user->progress()->firstOrCreate(
-                ['lesson_id' => $lesson->id],
-                ['status' => 'in_progress', 'started_at' => now()]
-            );
-
             $allLessonIds = $allLessons->pluck('id');
             $completedMap = UserProgress::whereIn('lesson_id', $allLessonIds)
                 ->where('user_id', $user->id)
@@ -722,13 +717,43 @@ class StudentController extends Controller
                 ->pluck('lesson_id')
                 ->flip();
 
-            $lessonsWithProgress = $allLessons->map(function($ls) use ($completedMap, $lesson) {
+            // Sequential lock: if course requires sequential completion, gate access
+            if ($course->sequential_lessons) {
+                $lessonsBeforeCurrent = $allLessons->filter(
+                    fn($ls) => $ls->order < $lesson->order
+                );
+                $allPreviousCompleted = $lessonsBeforeCurrent->every(
+                    fn($ls) => $completedMap->has($ls->id)
+                );
+                if (!$allPreviousCompleted) {
+                    $firstIncomplete = $lessonsBeforeCurrent->first(
+                        fn($ls) => !$completedMap->has($ls->id)
+                    );
+                    return redirect()->route('student.lesson.show', $firstIncomplete->id)
+                        ->with('error', 'يجب إكمال الدروس بالترتيب. أكمل الدرس السابق أولاً.');
+                }
+            }
+
+            $currentProgress = $user->progress()->firstOrCreate(
+                ['lesson_id' => $lesson->id],
+                ['status' => 'in_progress', 'started_at' => now()]
+            );
+
+            $lessonsWithProgress = $allLessons->map(function($ls) use ($completedMap, $lesson, $course, $allLessons) {
+                $locked = false;
+                if ($course->sequential_lessons && !$completedMap->has($ls->id) && $ls->id !== $lesson->id) {
+                    // Lesson is locked if any prior lesson is incomplete
+                    $locked = $allLessons
+                        ->filter(fn($prev) => $prev->order < $ls->order)
+                        ->contains(fn($prev) => !$completedMap->has($prev->id));
+                }
                 return [
-                    'id' => $ls->id,
-                    'title' => $ls->name,
-                    'duration' => $ls->duration,
-                    'completed' => $completedMap->has($ls->id),
-                    'is_current' => $ls->id === $lesson->id
+                    'id'         => $ls->id,
+                    'title'      => $ls->name,
+                    'duration'   => $ls->duration,
+                    'completed'  => $completedMap->has($ls->id),
+                    'is_current' => $ls->id === $lesson->id,
+                    'locked'     => $locked,
                 ];
             })->toArray();
 

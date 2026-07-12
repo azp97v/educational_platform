@@ -597,6 +597,20 @@
       box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
     }
 
+    /* Locked lesson */
+    .lesson-item--locked {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .lesson-item--locked h5 {
+      color: var(--text-muted, #888);
+    }
+    .lesson-check--locked {
+      color: #888;
+      border-color: rgba(136,136,136,0.3);
+    }
+
     /* ACTIONS */
     .actions-group {
       display: flex;
@@ -1525,6 +1539,17 @@
       </div>
       <div class="lessons-wrapper">
         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $lessonsWithProgress; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ls): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+          <?php if(!empty($ls['locked'])): ?>
+            <div class="lesson-item lesson-item--locked" title="أكمل الدرس السابق لفتح هذا الدرس">
+              <div class="lesson-item-info">
+                <h5><?php echo e($ls['title']); ?></h5>
+                <div class="duration"><i class="ri-time-line"></i> <?php echo e($ls['duration'] ?? 0); ?> د</div>
+              </div>
+              <div class="lesson-check lesson-check--locked">
+                <i class="ri-lock-line"></i>
+              </div>
+            </div>
+          <?php else: ?>
           <a href="<?php echo e(route('student.lesson.show', $ls['id'])); ?>" style="text-decoration: none; color: inherit;">
             <div class="lesson-item <?php echo e($ls['is_current'] ? 'active' : ''); ?>">
               <div class="lesson-item-info">
@@ -1532,14 +1557,15 @@
                 <div class="duration"><i class="ri-time-line"></i> <?php echo e($ls['duration'] ?? 0); ?> د</div>
               </div>
               <div class="lesson-check">
-                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($ls['completed']): ?>
+                <?php if($ls['completed']): ?>
                   <i class="ri-check-fill"></i>
                 <?php else: ?>
                   <i class="ri-circle-line"></i>
-                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                <?php endif; ?>
               </div>
             </div>
           </a>
+          <?php endif; ?>
         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
           <div style="text-align: center; padding: 2rem 0; color: var(--light-gray); font-size: 0.9rem;">
             <i class="ri-inbox-line" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
