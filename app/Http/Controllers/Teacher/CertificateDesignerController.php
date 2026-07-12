@@ -812,18 +812,20 @@ class CertificateDesignerController extends Controller
     public function bulkSendEmail(Request $request)
     {
         $request->validate([
-            'course'       => 'required|string|max:200',
-            'template_num' => 'required|in:1,2,3,4,5',
+            'student_ids'   => 'required|array|min:1',
+            'student_ids.*' => 'integer',
+            'template_num'  => 'required|in:1,2,3,4,5',
         ]);
 
+        // Only students belonging to this teacher
         $students = CertificateStudent::where('user_id', auth()->id())
-            ->where('course', $request->course)
+            ->whereIn('id', $request->student_ids)
             ->whereNotNull('email')
             ->where('email', '!=', '')
             ->get();
 
         if ($students->isEmpty()) {
-            return back()->with('error', 'لا يوجد مستفيدون بعناوين بريد في هذا المسار.');
+            return back()->with('error', 'لا يوجد مستفيدون محددون بعناوين بريد صالحة.');
         }
 
         $imageName = 'qw' . $request->template_num . '.jpeg';

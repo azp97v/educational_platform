@@ -154,9 +154,6 @@
                 <div class="sub">إدارة الطلاب المستفيدين من شهادات الإنجاز — {{ $students->total() }} مستفيد</div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <button class="btn btn-gold-light" id="openBulkModalBtn">
-                    <i class="ri-send-plane-line"></i> إرسال جماعي
-                </button>
                 <a href="{{ route('teacher.certificates.students.create') }}" class="btn btn-primary">
                     <i class="ri-user-add-line"></i> إضافة مستفيد
                 </a>
@@ -244,6 +241,10 @@
                 <table>
                     <thead>
                         <tr>
+                            <th style="width:40px;cursor:default;">
+                                <input type="checkbox" id="selectAll" title="تحديد الكل"
+                                       style="width:16px;height:16px;cursor:pointer;accent-color:var(--theme-gold);">
+                            </th>
                             <th>#</th>
                             <th>الاسم</th>
                             <th>البريد</th>
@@ -260,6 +261,10 @@
                                 $hasCert = $s->customTemplates()->where('user_id', auth()->id())->exists();
                             @endphp
                             <tr data-href="{{ route('teacher.certificates.student.profile', $s) }}">
+                                <td onclick="event.stopPropagation()">
+                                    <input type="checkbox" class="student-chk" value="{{ $s->id }}"
+                                           style="width:16px;height:16px;cursor:pointer;accent-color:var(--theme-gold);">
+                                </td>
                                 <td style="color:var(--text-muted);">{{ $students->firstItem() + $i }}</td>
                                 <td>
                                     <a href="{{ route('teacher.certificates.student.profile', $s) }}"
@@ -303,69 +308,62 @@
         @endif
     </div>
 
-    <!-- Bulk Send Modal -->
-    <div class="delete-modal-overlay" id="bulkModal">
-        <div class="delete-modal-card" style="max-width:520px;text-align:right;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                <h3 style="font-size:18px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
-                    <i class="ri-send-plane-line" style="color:var(--theme-gold);"></i>
-                    إرسال جماعي للشهادات
-                </h3>
-                <button onclick="closeBulkModal()" style="background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;line-height:1;">&times;</button>
+    <!-- Floating Bulk Action Bar -->
+    <form action="{{ route('teacher.certificates.bulk.email') }}" method="POST" id="bulkForm">
+        @csrf
+        <div id="bulkBar" style="
+            display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+            z-index:1000; background:var(--theme-surface); border:1px solid var(--theme-border);
+            border-radius:20px; padding:14px 20px; box-shadow:0 12px 40px rgba(0,0,0,.5);
+            align-items:center; gap:14px; flex-wrap:wrap; min-width:360px; max-width:700px;
+            backdrop-filter:blur(16px); animation:slideUp .25s ease;">
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span id="selCount" style="background:var(--theme-gold);color:#000;font-weight:800;font-size:13px;
+                      padding:4px 10px;border-radius:20px;">0</span>
+                <span style="font-size:13px;color:var(--text-secondary);">طالب محدد</span>
             </div>
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.7;">
-                اختر المسار والقالب ثم اضغط إرسال — سيصل البريد لجميع المستفيدين في ذلك المسار الذين لديهم عنوان بريد إلكتروني.
-            </p>
 
-            <form action="{{ route('teacher.certificates.bulk.email') }}" method="POST" id="bulkSendForm" onsubmit="return confirmBulkSend(event)">
-                @csrf
-
-                {{-- Course selector --}}
-                <div style="margin-bottom:16px;">
-                    <label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:6px;">
-                        المسار
+            <div style="flex:1;min-width:200px;">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">اختر قالب الشهادة</div>
+                <div style="display:flex;gap:6px;">
+                    @foreach([1=>'الكلاسيكي',2=>'العصري',3=>'الذهبي',4=>'الدرع',5=>'الأكاديمي'] as $num => $label)
+                    <label style="cursor:pointer;flex:1;text-align:center;">
+                        <input type="radio" name="template_num" value="{{ $num }}" {{ $num===1?'checked':'' }}
+                               class="bar-radio" style="display:none;">
+                        <div class="bar-tpl" data-n="{{ $num }}"
+                             style="border:2px solid var(--theme-border);border-radius:10px;padding:6px 4px;
+                                    font-size:11px;color:var(--text-secondary);transition:all .2s;
+                                    background:var(--theme-surface-2);white-space:nowrap;">
+                            {{ $num }} · {{ $label }}
+                        </div>
                     </label>
-                    <select name="course" id="bulkCourseSelect" required
-                            style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--theme-border);
-                                   background:var(--theme-surface-2);color:var(--text-primary);
-                                   font-family:Tajawal,sans-serif;font-size:14px;outline:none;">
-                        <option value="">— اختر المسار —</option>
-                        @foreach($allCourses as $c)
-                            <option value="{{ $c }}">{{ $c }}</option>
-                        @endforeach
-                    </select>
+                    @endforeach
                 </div>
+            </div>
 
-                {{-- Template selector --}}
-                <div style="margin-bottom:20px;">
-                    <label style="font-size:12px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:10px;">
-                        قالب الشهادة
-                    </label>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        @foreach([1=>'الكلاسيكي',2=>'العصري',3=>'الذهبي',4=>'الدرع',5=>'الأكاديمي'] as $num => $label)
-                        <label style="flex:1;min-width:80px;cursor:pointer;">
-                            <input type="radio" name="template_num" value="{{ $num }}" {{ $num === 1 ? 'checked' : '' }}
-                                   style="display:none;" class="template-radio">
-                            <div class="tpl-opt" data-num="{{ $num }}"
-                                 style="border:2px solid var(--theme-border);border-radius:12px;padding:10px 6px;
-                                        text-align:center;transition:all .2s;background:var(--theme-surface-2);">
-                                <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">{{ $num }}</div>
-                                <div style="font-size:11px;color:var(--text-muted);">{{ $label }}</div>
-                            </div>
-                        </label>
-                        @endforeach
-                    </div>
-                </div>
+            <div id="bulkHiddenIds"></div>
 
-                <div style="display:flex;gap:10px;justify-content:flex-end;">
-                    <button type="button" onclick="closeBulkModal()" class="btn btn-outline">إلغاء</button>
-                    <button type="submit" class="btn btn-primary" id="bulkSendBtn">
-                        <i class="ri-send-plane-line"></i> إرسال الآن
-                    </button>
-                </div>
-            </form>
+            <div style="display:flex;gap:8px;flex-shrink:0;">
+                <button type="button" onclick="clearSelection()"
+                        style="padding:10px 16px;border-radius:12px;border:1px solid var(--theme-border);
+                               background:transparent;color:var(--text-muted);cursor:pointer;
+                               font-family:Tajawal,sans-serif;font-size:13px;">
+                    إلغاء
+                </button>
+                <button type="submit" id="bulkSendBtn"
+                        style="padding:10px 20px;border-radius:12px;border:none;
+                               background:var(--theme-gold);color:#000;font-weight:800;
+                               cursor:pointer;font-family:Tajawal,sans-serif;font-size:13px;
+                               display:flex;align-items:center;gap:6px;">
+                    <i class="ri-send-plane-line"></i> إرسال الشهادة
+                </button>
+            </div>
         </div>
-    </div>
+    </form>
+
+    <style>
+        @keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(16px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    </style>
 
     <!-- Delete Confirmation Modal -->
     <div class="delete-modal-overlay" id="deleteModal">
@@ -413,48 +411,77 @@
         @keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
     </style>
     <script>
-        /* ── Bulk Send Modal ── */
-        function openBulkModal()  { document.getElementById('bulkModal').classList.add('show'); }
-        function closeBulkModal() { document.getElementById('bulkModal').classList.remove('show'); }
-
-        function confirmBulkSend(e) {
-            const course = document.getElementById('bulkCourseSelect').value;
-            if (!course) { alert('يرجى اختيار المسار أولاً'); e.preventDefault(); return false; }
-            if (!confirm('سيتم إرسال الشهادة لجميع مستفيدي «' + course + '».\nهل تريد المتابعة؟')) {
-                e.preventDefault(); return false;
-            }
-            document.getElementById('bulkSendBtn').disabled = true;
-            document.getElementById('bulkSendBtn').innerHTML = '<i class="ri-loader-4-line"></i> جارٍ الإرسال...';
-            return true;
-        }
-
         /* ── Delete Modal ── */
         function closeDeleteModal() {
             document.getElementById('deleteModal').classList.remove('show');
         }
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('openBulkModalBtn').addEventListener('click', openBulkModal);
-            document.getElementById('bulkModal').addEventListener('click', function(e) {
-                if (e.target === this) closeBulkModal();
+
+        /* ── Bulk Selection ── */
+        function updateBulkBar() {
+            var chks   = document.querySelectorAll('.student-chk:checked');
+            var bar    = document.getElementById('bulkBar');
+            var hidden = document.getElementById('bulkHiddenIds');
+
+            document.getElementById('selCount').textContent = chks.length;
+
+            hidden.innerHTML = '';
+            chks.forEach(function(c) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden'; inp.name = 'student_ids[]'; inp.value = c.value;
+                hidden.appendChild(inp);
             });
 
-            /* Template radio visual */
-            document.querySelectorAll('.template-radio').forEach(function(r) {
-                r.addEventListener('change', function() {
-                    document.querySelectorAll('.tpl-opt').forEach(function(d) {
-                        d.style.borderColor = 'var(--theme-border)';
-                        d.style.background  = 'var(--theme-surface-2)';
-                    });
-                    var opt = document.querySelector('.tpl-opt[data-num="' + this.value + '"]');
-                    if (opt) {
-                        opt.style.borderColor = 'var(--theme-gold)';
-                        opt.style.background  = 'var(--theme-gold-soft)';
-                    }
+            bar.style.display = chks.length > 0 ? 'flex' : 'none';
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.student-chk, #selectAll').forEach(function(c) { c.checked = false; });
+            updateBulkBar();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            /* Select all */
+            var selectAll = document.getElementById('selectAll');
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    document.querySelectorAll('.student-chk').forEach(function(c) { c.checked = selectAll.checked; });
+                    updateBulkBar();
+                });
+            }
+            document.querySelectorAll('.student-chk').forEach(function(c) {
+                c.addEventListener('change', function() {
+                    var all  = document.querySelectorAll('.student-chk');
+                    var chkd = document.querySelectorAll('.student-chk:checked');
+                    if (selectAll) selectAll.indeterminate = chkd.length > 0 && chkd.length < all.length;
+                    if (selectAll) selectAll.checked = chkd.length === all.length && all.length > 0;
+                    updateBulkBar();
                 });
             });
-            // highlight default selected
-            var checked = document.querySelector('.template-radio:checked');
-            if (checked) checked.dispatchEvent(new Event('change'));
+
+            /* Template radio visual in bulk bar */
+            document.querySelectorAll('.bar-radio').forEach(function(r) {
+                r.addEventListener('change', function() {
+                    document.querySelectorAll('.bar-tpl').forEach(function(d) {
+                        d.style.borderColor = 'var(--theme-border)';
+                        d.style.color       = 'var(--text-secondary)';
+                        d.style.background  = 'var(--theme-surface-2)';
+                    });
+                    var tpl = document.querySelector('.bar-tpl[data-n="' + this.value + '"]');
+                    if (tpl) { tpl.style.borderColor='var(--theme-gold)'; tpl.style.color='var(--theme-gold)'; tpl.style.background='var(--theme-gold-soft)'; }
+                });
+            });
+            var defRadio = document.querySelector('.bar-radio:checked');
+            if (defRadio) defRadio.dispatchEvent(new Event('change'));
+
+            /* Bulk form submit confirm */
+            document.getElementById('bulkForm').addEventListener('submit', function(e) {
+                var count = document.querySelectorAll('.student-chk:checked').length;
+                if (!confirm('إرسال الشهادة لـ ' + count + ' طالب محدد؟\nهل تريد المتابعة؟')) {
+                    e.preventDefault(); return;
+                }
+                document.getElementById('bulkSendBtn').disabled = true;
+                document.getElementById('bulkSendBtn').innerHTML = '<i class="ri-loader-4-line"></i> جارٍ الإرسال...';
+            });
             document.querySelectorAll('tr[data-href]').forEach(function (tr) {
                 tr.addEventListener('click', function (e) {
                     if (e.target.closest('a') || e.target.closest('button')) return;
