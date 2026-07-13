@@ -5009,6 +5009,7 @@ pipPos: { bottom: 100, left: 16 },
 pipDragging: false,
 pipDragOffset: { x: 0, y: 0 },
 outgoingRingtone: null,
+incomingRingtone: null,
 
 callType: null,  // 'audio' | 'video'
 
@@ -14524,6 +14525,7 @@ await this.hmsJoinRoom(this.currentCallId, type);
 async answerIncomingCall(typeOverride) {
 if (!this.currentCallId) return;
 if (typeOverride) this.callType = typeOverride;
+this.stopIncomingRingtone();
 console.log('[CALL] answerIncomingCall callId=' + this.currentCallId + ' type=' + this.callType);
 
 const _answerRes = await this.postCallAction(this.callRouteFor(this.callsAnswerRouteTemplate, this.currentCallId), {});
@@ -14837,6 +14839,7 @@ this._callPollTimer = setInterval(async () => {
             this.callState = 'incoming';
             this.postCallAction(this.callRouteFor(this.callsRingRouteTemplate, callId), {});
             this.maybeShowCallNotification(this.callContact, this.callType);
+            this.startIncomingRingtone();
         }
     } catch (_) {}
 }, 2000);
@@ -14907,6 +14910,7 @@ this.remoteAudioLevel = 0;
 this.callDeviceHoverOpen = null;
 this.callIsRinging = false;
 this.stopOutgoingRingtone();
+this.stopIncomingRingtone();
 
 // Show call ended summary
 if (this.callStartedAt) {
@@ -15092,6 +15096,31 @@ try {
 } catch(_) { return ''; }
 },
 
+// ── Ring tone helpers ──────────────────────────────────────
+_getRingFreq() {
+const freqMap = {default:800,'soft-bell':1200,classic:660,digital:1000,chime:1400,pop:520,ping:2000,gentle:440};
+return freqMap[this.callSettings?.ringtone] || 800;
+},
+_getRingOscType() {
+const t = this.callSettings?.ringtone;
+if (t === 'digital') return 'square';
+if (t === 'pop') return 'triangle';
+return 'sine';
+},
+_playRingBeep(ctx, freq, oscType, startAt, duration) {
+try {
+const osc = ctx.createOscillator();
+const gain = ctx.createGain();
+osc.connect(gain); gain.connect(ctx.destination);
+osc.type = oscType; osc.frequency.value = freq;
+gain.gain.setValueAtTime(0, startAt);
+gain.gain.linearRampToValueAtTime(0.18, startAt + 0.07);
+gain.gain.setValueAtTime(0.18, startAt + duration - 0.07);
+gain.gain.linearRampToValueAtTime(0, startAt + duration);
+osc.start(startAt); osc.stop(startAt + duration);
+} catch(_) {}
+},
+
 // ── Outgoing ringtone (Web Audio API) ──────────────────────
 startOutgoingRingtone() {
 try {
@@ -15099,16 +15128,10 @@ if (this.outgoingRingtone) this.stopOutgoingRingtone();
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 if (!AudioCtx) return;
 const ctx = new AudioCtx();
+const freq = this._getRingFreq();
+const oscType = this._getRingOscType();
 const play = () => {
-const osc = ctx.createOscillator();
-const gain = ctx.createGain();
-osc.connect(gain); gain.connect(ctx.destination);
-osc.type = 'sine'; osc.frequency.value = 440;
-gain.gain.setValueAtTime(0, ctx.currentTime);
-gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.08);
-gain.gain.setValueAtTime(0.18, ctx.currentTime + 0.35);
-gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.45);
-osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+this._playRingBeep(ctx, freq, oscType, ctx.currentTime, 0.45);
 };
 let running = true;
 const loop = () => { if (!running) return; play(); setTimeout(loop, 2000); };
@@ -15118,6 +15141,30 @@ this.outgoingRingtone = { ctx, stop() { running = false; try { ctx.close(); } ca
 },
 stopOutgoingRingtone() {
 if (this.outgoingRingtone) { this.outgoingRingtone.stop(); this.outgoingRingtone = null; }
+},
+
+// ── Incoming ringtone (Web Audio API) ──────────────────────
+startIncomingRingtone() {
+try {
+if (this.incomingRingtone) this.stopIncomingRingtone();
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+if (!AudioCtx) return;
+const ctx = new AudioCtx();
+const freq = this._getRingFreq();
+const oscType = this._getRingOscType();
+const play = () => {
+// Two quick beeps — classic incoming phone pattern
+this._playRingBeep(ctx, freq, oscType, ctx.currentTime, 0.3);
+this._playRingBeep(ctx, freq, oscType, ctx.currentTime + 0.4, 0.3);
+};
+let running = true;
+const loop = () => { if (!running) return; play(); setTimeout(loop, 3000); };
+loop();
+this.incomingRingtone = { ctx, stop() { running = false; try { ctx.close(); } catch(_) {} } };
+} catch(_) {}
+},
+stopIncomingRingtone() {
+if (this.incomingRingtone) { this.incomingRingtone.stop(); this.incomingRingtone = null; }
 },
 
 // ── Speaking detector ──────────────────────────────────────
@@ -15209,6 +15256,7 @@ this.callState = 'incoming';
 
 this.postCallAction(this.callRouteFor(this.callsRingRouteTemplate, data.call_id), {});
 this.maybeShowCallNotification(this.callContact, this.callType);
+this.startIncomingRingtone();
 });
 
 channel.listen('.call.ringing', (data) => {
