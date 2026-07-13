@@ -4024,7 +4024,9 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
   @pointerdown.prevent="startPipDrag"
 ></video>
 
-<div class="call-avatar" v-show="!(callType === 'video' && callState === 'in-call')">
+<div class="call-avatar"
+     v-show="!(callType === 'video' && callState === 'in-call')"
+     :style="callState === 'in-call' ? { '--vad-spread': remoteVadSpread, '--vad-alpha': remoteVadAlpha } : {}">
 <img v-if="callContact && normalizeAvatarUrl(callContact.avatar_url)" :src="normalizeAvatarUrl(callContact.avatar_url)" alt="" v-on:error="$event.target.style.display='none'">
 <span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
 </div>
@@ -4040,10 +4042,55 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 </div>
 
 <div class="call-actions">
+
+<!-- ميكروفون + picker -->
+<div class="call-btn-group" @mouseenter="openCallDeviceMenu('mic')" @mouseleave="closeCallDeviceMenu()">
 <button class="call-btn mute" :class="{active: callMuted}" @click="toggleMute" title="كتم الصوت"><i :class="callMuted ? 'ri-mic-off-line' : 'ri-mic-line'"></i></button>
+<div class="call-device-picker" v-show="callDeviceHoverOpen === 'mic' && callDevices.audioinput.length > 0"
+     @mouseenter="cancelCallDeviceClose()" @mouseleave="closeCallDeviceMenu()">
+<div class="cdp-title"><i class="ri-mic-2-line"></i> الميكروفون</div>
+<button v-for="d in callDevices.audioinput" :key="'ai-'+d.deviceId" class="cdp-option"
+        :class="{active: callActiveAudioInput ? callActiveAudioInput===d.deviceId : d.deviceId==='default' || callDevices.audioinput.indexOf(d)===0}"
+        @click.stop="setCallAudioInput(d.deviceId)">
+<i class="ri-check-line cdp-check"></i>
+<span>@{{ d.label || ('ميكروفون ' + (callDevices.audioinput.indexOf(d)+1)) }}</span>
+</button>
+</div>
+</div>
+
+<!-- سماعة + picker -->
+<div class="call-btn-group" @mouseenter="openCallDeviceMenu('speaker')" @mouseleave="closeCallDeviceMenu()">
 <button class="call-btn speaker" :class="{active: speakerMuted}" @click="toggleSpeaker" title="السماعة"><i :class="speakerMuted ? 'ri-volume-mute-line' : 'ri-volume-up-line'"></i></button>
+<div class="call-device-picker" v-show="callDeviceHoverOpen === 'speaker' && callDevices.audiooutput.length > 0"
+     @mouseenter="cancelCallDeviceClose()" @mouseleave="closeCallDeviceMenu()">
+<div class="cdp-title"><i class="ri-speaker-2-line"></i> مكبر الصوت</div>
+<button v-for="d in callDevices.audiooutput" :key="'ao-'+d.deviceId" class="cdp-option"
+        :class="{active: callActiveAudioOutput ? callActiveAudioOutput===d.deviceId : d.deviceId==='default' || callDevices.audiooutput.indexOf(d)===0}"
+        @click.stop="setCallAudioOutput(d.deviceId)">
+<i class="ri-check-line cdp-check"></i>
+<span>@{{ d.label || ('مكبر ' + (callDevices.audiooutput.indexOf(d)+1)) }}</span>
+</button>
+</div>
+</div>
+
+<!-- إنهاء (لا picker) -->
 <button class="call-btn end" @click="endCall" title="إنهاء"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i></button>
-<button class="call-btn cam" :class="{active: cameraOff}" @click="toggleCamera" title="الكاميرا" v-if="callType === 'video'"><i :class="cameraOff ? 'ri-camera-off-line' : 'ri-camera-line'"></i></button>
+
+<!-- كاميرا + picker -->
+<div class="call-btn-group" v-if="callType === 'video'" @mouseenter="openCallDeviceMenu('camera')" @mouseleave="closeCallDeviceMenu()">
+<button class="call-btn cam" :class="{active: cameraOff}" @click="toggleCamera" title="الكاميرا"><i :class="cameraOff ? 'ri-camera-off-line' : 'ri-camera-line'"></i></button>
+<div class="call-device-picker" v-show="callDeviceHoverOpen === 'camera' && callDevices.videoinput.length > 0"
+     @mouseenter="cancelCallDeviceClose()" @mouseleave="closeCallDeviceMenu()">
+<div class="cdp-title"><i class="ri-camera-3-line"></i> الكاميرا</div>
+<button v-for="d in callDevices.videoinput" :key="'vi-'+d.deviceId" class="cdp-option"
+        :class="{active: callActiveVideoInput ? callActiveVideoInput===d.deviceId : d.deviceId==='default' || callDevices.videoinput.indexOf(d)===0}"
+        @click.stop="setCallVideoInput(d.deviceId)">
+<i class="ri-check-line cdp-check"></i>
+<span>@{{ d.label || ('كاميرا ' + (callDevices.videoinput.indexOf(d)+1)) }}</span>
+</button>
+</div>
+</div>
+
 <button class="call-btn switch-cam" @click="switchCamera" title="تبديل الكاميرا" v-if="callType === 'video' && !cameraOff"><i class="ri-camera-switch-line"></i></button>
 <button class="call-btn add-participant" @click="openAddParticipant" title="إضافة مشارك" v-if="callState === 'in-call' && callParticipants.length < 5"><i class="ri-user-add-line"></i></button>
 </div>
@@ -4945,6 +4992,13 @@ _poorQualityToastAt: null,
 _callElapsedTimer: null,
 callElapsedDisplay: '',
 _callNow: 0,
+remoteAudioLevel: 0,
+callDevices: { audioinput: [], audiooutput: [], videoinput: [] },
+callActiveAudioInput: null,
+callActiveAudioOutput: null,
+callActiveVideoInput: null,
+callDeviceHoverOpen: null,
+_callDeviceCloseTimer: null,
 callMinimized: false,
 callConnectionWarning: false,
 callEndedSummary: null,
@@ -5403,6 +5457,17 @@ this.muteCustomMinutes = saved.minutes ?? 0;
 },
 
 computed: {
+
+remoteVadSpread() {
+const l = this.remoteAudioLevel;
+if (l < 8) return '3px';
+return Math.min(16, Math.round(3 + (l / 100) * 13)) + 'px';
+},
+remoteVadAlpha() {
+const l = this.remoteAudioLevel;
+if (l < 8) return '0';
+return Math.min(0.75, 0.25 + (l / 100) * 0.5).toFixed(2);
+},
 
 usernameCooldownDaysLeft() {
 if (!this.settingsAccount.username_changed_at) return 0;
@@ -14588,6 +14653,18 @@ this.cameraOff = true;
 
 this._hmsUnsubFns = [];
 
+// Load device list for in-call pickers (non-blocking)
+this.loadCallDevices();
+
+// Voice Activity Detection — drive speaking ring on remote avatar
+if (HMS.selectSpeakers) {
+this._hmsUnsubFns.push(hmsStore.subscribe((speakers) => {
+    if (!speakers || !this.callState) { this.remoteAudioLevel = 0; return; }
+    const levels = Object.values(speakers);
+    this.remoteAudioLevel = levels.length ? Math.max(...levels) : 0;
+}, HMS.selectSpeakers));
+}
+
 // Poor network quality warning — HMS provides downlinkQuality 0-5 (0=unknown, 1=poor, 5=excellent)
 if (HMS.selectConnectionQualities) {
 this._hmsUnsubFns.push(hmsStore.subscribe((qualities) => {
@@ -14823,8 +14900,11 @@ if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTime
 if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
 if (this._groupCallEmptyTimer) { clearTimeout(this._groupCallEmptyTimer); this._groupCallEmptyTimer = null; }
 if (this._callElapsedTimer) { clearInterval(this._callElapsedTimer); this._callElapsedTimer = null; }
+if (this._callDeviceCloseTimer) { clearTimeout(this._callDeviceCloseTimer); this._callDeviceCloseTimer = null; }
 this._poorQualityToastAt = null;
 this._callNow = 0;
+this.remoteAudioLevel = 0;
+this.callDeviceHoverOpen = null;
 this.callIsRinging = false;
 this.stopOutgoingRingtone();
 
@@ -14941,6 +15021,75 @@ const secs = Math.floor((this._callNow - this.callStartedAt) / 1000);
 const m = Math.floor(secs / 60).toString().padStart(2, '0');
 const s = (secs % 60).toString().padStart(2, '0');
 return `${m}:${s}`;
+},
+
+// ── Call device picker ────────────────────────────────────
+async loadCallDevices() {
+try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    this.callDevices = {
+        audioinput:  devices.filter(d => d.kind === 'audioinput'  && d.deviceId),
+        audiooutput: devices.filter(d => d.kind === 'audiooutput' && d.deviceId),
+        videoinput:  devices.filter(d => d.kind === 'videoinput'  && d.deviceId),
+    };
+} catch(_) {}
+},
+openCallDeviceMenu(type) {
+if (this._callDeviceCloseTimer) { clearTimeout(this._callDeviceCloseTimer); this._callDeviceCloseTimer = null; }
+this.callDeviceHoverOpen = type;
+},
+closeCallDeviceMenu() {
+this._callDeviceCloseTimer = setTimeout(() => { this.callDeviceHoverOpen = null; }, 200);
+},
+cancelCallDeviceClose() {
+if (this._callDeviceCloseTimer) { clearTimeout(this._callDeviceCloseTimer); this._callDeviceCloseTimer = null; }
+},
+async setCallAudioInput(deviceId) {
+this.callActiveAudioInput = deviceId;
+this.callDeviceHoverOpen = null;
+try { await window._hmsActions?.setAudioSettings({ deviceId }); } catch(_) {}
+},
+async setCallAudioOutput(deviceId) {
+this.callActiveAudioOutput = deviceId;
+this.callDeviceHoverOpen = null;
+try { await window._hmsActions?.setAudioOutputDevice(deviceId); } catch(_) {}
+},
+async setCallVideoInput(deviceId) {
+this.callActiveVideoInput = deviceId;
+this.callDeviceHoverOpen = null;
+try { await window._hmsActions?.setVideoSettings({ deviceId }); } catch(_) {}
+},
+
+// ── User-agent parser for sessions panel ─────────────────
+parseUserAgent(ua) {
+if (!ua) return { name: 'جهاز غير معروف', icon: 'ri-computer-line' };
+const s = ua;
+let name = 'متصفح غير معروف';
+let icon = 'ri-computer-line';
+const isMobile = /Mobile|Android|iPhone|iPad/i.test(s);
+if (isMobile) icon = 'ri-smartphone-line';
+if      (/Edg\//i.test(s))                              { name = 'Microsoft Edge'; }
+else if (/OPR\//i.test(s))                              { name = 'Opera'; }
+else if (/Chrome\//i.test(s) && !/Chromium/i.test(s))  { name = 'Google Chrome'; icon = isMobile ? 'ri-smartphone-line' : 'ri-chrome-line'; }
+else if (/Firefox\//i.test(s))                          { name = 'Firefox'; icon = isMobile ? 'ri-smartphone-line' : 'ri-firefox-line'; }
+else if (/Safari\//i.test(s) && !/Chrome/i.test(s))    { name = 'Safari'; icon = isMobile ? 'ri-smartphone-line' : 'ri-safari-line'; }
+else if (/MSIE|Trident/i.test(s))                       { name = 'Internet Explorer'; }
+if      (/Windows NT/i.test(s)) name += ' — ويندوز';
+else if (/Mac OS X/i.test(s))   name += ' — ماك';
+else if (/Android/i.test(s))    name += ' — أندرويد';
+else if (/iPhone|iPad/i.test(s)) name += ' — iOS';
+else if (/Linux/i.test(s))      name += ' — لينكس';
+return { name, icon };
+},
+formatLastActivity(isoStr) {
+if (!isoStr) return '';
+try {
+    const diff = Date.now() - new Date(isoStr).getTime();
+    if (diff < 60000)      return 'منذ لحظات';
+    if (diff < 3600000)    return 'منذ ' + Math.floor(diff / 60000) + ' دقيقة';
+    if (diff < 86400000)   return 'منذ ' + Math.floor(diff / 3600000) + ' ساعة';
+    return 'منذ ' + Math.floor(diff / 86400000) + ' يوم';
+} catch(_) { return ''; }
 },
 
 // ── Outgoing ringtone (Web Audio API) ──────────────────────
