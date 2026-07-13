@@ -47,5 +47,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
+            if (app()->bound(\Sentry\State\HubInterface::class)) {
+                \Sentry\captureException($e);
+            }
         });
     })->create();
