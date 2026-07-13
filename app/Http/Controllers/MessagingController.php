@@ -844,8 +844,8 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             ->whereNotIn('id', is_array($excludeIds) ? $excludeIds : [])
             ->where(function ($q) use ($query) {
                 if ($query !== '') {
-                    $q->where('name', 'like', "%{$query}%")
-                      ->orWhere('email', 'like', "%{$query}%");
+                    $q->whereRaw('MATCH(name, email) AGAINST(? IN BOOLEAN MODE)', ['+' . $query . '*'])
+                      ->orWhere('name', 'like', "{$query}%");
                 }
             })
             ->orderBy('name')
@@ -1168,7 +1168,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $messages = Message::where(function ($q) use ($user) {
             $q->where('sender_id', $user->id)->orWhere('recipient_id', $user->id);
         })
-        ->where('content', 'like', '%' . $query . '%')
+        ->whereRaw('MATCH(content) AGAINST(? IN BOOLEAN MODE)', ['"' . addslashes($query) . '"'])
         ->with(['sender', 'recipient', 'replyTo.sender'])
         ->orderBy('created_at', 'desc')
         ->limit(50)

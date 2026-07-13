@@ -13,9 +13,14 @@ class PlatformSetting extends Model
         'value' => 'string',
     ];
 
+    private static function cached(): \Illuminate\Support\Collection
+    {
+        return Cache::remember('platform_settings_all', 3600, fn () => static::all()->keyBy('key'));
+    }
+
     public static function get(string $key, mixed $default = null): mixed
     {
-        $settings = static::all()->keyBy('key');
+        $settings = static::cached();
 
         if (!$settings->has($key)) {
             return $default;
@@ -36,10 +41,11 @@ class PlatformSetting extends Model
             ['key' => $key],
             ['value' => (string) $value, 'type' => $type, 'group' => $group, 'label' => $label ?? $key]
         );
+        Cache::forget('platform_settings_all');
     }
 
     public static function getAllGrouped(): array
     {
-        return static::all()->groupBy('group')->toArray();
+        return static::cached()->groupBy('group')->toArray();
     }
 }
