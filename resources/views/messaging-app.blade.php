@@ -14657,6 +14657,7 @@ if (this.isGroupCall) {
 // New peer arrived during grace period — cancel the grace timer
 clearTimeout(this._groupCallEmptyTimer);
 this._groupCallEmptyTimer = null;
+}
 }, HMS.selectRemotePeers));
 
 // Connection health indicator + auto-reconnect on disconnect
