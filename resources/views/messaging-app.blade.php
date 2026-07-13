@@ -628,7 +628,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 <div class="pinned-list-card">
 <div class="pinned-list-item" v-for="msg in pinnedMessagesForCurrentChat" :key="'pin-'+msg.id" @click="jumpToPinnedMessage(msg); pinnedListOpen = false">
 <i class="ri-pushpin-2-fill"></i>
-<span class="pinned-list-text">@{{ isStillEncrypted(msg.content) ? '🔒 رسالة مشفّرة' : (msg.content || (msg.messageType === 'image' ? 'صورة' : msg.messageType === 'video' ? 'فيديو' : msg.messageType === 'audio' ? 'رسالة صوتية' : 'مرفق')) }}</span>
+<span class="pinned-list-text">@{{ isStillEncrypted(msg.content) ? '🔒 رسالة محمية' : (msg.content || (msg.messageType === 'image' ? 'صورة' : msg.messageType === 'video' ? 'فيديو' : msg.messageType === 'audio' ? 'رسالة صوتية' : 'مرفق')) }}</span>
 <button class="pinned-list-unpin" @click.stop="messageContextMessage = msg; contextPin()"><i class="ri-close-line"></i></button>
 </div>
 </div>
@@ -762,7 +762,10 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 </div>
 </div>
 
-<div class="txt" v-if="message.content && message.messageType === 'text'" :class="{ 'txt--encrypted-fallback': isStillEncrypted(message.content) }">@{{ isStillEncrypted(message.content) ? '🔒 رسالة مشفّرة — الطرف الآخر لم يشارك مفتاح التشفير بعد' : message.content }}</div>
+<div class="txt" v-if="message.content && message.messageType === 'text'" :class="{ 'txt--encrypted-fallback': isStillEncrypted(message.content) }">
+  <template v-if="isStillEncrypted(message.content)"><i class="ri-lock-line" style="font-size:13px;opacity:.55;margin-left:4px;"></i><span style="opacity:.55;font-size:13px;">رسالة محمية</span></template>
+  <template v-else>@{{ message.content }}</template>
+</div>
 
 <div class="sticker-bubble" v-if="(message.messageType === 'sticker_static' || message.messageType === 'sticker_animated') && !brokenMediaByMessageId[message.id]" @click="openStickerViewer(message)">
 <img v-if="message.messageType === 'sticker_static'" :src="message.attachmentUrl" :alt="message.attachmentName" class="sticker-bubble-media" v-on:error="markMediaAsBroken(message)">
@@ -10815,7 +10818,7 @@ window._e2eKeyPair.privateKey,
 );
 const plain = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sharedKey, ct);
 return new TextDecoder().decode(plain);
-} catch (_) { return '[رسالة مشفرة — يتعذر فكّ التشفير]'; }
+} catch (_) { return 'e2e:__decrypt_failed__'; }
 },
 
 // يفحص إذا كان محتوى الرسالة لا يزال بصيغة e2e المشفّرة (لم يُفكّ)
