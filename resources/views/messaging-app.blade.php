@@ -1625,11 +1625,12 @@ key="mic-action"
 
   <div v-for="(layer, lIdx) in getStatusTextLayers(currentStatus)" :key="'txt-'+lIdx"
        class="status-viewer-text-layer"
-       style="position:absolute; white-space:pre-wrap; text-align:center; z-index:10; font-weight:600; max-width:90%; word-break:break-word;"
+       style="position:absolute; white-space:pre-wrap; z-index:10; font-weight:600; max-width:90%; word-break:break-word;"
        :style="{
          fontFamily: layer.isSticker ? undefined : (layer.fontStyle || 'Tajawal'),
          fontSize: layer.isSticker ? undefined : ((layer.fontSize || 42)+'px'),
          color: layer.isSticker ? undefined : ((layer.textBgStyle==='neon') ? '#fff' : (layer.textColor || '#ffffff')),
+         textAlign: layer.isSticker ? undefined : (layer.textAlign || 'center'),
          top: (layer.textPosY ?? 50)+'%',
          left: (layer.textPosX ?? 50)+'%',
          transform: 'translate(-50%,-50%) rotate('+(layer.rotate||0)+'deg) scale('+(layer.scale||1)+')',
@@ -1788,6 +1789,7 @@ key="mic-action"
                fontSize: (t.fontSize || 42)+'px',
                color: (t.textBgStyle==='neon') ? '#fff' : (t.textColor || '#ffffff'),
                fontWeight: 600,
+               textAlign: t.textAlign || 'center',
                top: (t.textPosY || 50)+'%',
                left: (t.textPosX || 50)+'%',
                transform: 'translate(-50%,-50%) rotate('+(t.rotate||0)+'deg) scale('+(t.scale||1)+')',
@@ -1900,6 +1902,9 @@ key="mic-action"
           <button class="sc-btn" @click="cycleTextFontStyle">
             <span style="font-family: serif; font-size: 18px; font-weight: bold;">A</span>
           </button>
+          <button class="sc-btn" @click="cycleTextAlign" title="محاذاة النص">
+            <i :class="seActiveText()?.textAlign==='right' ? 'ri-align-right' : (seActiveText()?.textAlign==='left' ? 'ri-align-left' : 'ri-align-center')"></i>
+          </button>
         </div>
         <button class="sc-typing-done" @click="handleTypingOverlayBgClick">تم</button>
       </div>
@@ -1917,6 +1922,7 @@ key="mic-action"
                         fontSize: (statusEditor.fontSize || seActiveText()?.fontSize || 42) + 'px',
                         fontFamily: seActiveText()?.fontStyle || 'Tajawal',
                         color: (seActiveText()?.textBgStyle==='neon') ? '#fff' : (seActiveText()?.textColor || '#ffffff'),
+                        textAlign: seActiveText()?.textAlign || 'center',
                         textShadow: (seActiveText()?.textBgStyle==='none') ? '0 2px 8px rgba(0,0,0,.7)' : ((seActiveText()?.textBgStyle==='neon') ? '0 0 10px ' + (seActiveText()?.textColor || '#ffffff') + ', 0 0 20px ' + (seActiveText()?.textColor || '#ffffff') : 'none'),
                         background: (seActiveText()?.textBgStyle==='solid') ? 'rgba(0,0,0,0.75)' : ((seActiveText()?.textBgStyle==='translucent') ? 'rgba(0,0,0,0.38)' : 'transparent'),
                         padding: (seActiveText()?.textBgStyle==='solid' || seActiveText()?.textBgStyle==='translucent') ? '10px 20px' : '0',
@@ -15525,6 +15531,14 @@ const idx = fonts.indexOf(active.fontStyle || 'Tajawal');
 const nextFont = fonts[(idx + 1) % fonts.length];
 active.fontStyle = nextFont;
 this.statusEditor.fontStyle = nextFont;
+},
+
+cycleTextAlign() {
+const order = ['center', 'right', 'left'];
+const active = this.seActiveText();
+if (!active) return;
+const idx = order.indexOf(active.textAlign || 'center');
+active.textAlign = order[(idx + 1) % order.length];
 },
 
 insertEmojiIntoStatus(emoji) {
