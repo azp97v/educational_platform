@@ -4941,6 +4941,7 @@ callTimeoutTimer: null,
 _callRingingFallbackTimer: null,
 _hmsReconnectTimer: null,
 _groupCallEmptyTimer: null,
+_poorQualityToastAt: null,
 callMinimized: false,
 callConnectionWarning: false,
 callEndedSummary: null,
@@ -14518,7 +14519,10 @@ console.log('[HMS] token OK roomId=' + res.room_id);
 // Keep stream open during join so HMS gets a track from the already-active session.
 let _warmStream = null;
 try {
-_warmStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+_warmStream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: false,
+});
 const _warmTrack = _warmStream.getAudioTracks()[0];
 if (_warmTrack && _warmTrack.muted) {
 // Wait for OS to deliver first audio frames (unmute event), up to 2 seconds
@@ -14576,6 +14580,21 @@ this.cameraOff = true;
 }
 
 this._hmsUnsubFns = [];
+
+// Poor network quality warning — HMS provides downlinkQuality 0-5 (0=unknown, 1=poor, 5=excellent)
+if (HMS.selectConnectionQualities) {
+this._hmsUnsubFns.push(hmsStore.subscribe((qualities) => {
+    if (!qualities || !this.callState) return;
+    const values = Object.values(qualities);
+    const hasPoor = values.some(q => q.downlinkQuality > 0 && q.downlinkQuality <= 2);
+    if (hasPoor && !this._poorQualityToastAt) {
+        this._poorQualityToastAt = Date.now();
+        this.showToast('جودة الشبكة ضعيفة — قد يتأثر الصوت', 'info');
+    } else if (!hasPoor && this._poorQualityToastAt && Date.now() - this._poorQualityToastAt > 30000) {
+        this._poorQualityToastAt = null; // allow re-notification after 30s of good quality
+    }
+}, HMS.selectConnectionQualities));
+}
 
 // Log HMS errors to console for diagnostics (3008 = transient NoDataInTrack, not fatal)
 if (HMS.selectErrors) {
@@ -14643,7 +14662,7 @@ this._groupCallEmptyTimer = null;
 // Connection health indicator + auto-reconnect on disconnect
 this._hmsUnsubFns.push(hmsStore.subscribe((isConnected) => {
 console.log('[HMS] isConnectedToRoom=' + isConnected + ' callState=' + this.callState);
-if (this.callState === 'in-call') {
+if (this.callState === 'in-call' || this.callState === 'calling') {
     this.callConnectionWarning = !isConnected;
     if (!isConnected) {
         // Give HMS 10s to self-recover; if still disconnected, trigger a rejoin
@@ -14651,7 +14670,7 @@ if (this.callState === 'in-call') {
             this._hmsReconnectTimer = setTimeout(async () => {
                 this._hmsReconnectTimer = null;
                 const stillDisconnected = !window._hmsStore?.getState(HMS.selectIsConnectedToRoom);
-                if (stillDisconnected && this.callState === 'in-call' && this.currentCallId) {
+                if (stillDisconnected && (this.callState === 'in-call' || this.callState === 'calling') && this.currentCallId) {
                     console.log('[HMS] reconnect: attempting rejoin after 10s disconnect');
                     try { await window._hmsActions?.leave(); } catch (_) {}
                     await this.hmsJoinRoom(this.currentCallId, this.callType);
@@ -14659,7 +14678,6 @@ if (this.callState === 'in-call') {
             }, 10000);
         }
     } else {
-        // Reconnected — cancel pending reconnect timer
         if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
     }
 }
@@ -14775,6 +14793,7 @@ if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeo
 if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTimer); this._callRingingFallbackTimer = null; }
 if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
 if (this._groupCallEmptyTimer) { clearTimeout(this._groupCallEmptyTimer); this._groupCallEmptyTimer = null; }
+this._poorQualityToastAt = null;
 this.callIsRinging = false;
 this.stopOutgoingRingtone();
 
@@ -17443,6 +17462,55 @@ if (!document.hidden && !this.callState && !this._callPollTimer) {
 this.startIncomingCallPoll();
 }
 
+});
+
+// Network offline → show warning immediately without waiting for HMS 10s timeout
+window.addEventListener('offline', () => {
+if (this.callState === 'in-call' || this.callState === 'calling') {
+    this.callConnectionWarning = true;
+    console.log('[NET] offline – call connection warning shown');
+}
+});
+
+// Network online → reconnect immediately instead of waiting for 10s HMS timer
+window.addEventListener('online', () => {
+console.log('[NET] online – restoring call services');
+// Restart poll if not in a call
+if (!this.callState && !this._callPollTimer) this.startIncomingCallPoll();
+// If we were showing a connection warning during a call, try to rejoin immediately
+if (this.callConnectionWarning && (this.callState === 'in-call' || this.callState === 'calling') && this.currentCallId) {
+    if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
+    // Brief pause (500ms) for OS network stack to stabilise before rejoining
+    setTimeout(() => {
+        if ((this.callState === 'in-call' || this.callState === 'calling') && this.currentCallId) {
+            console.log('[NET] immediate rejoin after network restored');
+            this.hmsJoinRoom(this.currentCallId, this.callType);
+        }
+    }, 500);
+}
+});
+
+// Audio device change (headphones plugged/unplugged) → switch HMS to new default device
+if (navigator.mediaDevices?.addEventListener) {
+navigator.mediaDevices.addEventListener('devicechange', async () => {
+    if ((this.callState !== 'in-call' && this.callState !== 'calling') || !window._hmsActions) return;
+    try {
+        console.log('[DEVICE] device change detected – switching to new default audio device');
+        await window._hmsActions.setAudioSettings({ deviceId: 'default' });
+    } catch (e) {
+        console.warn('[DEVICE] setAudioSettings failed:', e.message);
+    }
+});
+}
+
+// Tab/window close mid-call → end call on server via keepalive beacon
+window.addEventListener('beforeunload', () => {
+if (this.currentCallId) {
+    const endUrl = this.callRouteFor(this.callsEndRouteTemplate, this.currentCallId);
+    // Use URL-encoded body so Laravel's CSRF middleware reads _token from the body
+    const body = '_token=' + encodeURIComponent(this.csrfToken);
+    navigator.sendBeacon(endUrl, new Blob([body], { type: 'application/x-www-form-urlencoded' }));
+}
 });
 
 // Esc key handler: close any open modal or panel.
