@@ -4938,6 +4938,9 @@ callState: null, // null | 'calling' | 'in-call' | 'incoming'
 callDirection: null, // 'outgoing' | 'incoming' — tracked separately from callState
 callIsRinging: false,
 callTimeoutTimer: null,
+_callRingingFallbackTimer: null,
+_hmsReconnectTimer: null,
+_groupCallEmptyTimer: null,
 callMinimized: false,
 callConnectionWarning: false,
 callEndedSummary: null,
@@ -13478,26 +13481,7 @@ if (raw) {
 try { this.callLogs = JSON.parse(raw); } catch (_) { this.callLogs = []; }
 }
 if (!this.callLogs || !this.callLogs.length) {
-const now = Date.now();
-const sampleContacts = (this.contacts || []).filter(c => Number(c.id) !== Number(this.currentUserId));
-const sampleCalls = [];
-sampleContacts.slice(0, 12).forEach((c, i) => {
-const hrs = i * 2;
-sampleCalls.push({
-id: 'call_' + i,
-contactId: c.id,
-contactName: c.name,
-contactAvatar: c.avatar_url,
-type: i % 3 === 0 ? 'video' : 'audio',
-direction: i % 2 === 0 ? 'outgoing' : 'incoming',
-status: i === 2 || i === 5 || i === 9 ? 'missed' : 'completed',
-duration: 30 + Math.floor(Math.random() * 300),
-timestamp: new Date(now - hrs * 3600000 - Math.floor(Math.random() * 1800000)).toISOString(),
-attempts: i === 5 ? 3 : i === 2 ? 2 : 1,
-});
-});
-this.callLogs = sampleCalls;
-this.saveCallLogs();
+this.callLogs = [];
 }
 },
 
@@ -14457,6 +14441,12 @@ this.showToast('لم يرد المستخدم على المكالمة', 'info');
 this.endCall();
 }
 }, 45000);
+// Fallback: if call.ringing event hasn't arrived after 4s, set it ourselves
+if (this._callRingingFallbackTimer) clearTimeout(this._callRingingFallbackTimer);
+this._callRingingFallbackTimer = setTimeout(() => {
+this._callRingingFallbackTimer = null;
+if (this.callState === 'calling' && !this.callIsRinging) this.callIsRinging = true;
+}, 4000);
 }
 
 await this.hmsJoinRoom(this.currentCallId, type);
@@ -14477,7 +14467,7 @@ return;
 }
 
 this.callState = 'in-call';
-this.callStartedAt = Date.now();
+this.callStartedAt = _answerRes.answered_at ? new Date(_answerRes.answered_at).getTime() : Date.now();
 this.incomingCallOffer = null;
 
 await this.hmsJoinRoom(this.currentCallId, this.callType);
@@ -14512,6 +14502,7 @@ const res = await this.postCallAction(tokenUrl, {});
 if (!res?.success) {
 console.error('[HMS] token fetch FAILED', res);
 this.showToast('تعذّر الحصول على رمز المكالمة', 'error');
+this.cleanupCall();
 return;
 }
 console.log('[HMS] token OK roomId=' + res.room_id);
@@ -14625,16 +14616,53 @@ if (this.callState === 'in-call') {
     this.callStartedAt = this.callStartedAt || Date.now();
     if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 }
-} else if ((!peers || peers.length === 0) && this.callState === 'in-call' && !this.isGroupCall && this.callStartedAt) {
-console.log('[HMS] all remote peers left – ending call');
-this.cleanupCall();
+} else if ((!peers || peers.length === 0) && this.callState === 'in-call' && this.callStartedAt) {
+if (this.isGroupCall) {
+    // Group: give 10s grace period before ending — others may still be connecting
+    if (!this._groupCallEmptyTimer) {
+        console.log('[HMS] group call: all peers left – starting 10s grace period');
+        this._groupCallEmptyTimer = setTimeout(() => {
+            this._groupCallEmptyTimer = null;
+            if (this.callState === 'in-call' && this.isGroupCall) {
+                const currentPeers = window._hmsStore?.getState(HMS.selectRemotePeers) || [];
+                if (!currentPeers.length) { console.log('[HMS] group grace elapsed – ending call'); this.cleanupCall(); }
+            }
+        }, 10000);
+    }
+} else {
+    if (this._groupCallEmptyTimer) { clearTimeout(this._groupCallEmptyTimer); this._groupCallEmptyTimer = null; }
+    console.log('[HMS] all remote peers left – ending call');
+    this.cleanupCall();
 }
+} else if (peers && peers.length > 0 && this._groupCallEmptyTimer) {
+// New peer arrived during grace period — cancel the grace timer
+clearTimeout(this._groupCallEmptyTimer);
+this._groupCallEmptyTimer = null;
 }, HMS.selectRemotePeers));
 
-// Connection health indicator
+// Connection health indicator + auto-reconnect on disconnect
 this._hmsUnsubFns.push(hmsStore.subscribe((isConnected) => {
 console.log('[HMS] isConnectedToRoom=' + isConnected + ' callState=' + this.callState);
-if (this.callState === 'in-call') this.callConnectionWarning = !isConnected;
+if (this.callState === 'in-call') {
+    this.callConnectionWarning = !isConnected;
+    if (!isConnected) {
+        // Give HMS 10s to self-recover; if still disconnected, trigger a rejoin
+        if (!this._hmsReconnectTimer) {
+            this._hmsReconnectTimer = setTimeout(async () => {
+                this._hmsReconnectTimer = null;
+                const stillDisconnected = !window._hmsStore?.getState(HMS.selectIsConnectedToRoom);
+                if (stillDisconnected && this.callState === 'in-call' && this.currentCallId) {
+                    console.log('[HMS] reconnect: attempting rejoin after 10s disconnect');
+                    try { await window._hmsActions?.leave(); } catch (_) {}
+                    await this.hmsJoinRoom(this.currentCallId, this.callType);
+                }
+            }, 10000);
+        }
+    } else {
+        // Reconnected — cancel pending reconnect timer
+        if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
+    }
+}
 }, HMS.selectIsConnectedToRoom));
 console.log('[HMS] hmsJoinRoom COMPLETE – subscriptions active, callState=' + this.callState);
 },
@@ -14656,7 +14684,16 @@ if (window._hmsActions) await window._hmsActions.leave();
 startIncomingCallPoll() {
 if (this._callPollTimer || !this.callsPendingRoute) return;
 this._callPollTimer = setInterval(async () => {
-    if (this.callState) return; // Already handling a call
+    // If currently showing an incoming call UI, check whether the caller cancelled it
+    if (this.callState === 'incoming' && this.currentCallId) {
+        try {
+            const cu = this.callsPendingRoute + '?check_call_id=' + this.currentCallId;
+            const cr = await fetch(cu, { headers: { 'Accept': 'application/json' } });
+            if (cr.ok) { const cd = await cr.json(); if (cd.cancelled) this.cleanupCall(); }
+        } catch (_) {}
+        return;
+    }
+    if (this.callState) return; // Already in a call — skip normal pending check
     try {
         const r = await fetch(this.callsPendingRoute, { headers: { 'Accept': 'application/json' } });
         if (!r.ok) return;
@@ -14735,6 +14772,9 @@ cleanupCall() {
 if (!this.callState && !this.currentCallId) return; // already cleaned up — prevent double execution
 this.stopIncomingCallPoll();
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
+if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTimer); this._callRingingFallbackTimer = null; }
+if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
+if (this._groupCallEmptyTimer) { clearTimeout(this._groupCallEmptyTimer); this._groupCallEmptyTimer = null; }
 this.callIsRinging = false;
 this.stopOutgoingRingtone();
 
@@ -14980,11 +15020,12 @@ if (this.callState === 'calling') this.callIsRinging = true;
 channel.listen('.call.answered', (data) => {
 console.log('[CALL] call.answered received callId=' + data.call_id + ' myCallId=' + this.currentCallId);
 if (Number(data.call_id) !== Number(this.currentCallId)) return;
-// HMS handles the actual media — just update call state
 console.log('[CALL] → switching callState to in-call');
 this.callState = 'in-call';
-this.callStartedAt = this.callStartedAt || Date.now();
+// Sync call start time from server-stamped answered_at for accurate duration across both parties
+this.callStartedAt = data.answered_at ? new Date(data.answered_at).getTime() : (this.callStartedAt || Date.now());
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
+if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTimer); this._callRingingFallbackTimer = null; }
 });
 
 channel.listen('.call.rejected', (data) => {
@@ -17395,6 +17436,11 @@ this.startSSE();
 
 this.scheduleDeltaRefresh();
 
+}
+
+// Restart call poll when tab becomes visible so missed incoming calls are caught immediately
+if (!document.hidden && !this.callState && !this._callPollTimer) {
+this.startIncomingCallPoll();
 }
 
 });

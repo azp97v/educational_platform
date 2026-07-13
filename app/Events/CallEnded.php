@@ -19,10 +19,15 @@ class CallEnded implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('user.' . $this->call->caller_id),
-            new PrivateChannel('user.' . $this->call->recipient_id),
-        ];
+        // Broadcast to every participant (handles group calls and avoids null recipient_id)
+        $userIds = $this->call->participants()
+            ->pluck('user_id')
+            ->filter()
+            ->unique();
+
+        $channels = $userIds->map(fn ($id) => new PrivateChannel('user.' . $id))->all();
+
+        return $channels ?: [new PrivateChannel('user.' . $this->call->caller_id)];
     }
 
     public function broadcastAs(): string
