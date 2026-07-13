@@ -14444,6 +14444,7 @@ return;
 }
 
 this.currentCallId = result.call_id;
+console.log('[CALL] initiate OK callId=' + result.call_id + ' type=' + type);
 
 if (!this.isGroupCall) {
 if (this.callTimeoutTimer) clearTimeout(this.callTimeoutTimer);
@@ -14461,8 +14462,16 @@ await this.hmsJoinRoom(this.currentCallId, type);
 async answerIncomingCall(typeOverride) {
 if (!this.currentCallId) return;
 if (typeOverride) this.callType = typeOverride;
+console.log('[CALL] answerIncomingCall callId=' + this.currentCallId + ' type=' + this.callType);
 
-await this.postCallAction(this.callRouteFor(this.callsAnswerRouteTemplate, this.currentCallId), {});
+const _answerRes = await this.postCallAction(this.callRouteFor(this.callsAnswerRouteTemplate, this.currentCallId), {});
+console.log('[CALL] answer POST result:', _answerRes);
+if (!_answerRes?.success) {
+console.error('[CALL] answer endpoint failed – aborting call');
+this.showToast('تعذّر قبول المكالمة', 'error');
+this.cleanupCall();
+return;
+}
 
 this.callState = 'in-call';
 this.callStartedAt = Date.now();
@@ -14474,6 +14483,7 @@ await this.hmsJoinRoom(this.currentCallId, this.callType);
 // ── 100ms SDK helpers ──────────────────────────────────────────────────────
 
 async hmsJoinRoom(callId, callType) {
+console.log('[HMS] hmsJoinRoom START callId=' + callId + ' type=' + callType + ' dir=' + this.callDirection);
 const HMS = window.HMSVideoStore;
 if (!HMS?.HMSReactiveStore) {
 console.warn('[HMS] SDK not loaded — calls require 100ms SDK');
@@ -14494,11 +14504,14 @@ this._hmsUnsubFns = [];
 }
 
 const tokenUrl = this.callRouteFor(this.callsHmsTokenRouteTemplate, callId);
+console.log('[HMS] fetching token from', tokenUrl);
 const res = await this.postCallAction(tokenUrl, {});
 if (!res?.success) {
+console.error('[HMS] token fetch FAILED', res);
 this.showToast('تعذّر الحصول على رمز المكالمة', 'error');
 return;
 }
+console.log('[HMS] token OK roomId=' + res.room_id);
 
 // Strategy: join with isAudioMuted:true so HMS uses an empty oscillator track
 // instead of calling getUserMedia. This avoids error 3015 (NoDataInTrack) which
@@ -14531,24 +14544,28 @@ console.warn('[HMS] mic pre-warm:', micErr.name);
 try {
 const selfContact = (this.contacts || []).find(c => Number(c.id) === Number(this.currentUserId));
 const userName = selfContact?.name || 'مستخدم';
+console.log('[HMS] calling hmsActions.join() roomId=' + res.room_id + ' userName=' + userName);
 await hmsActions.join({
 authToken: res.token,
 userName,
 settings: { isAudioMuted: true, isVideoMuted: true },
 });
+console.log('[HMS] join() RESOLVED – now in HMS room ✓');
 } catch (err) {
-console.error('[HMS] join error:', err);
+console.error('[HMS] join() ERROR:', err);
 this.showToast('تعذّر الاتصال بخادم المكالمات', 'error');
 if (_warmStream) _warmStream.getTracks().forEach(t => t.stop());
 return;
 }
 
 // Enable real audio while warm stream is still open (shared OS capture session → unmuted track)
+console.log('[HMS] calling setLocalAudioEnabled(true)...');
 try {
 await hmsActions.setLocalAudioEnabled(true);
 this.callMuted = false;
+console.log('[HMS] audio enabled OK ✓');
 } catch (audioErr) {
-console.warn('[HMS] audio enable post-join:', audioErr.code, audioErr.message);
+console.warn('[HMS] audio enable FAILED:', audioErr.code, audioErr.message);
 this.callMuted = true;
 this.showToast('تحذير: الميكروفون غير متاح — اضغط رفع الكتم لإعادة المحاولة', 'info');
 } finally {
@@ -14585,6 +14602,7 @@ hmsActions.attachVideo(localPeer.videoTrack, this.$refs.localVideo).catch(() => 
 
 // Attach remote peers' video and transition caller to in-call state
 this._hmsUnsubFns.push(hmsStore.subscribe((peers) => {
+console.log('[HMS] selectRemotePeers fired: ' + (peers || []).length + ' peers, callState=' + this.callState);
 this.$nextTick(() => {
 (peers || []).forEach(peer => {
 const uid = peer.customerUserId;
@@ -14606,8 +14624,10 @@ if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeo
 
 // Connection health indicator
 this._hmsUnsubFns.push(hmsStore.subscribe((isConnected) => {
+console.log('[HMS] isConnectedToRoom=' + isConnected + ' callState=' + this.callState);
 if (this.callState === 'in-call') this.callConnectionWarning = !isConnected;
 }, HMS.selectIsConnectedToRoom));
+console.log('[HMS] hmsJoinRoom COMPLETE – subscriptions active, callState=' + this.callState);
 },
 
 async hmsLeaveRoom() {
@@ -14873,9 +14893,19 @@ if (!window.Echo || !this.currentUserId) return;
 
 const channel = window.Echo.private('user.' + this.currentUserId);
 
+// Log Pusher subscription state so we can diagnose missed call events
+channel.subscribed(() => {
+    console.log('[PUSHER] private-user.' + this.currentUserId + ' subscribed OK ✓');
+});
+channel.error((err) => {
+    console.error('[PUSHER] private-user.' + this.currentUserId + ' subscription ERROR:', err);
+});
+
 channel.listen('.call.initiated', (data) => {
+console.log('[CALL] call.initiated received callId=' + data.call_id + ' from=' + data.caller?.id + ' type=' + data.type + ' currentCallState=' + (this.callState || 'idle'));
 if (this.callState) {
     // Auto-reject: already on a call
+    console.log('[CALL] auto-rejecting: already in state ' + this.callState);
     this.postCallAction(this.callRouteFor(this.callsRejectRouteTemplate, data.call_id), {});
     return;
 }
@@ -14902,8 +14932,10 @@ if (this.callState === 'calling') this.callIsRinging = true;
 });
 
 channel.listen('.call.answered', (data) => {
+console.log('[CALL] call.answered received callId=' + data.call_id + ' myCallId=' + this.currentCallId);
 if (Number(data.call_id) !== Number(this.currentCallId)) return;
 // HMS handles the actual media — just update call state
+console.log('[CALL] → switching callState to in-call');
 this.callState = 'in-call';
 this.callStartedAt = this.callStartedAt || Date.now();
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
