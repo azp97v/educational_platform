@@ -14652,7 +14652,7 @@ if (window._hmsActions) await window._hmsActions.leave();
 // ── end 100ms helpers ──────────────────────────────────────────────────────
 
 // ── Polling fallback for incoming calls ────────────────────────────────────
-// Fires every 5 s as a backup when the Pusher/Reverb WebSocket event is missed.
+// Fires every 2 s as a backup when the Pusher/Reverb WebSocket event is missed.
 startIncomingCallPoll() {
 if (this._callPollTimer || !this.callsPendingRoute) return;
 this._callPollTimer = setInterval(async () => {
@@ -14678,7 +14678,7 @@ this._callPollTimer = setInterval(async () => {
             this.maybeShowCallNotification(this.callContact, this.callType);
         }
     } catch (_) {}
-}, 5000);
+}, 2000);
 },
 
 stopIncomingCallPoll() {
@@ -14732,6 +14732,7 @@ return { sdp: offer.sdp, type: offer.type };
 },
 
 cleanupCall() {
+if (!this.callState && !this.currentCallId) return; // already cleaned up — prevent double execution
 this.stopIncomingCallPoll();
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 this.callIsRinging = false;
@@ -14801,6 +14802,7 @@ this.showAddParticipant = false;
 this.callMinimized = false;
 this.callConnectionWarning = false;
 this.pipPos = { bottom: 100, left: 16 };
+this.startIncomingCallPoll(); // restart poll so subsequent incoming calls are detected
 },
 
 toggleMute() {
