@@ -122,6 +122,36 @@
   .add-row { flex-direction: column; }
   .cat-row { flex-wrap: wrap; }
 }
+
+/* ── Custom Delete Modal ── */
+.del-modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.del-modal-backdrop.open { display: flex; }
+.del-modal {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: 0 24px 64px rgba(0,0,0,.45);
+  padding: 28px 28px 24px; width: 100%; max-width: 380px;
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.del-modal-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--danger-light); color: var(--danger);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin: 0 auto 16px;
+}
+.del-modal h3 { font-size: 17px; font-weight: 800; color: var(--text-primary); text-align: center; margin-bottom: 8px; }
+.del-modal p  { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 22px; line-height: 1.6; }
+.del-modal p strong { color: var(--text-primary); }
+.del-modal-btns { display: flex; gap: 10px; }
+.del-modal-btns button { flex: 1; padding: 11px 0; border-radius: var(--radius-md); font-size: 14px; font-weight: 700; font-family: Tajawal, sans-serif; cursor: pointer; border: none; transition: opacity .15s; }
+.btn-modal-cancel { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border) !important; }
+.btn-modal-cancel:hover { opacity: .8; }
+.btn-modal-confirm { background: var(--danger); color: #fff; }
+.btn-modal-confirm:hover { opacity: .88; }
 </style>
 @endsection
 
@@ -215,8 +245,47 @@
 
 </div>
 
+{{-- Custom themed delete confirmation modal --}}
+<div class="del-modal-backdrop" id="delModal">
+  <div class="del-modal" role="dialog" aria-modal="true">
+    <div class="del-modal-icon"><i class="ri-delete-bin-line"></i></div>
+    <h3>تأكيد الحذف</h3>
+    <p>هل أنت متأكد من حذف الفئة <strong id="delModalName"></strong>؟<br>لا يمكن التراجع عن هذا الإجراء.</p>
+    <div class="del-modal-btns">
+      <button class="btn-modal-cancel" id="delModalCancel">إلغاء</button>
+      <button class="btn-modal-confirm" id="delModalConfirm"><i class="ri-delete-bin-line"></i> حذف</button>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  var pendingForm = null;
+  var modal = document.getElementById('delModal');
+  var modalName = document.getElementById('delModalName');
+
+  function openDelModal(form) {
+    pendingForm = form;
+    modalName.textContent = '«' + form.dataset.name + '»';
+    modal.classList.add('open');
+  }
+  function closeDelModal() {
+    modal.classList.remove('open');
+    pendingForm = null;
+  }
+
+  document.getElementById('delModalCancel').addEventListener('click', closeDelModal);
+  document.getElementById('delModalConfirm').addEventListener('click', function () {
+    if (pendingForm) { pendingForm.submit(); }
+    closeDelModal();
+  });
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeDelModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDelModal();
+  });
+
   // Edit buttons
   document.querySelectorAll('.js-edit').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -233,13 +302,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Delete forms — require explicit confirmation
+  // Delete forms — open themed modal instead of native confirm
   document.querySelectorAll('.js-del-form').forEach(function (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      if (confirm('حذف الفئة «' + form.dataset.name + '»؟')) {
-        form.submit();
-      }
+      openDelModal(form);
     });
   });
 });
