@@ -3984,7 +3984,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <!-- Call minimized chip -->
 <div class="call-minimized-chip" v-if="callState && callMinimized" @click="callMinimized = false" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:300;background:var(--panel);border:1px solid var(--theme-border);border-radius:999px;padding:10px 20px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px;cursor:pointer;animation:incoming-call-slide-in .3s var(--ease-out);">
 <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--gold),var(--gold-2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;animation:call-pulse 1.8s ease-in-out infinite;">
-<img v-if="callContact && callContact.avatar_url" :src="callContact.avatar_url" style="width:100%;height:100%;object-fit:cover;" v-on:error="$event.target.style.display='none'">
+<img v-if="callContact && normalizeAvatarUrl(callContact.avatar_url)" :src="normalizeAvatarUrl(callContact.avatar_url)" style="width:100%;height:100%;object-fit:cover;" v-on:error="$event.target.style.display='none'">
 <span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
 </div>
 <div style="display:flex;flex-direction:column;min-width:0;">
@@ -3998,7 +3998,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <div class="call-overlay" v-show="(callState === 'calling' || callState === 'in-call') && !callMinimized" :class="{ 'is-active': !!callState }" :data-call-state="callState">
 
 <!-- FaceTime-style blurred avatar background -->
-<div class="call-bg-blur" v-if="callContact && callContact.avatar_url" :style="{ backgroundImage: 'url(' + callContact.avatar_url + ')' }"></div>
+<div class="call-bg-blur" v-if="callContact && normalizeAvatarUrl(callContact.avatar_url)" :style="{ backgroundImage: 'url(' + normalizeAvatarUrl(callContact.avatar_url) + ')' }"></div>
 
 <!-- Minimize button -->
 <button class="call-minimize-btn" @click="callMinimized = true" title="تصغير"><i class="ri-subtract-line"></i></button>
@@ -4025,7 +4025,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 ></video>
 
 <div class="call-avatar" v-show="!(callType === 'video' && callState === 'in-call')">
-<img v-if="callContact && callContact.avatar_url" :src="callContact.avatar_url" alt="" v-on:error="handleAvatarError($event, callContact)">
+<img v-if="callContact && normalizeAvatarUrl(callContact.avatar_url)" :src="normalizeAvatarUrl(callContact.avatar_url)" alt="" v-on:error="$event.target.style.display='none'">
 <span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
 </div>
 
@@ -4054,7 +4054,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <div class="incoming-call-widget" v-if="callState === 'incoming'">
 <button class="incoming-call-close" @click="rejectIncomingCall" title="رفض وإغلاق"><i class="ri-close-line"></i></button>
 <div class="incoming-call-avatar">
-<img v-if="callContact && callContact.avatar_url" :src="callContact.avatar_url" alt="" v-on:error="handleAvatarError($event, callContact)">
+<img v-if="callContact && normalizeAvatarUrl(callContact.avatar_url)" :src="normalizeAvatarUrl(callContact.avatar_url)" alt="" v-on:error="$event.target.style.display='none'">
 <span v-else>@{{ callContact ? getAuthorInitial(callContact.name) : '?' }}</span>
 </div>
 <div class="incoming-call-info">
@@ -14483,19 +14483,21 @@ if (!HMS?.HMSReactiveStore) {
 console.warn('[HMS] SDK not loaded — calls require 100ms SDK');
 return;
 }
-if (!window._hmsStore) {
-const hmsInstance = new HMS.HMSReactiveStore();
-window._hmsStore = hmsInstance.getStore();
-window._hmsActions = hmsInstance.getActions();
-}
-const hmsActions = window._hmsActions;
-const hmsStore = window._hmsStore;
-
-// Unsubscribe any lingering subscriptions from a previous call attempt
+// Always unsubscribe first, then fully leave + recreate fresh instance.
+// Reusing the same instance after a failed join/leave puts the SDK in a
+// corrupted state that causes "offer WS failed after 3 retries".
 if (this._hmsUnsubFns && this._hmsUnsubFns.length) {
 this._hmsUnsubFns.forEach(fn => { try { fn(); } catch (_) {} });
 this._hmsUnsubFns = [];
 }
+if (window._hmsActions) {
+try { await window._hmsActions.leave(); } catch (_) {}
+}
+const hmsInstance = new HMS.HMSReactiveStore();
+window._hmsStore = hmsInstance.getStore();
+window._hmsActions = hmsInstance.getActions();
+const hmsActions = window._hmsActions;
+const hmsStore = window._hmsStore;
 
 const tokenUrl = this.callRouteFor(this.callsHmsTokenRouteTemplate, callId);
 console.log('[HMS] fetching token from', tokenUrl);
@@ -14540,8 +14542,7 @@ console.warn('[HMS] mic pre-warm:', micErr.name);
 }
 
 try {
-const selfContact = (this.contacts || []).find(c => Number(c.id) === Number(this.currentUserId));
-const userName = selfContact?.name || 'مستخدم';
+const userName = this.userName || 'مستخدم';
 console.log('[HMS] calling hmsActions.join() roomId=' + res.room_id + ' userName=' + userName);
 await hmsActions.join({
 authToken: res.token,
@@ -14703,7 +14704,22 @@ if (window._hmsActions) await window._hmsActions.leave();
 startIncomingCallPoll() {
 if (this._callPollTimer || !this.callsPendingRoute) return;
 this._callPollTimer = setInterval(async () => {
-    // If currently showing an incoming call UI, check whether the caller cancelled it
+    // Outgoing call: poll to detect if callee rejected/cancelled (Reverb fallback)
+    if (this.callState === 'calling' && this.currentCallId) {
+        try {
+            const cu = this.callsPendingRoute + '?check_call_id=' + this.currentCallId;
+            const cr = await fetch(cu, { headers: { 'Accept': 'application/json' } });
+            if (cr.ok) {
+                const cd = await cr.json();
+                if (cd.cancelled) {
+                    this.showToast('تم رفض المكالمة', 'info');
+                    this.cleanupCall();
+                }
+            }
+        } catch (_) {}
+        return;
+    }
+    // Incoming call: check whether the caller cancelled it
     if (this.callState === 'incoming' && this.currentCallId) {
         try {
             const cu = this.callsPendingRoute + '?check_call_id=' + this.currentCallId;
@@ -14712,7 +14728,7 @@ this._callPollTimer = setInterval(async () => {
         } catch (_) {}
         return;
     }
-    if (this.callState) return; // Already in a call — skip normal pending check
+    if (this.callState) return; // in-call — skip normal pending check
     try {
         const r = await fetch(this.callsPendingRoute, { headers: { 'Accept': 'application/json' } });
         if (!r.ok) return;
