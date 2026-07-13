@@ -14500,19 +14500,31 @@ this.showToast('تعذّر الحصول على رمز المكالمة', 'error'
 return;
 }
 
-// Pre-warm the microphone so the OS audio system has time to start
-// delivering frames before HMS calls getUserMedia internally.
-// Without this, the track can be live but muted (no frames yet) → HMS error 3015.
+// Strategy: join with isAudioMuted:true so HMS uses an empty oscillator track
+// instead of calling getUserMedia. This avoids error 3015 (NoDataInTrack) which
+// fires when the hardware mic track is temporarily muted right after OS activation.
+// After join we call setLocalAudioEnabled(true) to swap in the real mic track.
+// If that also fails (mic still not ready), the call stays connected — only audio
+// is unavailable. HMS only calls leave() for errors during join(), not afterwards.
+
+// Pre-warm: request mic now so the OS audio session starts before we enable audio post-join.
+// Keep stream open during join so HMS gets a track from the already-active session.
+let _warmStream = null;
 try {
-const warmStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-await new Promise(r => setTimeout(r, 400));
-warmStream.getTracks().forEach(t => t.stop());
+_warmStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+const _warmTrack = _warmStream.getAudioTracks()[0];
+if (_warmTrack && _warmTrack.muted) {
+// Wait for OS to deliver first audio frames (unmute event), up to 2 seconds
+await new Promise(resolve => {
+const t = setTimeout(resolve, 2000);
+_warmTrack.addEventListener('unmute', () => { clearTimeout(t); resolve(); }, { once: true });
+});
+}
 } catch (micErr) {
 if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
 this.showToast('يرجى السماح للمتصفح بالوصول إلى الميكروفون', 'error');
 return;
 }
-// NotFoundError or other: proceed anyway, HMS will handle it
 console.warn('[HMS] mic pre-warm:', micErr.name);
 }
 
@@ -14522,12 +14534,33 @@ const userName = selfContact?.name || 'مستخدم';
 await hmsActions.join({
 authToken: res.token,
 userName,
-settings: { isAudioMuted: false, isVideoMuted: callType === 'voice' },
+settings: { isAudioMuted: true, isVideoMuted: true },
 });
 } catch (err) {
 console.error('[HMS] join error:', err);
 this.showToast('تعذّر الاتصال بخادم المكالمات', 'error');
+if (_warmStream) _warmStream.getTracks().forEach(t => t.stop());
 return;
+}
+
+// Enable real audio while warm stream is still open (shared OS capture session → unmuted track)
+try {
+await hmsActions.setLocalAudioEnabled(true);
+this.callMuted = false;
+} catch (audioErr) {
+console.warn('[HMS] audio enable post-join:', audioErr.code, audioErr.message);
+this.callMuted = true;
+this.showToast('تحذير: الميكروفون غير متاح — اضغط رفع الكتم لإعادة المحاولة', 'info');
+} finally {
+if (_warmStream) { _warmStream.getTracks().forEach(t => t.stop()); _warmStream = null; }
+}
+
+// Enable camera for video calls
+if (callType !== 'voice') {
+hmsActions.setLocalVideoEnabled(true).catch(e => {
+console.warn('[HMS] camera enable:', e.code, e.message);
+this.cameraOff = true;
+});
 }
 
 this._hmsUnsubFns = [];
