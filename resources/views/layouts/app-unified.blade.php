@@ -9,6 +9,12 @@
     <title>@yield('title', 'إجلال') - منصة إجلال التعليمية</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo/logo.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo/logo.png') }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#1a3c6e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="إجلال">
 
     {{-- Fonts --}}
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -221,6 +227,23 @@
     
     {{-- Page Styles --}}
     @yield('styles')
+
+    <!-- Sentry Browser SDK -->
+    <script src="https://js-de.sentry-cdn.com/021ff6ade06b8bf73a6467b845f06dbc.min.js" crossorigin="anonymous"></script>
+    <script>
+    Sentry.onLoad(function() {
+        Sentry.init({
+            dsn: "https://021ff6ade06b8bf73a6467b845f06dbc@o4511728095199232.ingest.de.sentry.io/4511728109224016",
+            environment: "{{ app()->environment() }}",
+            integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration({ maskAllText: false })],
+            tracesSampleRate: 0.2,
+            tracePropagationTargets: ["edu.ejlalmakkah.org.sa"],
+            replaysSessionSampleRate: 0.05,
+            replaysOnErrorSampleRate: 1.0,
+        });
+        @auth Sentry.setUser({ id: {{ auth()->id() }}, role: "{{ auth()->user()->role }}" }); @endauth
+    });
+    </script>
 </head>
 <body data-role="{{ auth()->user()?->role ?? '' }}">
     {{-- Load Theme ASAP --}}

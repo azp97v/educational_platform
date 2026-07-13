@@ -10,6 +10,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/admin-console.css') }}?v={{ @filemtime(public_path('css/admin-console.css')) ?: time() }}">
+    <!-- Sentry Browser SDK -->
+    <script src="https://js-de.sentry-cdn.com/021ff6ade06b8bf73a6467b845f06dbc.min.js" crossorigin="anonymous"></script>
+    <script>
+    Sentry.onLoad(function() {
+        Sentry.init({
+            dsn: "https://021ff6ade06b8bf73a6467b845f06dbc@o4511728095199232.ingest.de.sentry.io/4511728109224016",
+            environment: "{{ app()->environment() }}",
+            integrations: [Sentry.browserTracingIntegration()],
+            tracesSampleRate: 0.2,
+            tracePropagationTargets: ["edu.ejlalmakkah.org.sa"],
+        });
+        @auth Sentry.setUser({ id: {{ auth()->id() }}, role: "admin" }); @endauth
+    });
+    </script>
 </head>
 <body class="admin-console" data-admin-live="true" data-role="admin">
 <div class="admin-app">
