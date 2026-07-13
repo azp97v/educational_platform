@@ -56,7 +56,14 @@ class CallController extends Controller
         foreach ($recipients as $recipient) {
             abort_unless($this->userCanMessage($caller, $recipient), 403, 'لا يمكنك الاتصال بـ ' . $recipient->name);
 
-            // Reject if recipient is already in an active call
+            // Clean stale participants from calls that ended abnormally (browser crash, network drop)
+            // so they don't permanently block new calls with a false "busy" reading
+            CallParticipant::where('user_id', $recipient->id)
+                ->whereIn('status', ['joined', 'ringing'])
+                ->whereHas('call', fn ($q) => $q->whereNotIn('status', ['ringing', 'accepted']))
+                ->update(['status' => 'left', 'left_at' => now()]);
+
+            // Reject if recipient is genuinely in an active call
             $busy = CallParticipant::where('user_id', $recipient->id)
                 ->whereIn('status', ['joined', 'ringing'])
                 ->whereHas('call', fn ($q) => $q->whereIn('status', ['ringing', 'accepted']))
@@ -203,7 +210,10 @@ class CallController extends Controller
 
         broadcast(new CallAnswered($call, $data['answer'] ?? [], $userId, $call->caller_id));
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success'     => true,
+            'answered_at' => $call->answered_at?->toISOString(),
+        ]);
     }
 
     /**
@@ -294,6 +304,20 @@ class CallController extends Controller
             return response()->json(['success' => true, 'status' => $participant?->status]);
         }
 
+        // Update participant statuses before changing call status so we read the right current state
+        $participant?->update(['status' => 'left', 'left_at' => now()]);
+        if ($call->status === 'ringing') {
+            // Callee never answered — mark their participant as missed
+            $call->participants()->where('user_id', '!=', $userId)
+                ->where('status', 'ringing')
+                ->update(['status' => 'missed', 'left_at' => now()]);
+        } elseif ($call->status === 'accepted') {
+            // Both were joined — mark the other party as left too
+            $call->participants()->where('user_id', '!=', $userId)
+                ->whereIn('status', ['joined', 'ringing'])
+                ->update(['status' => 'left', 'left_at' => now()]);
+        }
+
         if ($call->status === 'ringing') {
             $call->update(['status' => 'missed', 'ended_at' => now()]);
             $this->notifyMissedCall($call);
@@ -345,9 +369,17 @@ class CallController extends Controller
      * Polling fallback: return any pending incoming call for the authenticated user.
      * Used as backup when the Pusher/Reverb WebSocket event is not delivered.
      */
-    public function pending(): \Illuminate\Http\JsonResponse
+    public function pending(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
     {
         $userId = Auth::id();
+
+        // Callee checking whether their current incoming call was cancelled or ended by the caller
+        if ($checkCallId = $request->query('check_call_id')) {
+            $call = Call::find((int) $checkCallId);
+            $cancelled = !$call || !in_array($call->status, ['ringing', 'accepted']);
+            return response()->json(['cancelled' => $cancelled, 'call' => null]);
+        }
+
         $participant = CallParticipant::where('user_id', $userId)
             ->where('status', 'ringing')
             ->whereHas('call', fn ($q) => $q->where('status', 'ringing'))

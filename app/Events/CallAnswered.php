@@ -34,9 +34,10 @@ class CallAnswered implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'call_id' => $this->call->id,
+            'call_id'     => $this->call->id,
             'from_user_id' => $this->fromUserId ?? $this->call->recipient_id,
-            'answer' => $this->answer,
+            'answer'      => $this->answer,
+            'answered_at' => $this->call->answered_at?->toISOString(),
         ];
     }
 }
