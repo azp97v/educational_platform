@@ -81,6 +81,27 @@ class CallController extends Controller
             CallParticipant::create(['call_id' => $call->id, 'user_id' => $id, 'status' => 'ringing']);
         }
 
+        // Create the 100ms room BEFORE notifying recipients so it's in cache when callee answers
+        try {
+            $mgmtToken = $this->hmsManagementToken();
+            $res = Http::timeout(8)->withToken($mgmtToken)
+                ->post('https://api.100ms.live/v2/rooms', [
+                    'name'        => 'call-' . $call->id . '-' . time(),
+                    'template_id' => config('services.hms.template_id'),
+                    'region'      => 'in',
+                ]);
+            if ($res->successful() && $res->json('id')) {
+                Cache::put("hms_room.{$call->id}", $res->json('id'), 7200);
+            }
+        } catch (\Throwable $e) {
+            // hmsToken() will create the room lazily on first request
+        }
+
+        // Now notify recipients
+        foreach ($participantIds as $id) {
+            broadcast(new CallInitiated($call, [], $id));
+        }
+
         return response()->json(['success' => true, 'call_id' => $call->id, 'is_group' => $isGroup]);
     }
 
@@ -110,6 +131,9 @@ class CallController extends Controller
         }
 
         CallParticipant::create(['call_id' => $call->id, 'user_id' => $newUserId, 'status' => 'ringing']);
+
+        // Notify the newly invited user (room already exists in cache)
+        broadcast(new CallInitiated($call, [], $newUserId));
 
         return response()->json(['success' => true]);
     }
@@ -325,7 +349,8 @@ class CallController extends Controller
     {
         $this->authorizeParticipant($call);
 
-        $roomId = Cache::remember("hms_room.{$call->id}", 7200, function () use ($call) {
+        $roomId = Cache::get("hms_room.{$call->id}");
+        if (!$roomId) {
             $mgmtToken = $this->hmsManagementToken();
             $res = Http::withToken($mgmtToken)
                 ->post('https://api.100ms.live/v2/rooms', [
@@ -334,8 +359,9 @@ class CallController extends Controller
                     'region'      => 'in',
                 ]);
             abort_unless($res->successful(), 502, 'HMS room creation failed: ' . $res->body());
-            return $res->json('id');
-        });
+            $roomId = $res->json('id');
+            Cache::put("hms_room.{$call->id}", $roomId, 7200);
+        }
 
         $token = $this->hmsAppToken($roomId, (string) Auth::id(), 'host');
 

@@ -14512,26 +14512,28 @@ this.showToast('تعذّر الاتصال بخادم المكالمات', 'error
 return;
 }
 
-// Attach local video preview
-const localVideoTrackId = hmsStore.getState(HMS.selectLocalVideoTrackID);
-if (localVideoTrackId && this.$refs.localVideo) {
-hmsActions.attachVideo(localVideoTrackId, this.$refs.localVideo);
+// Subscribe to local peer to attach local video once track is available
+hmsStore.subscribe((localPeer) => {
+if (localPeer?.videoTrack && callType !== 'voice' && this.$refs.localVideo) {
+hmsActions.attachVideo(localPeer.videoTrack, this.$refs.localVideo).catch(() => {});
 }
+}, HMS.selectLocalPeer);
 
-// Subscribe to remote peers so we can attach their video tracks
+// Subscribe to remote peers to attach their video/audio and update UI
 hmsStore.subscribe((peers) => {
 this.$nextTick(() => {
 (peers || []).forEach(peer => {
 const uid = peer.customerUserId;
+if (!uid) return;
 this.upsertParticipantTile(uid, { name: peer.name });
 if (peer.videoTrack && callType !== 'voice') {
 const el = this.$refs['remoteMedia_' + uid];
 const target = Array.isArray(el) ? el[0] : el;
-if (target) hmsActions.attachVideo(peer.videoTrack, target);
+if (target) hmsActions.attachVideo(peer.videoTrack, target).catch(() => {});
 }
 });
 });
-// Transition to in-call state once at least one remote peer is connected
+// Caller side: transition to in-call once remote peer joins the room
 if (peers && peers.length > 0 && this.callState === 'calling') {
 this.callState = 'in-call';
 this.callStartedAt = this.callStartedAt || Date.now();
@@ -14539,9 +14541,9 @@ if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeo
 }
 }, HMS.selectRemotePeers);
 
-// Listen for connection state
+// Connection health indicator
 hmsStore.subscribe((isConnected) => {
-this.callConnectionWarning = !isConnected && this.callState === 'in-call';
+if (this.callState === 'in-call') this.callConnectionWarning = !isConnected;
 }, HMS.selectIsConnectedToRoom);
 },
 
@@ -14586,10 +14588,7 @@ return;
 }
 this.isGroupCall = true;
 this.upsertParticipantTile(contact.id, { name: contact.name, avatar_url: contact.avatar_url || null, stream: null });
-await this.postCallAction(this.callRouteFor(this.callsOfferRouteTemplate, this.currentCallId), {
-to_user_id: contact.id,
-offer: await this.createOfferFor(contact.id),
-});
+// HMS SDK handles the new participant's media automatically when they join the room
 this.showAddParticipant = false;
 this.showToast('تمت دعوة ' + contact.name, 'success');
 },
