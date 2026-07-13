@@ -4109,7 +4109,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <script src="/js/vue.global.prod.js"></script>
 <script src="/js/pusher.min.js"></script>
 <script src="/js/echo.iife.js"></script>
-<script src="https://unpkg.com/@100mslive/hms-video-store/dist/index.umd.js" crossorigin="anonymous"></script>
+<script src="/js/hms.umd.js"></script>
 
 <script>
 </script>
