@@ -125,7 +125,7 @@ $callsPeerAnswerRouteTemplate = $buildCallRouteTemplate('peer-answer');
 $callsJoinRouteTemplate = $buildCallRouteTemplate('join');
 $callsInviteRouteTemplate = $buildCallRouteTemplate('invite');
 $callsHmsTokenRouteTemplate = $buildCallRouteTemplate('hms-token');
-$callsPendingRoute = $pickRoute($isTeacherRole ? ['teacher.calls.pending', 'calls.pending'] : ['calls.pending', 'teacher.calls.pending']);
+$callsPendingRoute = $pickRoute($isTeacherRole ? ['teacher.calls.pending', 'student.calls.pending'] : ['student.calls.pending', 'teacher.calls.pending']);
 
 // TURN server config — set TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in .env for production
 $turnIceConfig = [];
@@ -14554,6 +14554,7 @@ userName,
 settings: { isAudioMuted: true, isVideoMuted: true },
 });
 console.log('[HMS] join() RESOLVED – now in HMS room ✓');
+try { await hmsActions.unblockAudio(); } catch (_) {}
 } catch (err) {
 console.error('[HMS] join() ERROR:', err);
 this.showToast('تعذّر الاتصال بخادم المكالمات', 'error');
@@ -14618,10 +14619,15 @@ if (target) hmsActions.attachVideo(peer.videoTrack, target).catch(() => {});
 }
 });
 });
-if (peers && peers.length > 0 && this.callState === 'calling') {
-this.callState = 'in-call';
-this.callStartedAt = this.callStartedAt || Date.now();
-if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
+if (peers && peers.length > 0) {
+if (this.callState === 'calling') this.callState = 'in-call';
+if (this.callState === 'in-call') {
+    this.callStartedAt = this.callStartedAt || Date.now();
+    if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
+}
+} else if ((!peers || peers.length === 0) && this.callState === 'in-call' && !this.isGroupCall && this.callStartedAt) {
+console.log('[HMS] all remote peers left – ending call');
+this.cleanupCall();
 }
 }, HMS.selectRemotePeers));
 
