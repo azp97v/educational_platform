@@ -19,6 +19,9 @@ use App\Models\User;
 use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class CallController extends Controller
 {
@@ -163,7 +166,7 @@ class CallController extends Controller
     {
         $userId = $this->authorizeInvited($call);
 
-        $data = $request->validate(['answer' => ['required', 'array']]);
+        $data = $request->validate(['answer' => ['nullable', 'array']]);
 
         $participant = $call->participants()->where('user_id', $userId)->first();
         $participant?->update(['status' => 'joined', 'joined_at' => now()]);
@@ -174,7 +177,7 @@ class CallController extends Controller
             $call->update(['answered_at' => now()]);
         }
 
-        broadcast(new CallAnswered($call, $data['answer'], $userId, $call->caller_id));
+        broadcast(new CallAnswered($call, $data['answer'] ?? [], $userId, $call->caller_id));
 
         return response()->json(['success' => true]);
     }
@@ -312,6 +315,69 @@ class CallController extends Controller
     private function authorizeInvited(Call $call): int
     {
         return $this->authorizeParticipant($call);
+    }
+
+    /**
+     * Generate a 100ms room + user token for the requesting participant.
+     * The room is cached per call_id so all participants join the same room.
+     */
+    public function hmsToken(Call $call): \Illuminate\Http\JsonResponse
+    {
+        $this->authorizeParticipant($call);
+
+        $roomId = Cache::remember("hms_room.{$call->id}", 7200, function () use ($call) {
+            $mgmtToken = $this->hmsManagementToken();
+            $res = Http::withToken($mgmtToken)
+                ->post('https://api.100ms.live/v2/rooms', [
+                    'name'        => 'call-' . $call->id . '-' . time(),
+                    'template_id' => config('services.hms.template_id'),
+                    'region'      => 'in',
+                ]);
+            abort_unless($res->successful(), 502, 'HMS room creation failed: ' . $res->body());
+            return $res->json('id');
+        });
+
+        $token = $this->hmsAppToken($roomId, (string) Auth::id(), 'host');
+
+        return response()->json(['success' => true, 'token' => $token, 'room_id' => $roomId]);
+    }
+
+    private function hmsJwt(array $payload): string
+    {
+        $b64 = fn($s) => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+        $header  = $b64(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+        $body    = $b64(json_encode($payload));
+        $sig     = $b64(hash_hmac('sha256', "$header.$body", config('services.hms.secret'), true));
+        return "$header.$body.$sig";
+    }
+
+    private function hmsManagementToken(): string
+    {
+        return $this->hmsJwt([
+            'access_key' => config('services.hms.access_key'),
+            'type'       => 'management',
+            'version'    => 2,
+            'iat'        => time(),
+            'nbf'        => time(),
+            'exp'        => time() + 86400,
+            'jti'        => (string) Str::uuid(),
+        ]);
+    }
+
+    private function hmsAppToken(string $roomId, string $userId, string $role): string
+    {
+        return $this->hmsJwt([
+            'access_key' => config('services.hms.access_key'),
+            'room_id'    => $roomId,
+            'user_id'    => $userId,
+            'role'       => $role,
+            'type'       => 'app',
+            'version'    => 2,
+            'iat'        => time(),
+            'nbf'        => time(),
+            'exp'        => time() + 86400,
+            'jti'        => (string) Str::uuid(),
+        ]);
     }
 
     private function notifyMissedCall(Call $call): void

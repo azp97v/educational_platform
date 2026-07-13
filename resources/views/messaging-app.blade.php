@@ -124,6 +124,7 @@ $callsPeerOfferRouteTemplate = $buildCallRouteTemplate('peer-offer');
 $callsPeerAnswerRouteTemplate = $buildCallRouteTemplate('peer-answer');
 $callsJoinRouteTemplate = $buildCallRouteTemplate('join');
 $callsInviteRouteTemplate = $buildCallRouteTemplate('invite');
+$callsHmsTokenRouteTemplate = $buildCallRouteTemplate('hms-token');
 
 // TURN server config — set TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in .env for production
 $turnIceConfig = [];
@@ -4108,6 +4109,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <script src="/js/vue.global.prod.js"></script>
 <script src="/js/pusher.min.js"></script>
 <script src="/js/echo.iife.js"></script>
+<script src="https://unpkg.com/@100mslive/hms-video-store/dist/index.umd.js" crossorigin="anonymous"></script>
 
 <script>
 </script>
@@ -4518,6 +4520,7 @@ callsPeerOfferRouteTemplate: @json($callsPeerOfferRouteTemplate),
 callsPeerAnswerRouteTemplate: @json($callsPeerAnswerRouteTemplate),
 callsJoinRouteTemplate: @json($callsJoinRouteTemplate),
 callsInviteRouteTemplate: @json($callsInviteRouteTemplate),
+callsHmsTokenRouteTemplate: @json($callsHmsTokenRouteTemplate),
 turnIceConfig: @json($turnIceConfig),
 
 stickersIndexRoute: @json($stickersIndexRoute),
@@ -14417,8 +14420,6 @@ if (!contacts.length) return;
 const invalid = contacts.find(c => Number(c.id) === -1 || c.canCall === false);
 if (invalid) { this.showToast('لا يمكنك الاتصال بهذا المستخدم بسبب إعدادات الخصوصية', 'error'); return; }
 
-if (!(await this.startLocalMedia(type))) return;
-
 const isGroup = contacts.length > 1;
 this.callType = type;
 this.callContact = contacts[0];
@@ -14454,70 +14455,103 @@ this.endCall();
 }, 45000);
 }
 
-for (const contact of contacts) {
-const pc = this.createPeerConnection(contact.id);
-this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
-const offer = await pc.createOffer();
-await pc.setLocalDescription(offer);
-await this.postCallAction(this.callRouteFor(this.callsOfferRouteTemplate, this.currentCallId), {
-to_user_id: contact.id,
-offer: { sdp: offer.sdp, type: offer.type },
-});
-}
-
-if (this.$refs.localVideo) this.$refs.localVideo.srcObject = this.localStream;
+await this.hmsJoinRoom(this.currentCallId, type);
 },
 
 async answerIncomingCall(typeOverride) {
-if (!this.incomingCallOffer || !this.currentCallId) return;
+if (!this.currentCallId) return;
 if (typeOverride) this.callType = typeOverride;
 
-const callerId = this.callContact.id;
-if (!(await this.startLocalMedia(this.callType))) { this.rejectIncomingCall(); return; }
-
-const pc = this.createPeerConnection(callerId);
-this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
-if (this.$refs.localVideo) this.$refs.localVideo.srcObject = this.localStream;
-
-await pc.setRemoteDescription(new RTCSessionDescription(this.incomingCallOffer));
-const entry = this.getPeerEntry(callerId);
-entry.pendingCandidates.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}));
-entry.pendingCandidates = [];
-
-const answer = await pc.createAnswer();
-await pc.setLocalDescription(answer);
-
-await this.postCallAction(this.callRouteFor(this.callsAnswerRouteTemplate, this.currentCallId), {
-answer: { sdp: answer.sdp, type: answer.type },
-});
+await this.postCallAction(this.callRouteFor(this.callsAnswerRouteTemplate, this.currentCallId), {});
 
 this.callState = 'in-call';
 this.callStartedAt = Date.now();
 this.incomingCallOffer = null;
 
-if (this.isGroupCall) {
-const joinResult = await this.postCallAction(this.callRouteFor(this.callsJoinRouteTemplate, this.currentCallId), {});
-await this.connectToExistingParticipants(joinResult?.existing_participant_ids || []);
-}
+await this.hmsJoinRoom(this.currentCallId, this.callType);
 },
 
-/**
- * بعد الانضمام لمكالمة جماعية جارية: ننشئ اتصالاً مستقلاً (mesh) موجّهاً
- * لكل مشارك موجود فعلاً غير المتصل الأصلي (الذي تم الاتصال به أعلاه).
- */
-async connectToExistingParticipants(existingIds) {
-for (const id of existingIds) {
-if (this.peerConnections[String(id)]?.pc) continue;
-const pc = this.createPeerConnection(id);
-this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
-const offer = await pc.createOffer();
-await pc.setLocalDescription(offer);
-await this.postCallAction(this.callRouteFor(this.callsPeerOfferRouteTemplate, this.currentCallId), {
-to_user_id: id,
-offer: { sdp: offer.sdp, type: offer.type },
-});
+// ── 100ms SDK helpers ──────────────────────────────────────────────────────
+
+async hmsJoinRoom(callId, callType) {
+const HMS = window.HMSVideoStore;
+if (!HMS?.HMSReactiveStore) {
+console.warn('[HMS] SDK not loaded — calls require 100ms SDK');
+return;
 }
+if (!window._hmsStore) {
+const hmsInstance = new HMS.HMSReactiveStore();
+window._hmsStore = hmsInstance.getStore();
+window._hmsActions = hmsInstance.getActions();
+}
+const hmsActions = window._hmsActions;
+const hmsStore = window._hmsStore;
+
+const tokenUrl = this.callRouteFor(this.callsHmsTokenRouteTemplate, callId);
+const res = await this.postCallAction(tokenUrl, {});
+if (!res?.success) {
+this.showToast('تعذّر الحصول على رمز المكالمة', 'error');
+return;
+}
+
+try {
+const selfContact = (this.contacts || []).find(c => Number(c.id) === Number(this.currentUserId));
+const userName = selfContact?.name || 'مستخدم';
+
+await hmsActions.join({
+authToken: res.token,
+userName,
+settings: {
+isAudioMuted: this.callMuted,
+isVideoMuted: callType === 'voice',
 },
+});
+} catch (err) {
+console.error('[HMS] join error:', err);
+this.showToast('تعذّر الاتصال بخادم المكالمات', 'error');
+return;
+}
+
+// Attach local video preview
+const localVideoTrackId = hmsStore.getState(HMS.selectLocalVideoTrackID);
+if (localVideoTrackId && this.$refs.localVideo) {
+hmsActions.attachVideo(localVideoTrackId, this.$refs.localVideo);
+}
+
+// Subscribe to remote peers so we can attach their video tracks
+hmsStore.subscribe((peers) => {
+this.$nextTick(() => {
+(peers || []).forEach(peer => {
+const uid = peer.customerUserId;
+this.upsertParticipantTile(uid, { name: peer.name });
+if (peer.videoTrack && callType !== 'voice') {
+const el = this.$refs['remoteMedia_' + uid];
+const target = Array.isArray(el) ? el[0] : el;
+if (target) hmsActions.attachVideo(peer.videoTrack, target);
+}
+});
+});
+// Transition to in-call state once at least one remote peer is connected
+if (peers && peers.length > 0 && this.callState === 'calling') {
+this.callState = 'in-call';
+this.callStartedAt = this.callStartedAt || Date.now();
+if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
+}
+}, HMS.selectRemotePeers);
+
+// Listen for connection state
+hmsStore.subscribe((isConnected) => {
+this.callConnectionWarning = !isConnected && this.callState === 'in-call';
+}, HMS.selectIsConnectedToRoom);
+},
+
+async hmsLeaveRoom() {
+try {
+if (window._hmsActions) await window._hmsActions.leave();
+} catch (_) {}
+},
+
+// ── end 100ms helpers ──────────────────────────────────────────────────────
 
 async rejectIncomingCall() {
 if (this.currentCallId) {
@@ -14599,6 +14633,8 @@ this.localStream = null;
 }
 if (this.$refs.localVideo) this.$refs.localVideo.srcObject = null;
 
+this.hmsLeaveRoom();
+
 // Save call card to chat log before resetting state
 if (this.callContact && this.currentCallId) {
     const cid = Number(this.callContact.id);
@@ -14638,34 +14674,30 @@ this.pipPos = { bottom: 100, left: 16 };
 },
 
 toggleMute() {
-if (!this.localStream) return;
 this.callMuted = !this.callMuted;
-this.localStream.getAudioTracks().forEach(t => t.enabled = !this.callMuted);
+if (window._hmsActions) window._hmsActions.setLocalAudioEnabled(!this.callMuted).catch(() => {});
 },
 
 toggleCamera() {
-if (!this.localStream) return;
 this.cameraOff = !this.cameraOff;
-this.localStream.getVideoTracks().forEach(t => t.enabled = !this.cameraOff);
+if (window._hmsActions) window._hmsActions.setLocalVideoEnabled(!this.cameraOff).catch(() => {});
 },
 
 async switchCamera() {
-if (!this.localStream || this.callType !== 'video') return;
-const videoTrack = this.localStream.getVideoTracks()[0];
-if (!videoTrack) return;
-const currentFacing = videoTrack.getSettings().facingMode;
-const nextFacing = currentFacing === 'environment' ? 'user' : 'environment';
+if (this.callType !== 'video') return;
 try {
-const newStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: nextFacing } });
-const newTrack = newStream.getVideoTracks()[0];
-Object.values(this.peerConnections).forEach(entry => {
-const sender = entry.pc?.getSenders().find(s => s.track && s.track.kind === 'video');
-sender?.replaceTrack(newTrack);
-});
-this.localStream.removeTrack(videoTrack);
-videoTrack.stop();
-this.localStream.addTrack(newTrack);
-if (this.$refs.localVideo) this.$refs.localVideo.srcObject = this.localStream;
+if (window._hmsActions) {
+const devices = await navigator.mediaDevices.enumerateDevices();
+const cams = devices.filter(d => d.kind === 'videoinput');
+if (cams.length < 2) { this.showToast('لا توجد كاميرا ثانية', 'info'); return; }
+const HMS = window.HMSVideoStore;
+const localVideoTrackId = window._hmsStore?.getState(HMS.selectLocalVideoTrackID);
+if (!localVideoTrackId) return;
+const currentTrack = window._hmsStore.getState(HMS.selectVideoTrackByID(localVideoTrackId));
+const currentDeviceId = currentTrack?.settings?.deviceId;
+const next = cams.find(c => c.deviceId !== currentDeviceId) || cams[0];
+await window._hmsActions.switchCamera({ deviceId: next.deviceId });
+}
 } catch (_) {
 this.showToast('تعذر تبديل الكاميرا', 'error');
 }
@@ -14803,13 +14835,9 @@ if (Number(data.call_id) !== Number(this.currentCallId)) return;
 if (this.callState === 'calling') this.callIsRinging = true;
 });
 
-channel.listen('.call.answered', async (data) => {
+channel.listen('.call.answered', (data) => {
 if (Number(data.call_id) !== Number(this.currentCallId)) return;
-const entry = this.getPeerEntry(data.from_user_id);
-if (!entry.pc) return;
-await entry.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-entry.pendingCandidates.forEach(c => entry.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}));
-entry.pendingCandidates = [];
+// HMS handles the actual media — just update call state
 this.callState = 'in-call';
 this.callStartedAt = this.callStartedAt || Date.now();
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
@@ -14833,63 +14861,16 @@ this.showToast('لم يرد المستخدم', 'error');
 this.cleanupCall();
 });
 
-channel.listen('.call.ice-candidate', (data) => {
-if (Number(data.call_id) !== Number(this.currentCallId)) return;
-const entry = this.getPeerEntry(data.from_user_id);
-if (entry.pc && entry.pc.remoteDescription) {
-entry.pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(() => {});
-} else {
-entry.pendingCandidates.push(data.candidate);
-}
-});
+// ICE / peer-offer / peer-answer — no longer used (100ms SDK handles media transport)
 
-// مكالمات جماعية: مشارك جديد انضمّ — ننشئ اتصالاً مستقلاً موجّهاً له
-channel.listen('.call.participant-joined', async (data) => {
-if (Number(data.call_id) !== Number(this.currentCallId) || !this.localStream) return;
+channel.listen('.call.participant-joined', (data) => {
+if (Number(data.call_id) !== Number(this.currentCallId)) return;
 this.isGroupCall = true;
-this.upsertParticipantTile(data.user.id, { name: data.user.name, avatar_url: data.user.avatar_url, stream: null });
-const pc = this.createPeerConnection(data.user.id);
-this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
-const offer = await pc.createOffer();
-await pc.setLocalDescription(offer);
-await this.postCallAction(this.callRouteFor(this.callsPeerOfferRouteTemplate, this.currentCallId), {
-to_user_id: data.user.id,
-offer: { sdp: offer.sdp, type: offer.type },
+this.upsertParticipantTile(data.user.id, { name: data.user.name, avatar_url: data.user.avatar_url });
 });
-});
-
-// مكالمات جماعية: استقبال عرض من مشارك آخر موجود فعلاً (mesh)
-channel.listen('.call.peer-offer', async (data) => {
-if (Number(data.call_id) !== Number(this.currentCallId) || !this.localStream) return;
-const pc = this.createPeerConnection(data.from_user_id);
-this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
-await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-const entry = this.getPeerEntry(data.from_user_id);
-entry.pendingCandidates.forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}));
-entry.pendingCandidates = [];
-const answer = await pc.createAnswer();
-await pc.setLocalDescription(answer);
-await this.postCallAction(this.callRouteFor(this.callsPeerAnswerRouteTemplate, this.currentCallId), {
-to_user_id: data.from_user_id,
-answer: { sdp: answer.sdp, type: answer.type },
-});
-});
-
-channel.listen('.call.peer-answer', async (data) => {
-if (Number(data.call_id) !== Number(this.currentCallId)) return;
-const entry = this.getPeerEntry(data.from_user_id);
-if (!entry.pc) return;
-await entry.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-entry.pendingCandidates.forEach(c => entry.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}));
-entry.pendingCandidates = [];
-});
-
 
 channel.listen('.call.participant-left', (data) => {
 if (Number(data.call_id) !== Number(this.currentCallId)) return;
-const entry = this.peerConnections[String(data.user_id)];
-if (entry?.pc) { try { entry.pc.close(); } catch (_) {} }
-delete this.peerConnections[String(data.user_id)];
 this.removeParticipantTile(data.user_id);
 });
 
