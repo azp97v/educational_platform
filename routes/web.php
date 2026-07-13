@@ -348,6 +348,7 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
         Route::post('/calls/{call}/ring', [CallController::class, 'ring'])->name('calls.ring');
         Route::post('/calls/{call}/end', [CallController::class, 'end'])->name('calls.end');
         Route::post('/calls/{call}/ice-candidate', [CallController::class, 'iceCandidate'])->name('calls.ice-candidate');
+        Route::post('/calls/{call}/hms-token', [CallController::class, 'hmsToken'])->name('calls.hms-token');
     });
     Route::post('/messaging/send', [MessagingController::class, 'send'])->middleware('throttle:30,1')->name('messaging.send');
     Route::get('/messaging/refresh', [MessagingController::class, 'refresh'])->name('messaging.refresh');
@@ -566,6 +567,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
         Route::post('/calls/{call}/ring', [CallController::class, 'ring'])->name('teacher.calls.ring');
         Route::post('/calls/{call}/end', [CallController::class, 'end'])->name('teacher.calls.end');
         Route::post('/calls/{call}/ice-candidate', [CallController::class, 'iceCandidate'])->name('teacher.calls.ice-candidate');
+        Route::post('/calls/{call}/hms-token', [CallController::class, 'hmsToken'])->name('teacher.calls.hms-token');
     });
     Route::post('/messaging/send', [MessagingController::class, 'send'])->middleware('throttle:30,1')->name('teacher.messaging.send');
     Route::get('/messaging/refresh', [MessagingController::class, 'refresh'])->name('teacher.messaging.refresh');

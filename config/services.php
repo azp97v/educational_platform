@@ -47,4 +47,10 @@ return [
         'api_key' => env('YOUTUBE_API_KEY'),
     ],
 
+    'hms' => [
+        'access_key'  => env('HMS_APP_ACCESS_KEY'),
+        'secret'      => env('HMS_APP_SECRET'),
+        'template_id' => env('HMS_TEMPLATE_ID'),
+    ],
+
 ];

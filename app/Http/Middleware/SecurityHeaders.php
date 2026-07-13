@@ -32,7 +32,7 @@ class SecurityHeaders
             "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://unpkg.com",
             "img-src 'self' data: blob: https:",
             "media-src 'self' data: blob: https:",
-            "connect-src 'self' blob: ws: wss: https://*.pusher.com https://*.reverb.com http://localhost:* https://cdn.jsdelivr.net https://www.youtube.com https://staticimgly.com https://*.staticimgly.com",
+            "connect-src 'self' blob: ws: wss: https://*.pusher.com https://*.reverb.com http://localhost:* https://cdn.jsdelivr.net https://www.youtube.com https://staticimgly.com https://*.staticimgly.com https://*.100ms.live wss://*.100ms.live",
             "worker-src 'self' blob: https://cdn.jsdelivr.net https://staticimgly.com https://*.staticimgly.com",
             "script-src-elem 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://unpkg.com https://*.pusher.com https://*.reverb.com https://www.youtube.com https://s.ytimg.com",
             "frame-src 'self' https:",
