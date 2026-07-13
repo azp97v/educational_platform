@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lesson extends Model
 {
-    // Note: SoftDeletes can be added in a future migration when deleted_at column is added
-    // For now, lessons are permanently deleted
+    use SoftDeletes;
+
     protected $fillable = [
         'course_id',
         'lesson_type',

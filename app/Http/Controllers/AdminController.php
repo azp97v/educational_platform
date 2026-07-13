@@ -33,7 +33,8 @@ class AdminController extends Controller
 
     private function baseStats(): array
     {
-        return [
+        return Cache::remember('admin_base_stats', 300, function () {
+            return [
             'totalUsers'         => User::count(),
             'teachers'           => User::where('role', 'teacher')->count(),
             'students'           => User::where('role', 'student')->count(),
@@ -50,8 +51,11 @@ class AdminController extends Controller
             'openTickets'        => $this->safeConditionalCount('support_tickets', fn($q) => $q->whereIn('status', ['open', 'pending'])),
             'failedJobs'         => $this->safeTableCount('failed_jobs'),
             'activeAnnouncements' => $this->safeConditionalCount('announcements', fn($q) => $q->where('is_active', true)->where(fn($q2) => $q2->whereNull('expires_at')->orWhere('expires_at', '>', now()))),
-            'liveopsAlerts'      => $this->calcLiveopsAlertCount(),
-        ];
+            ]; // end inner array
+        }); // end Cache::remember
+        // liveopsAlerts uses now() so stays outside the cache
+        $stats['liveopsAlerts'] = $this->calcLiveopsAlertCount();
+        return $stats;
     }
 
     private function renderAdmin(string $view, array $data = [])

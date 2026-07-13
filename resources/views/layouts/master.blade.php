@@ -8,6 +8,13 @@
     <title>@yield('title', 'إجلال') - منصة إجلال التعليمية</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo/logo.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo/logo.png') }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#1a3c6e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="إجلال">
     <meta property="og:site_name" content="منصة إجلال التعليمية">
     <meta property="og:title" content="@yield('title', 'إجلال') - منصة إجلال التعليمية">
     <meta property="og:description" content="@yield('description', 'منصة إجلال التعليمية - نظام تعليمي ذكي من جمعية إجلال مكة المكرمة')">
