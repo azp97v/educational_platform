@@ -363,7 +363,7 @@ class CallController extends Controller
             Cache::put("hms_room.{$call->id}", $roomId, 7200);
         }
 
-        $token = $this->hmsAppToken($roomId, (string) Auth::id(), 'host');
+        $token = $this->hmsAppToken($roomId, (string) Auth::id(), 'broadcaster');
 
         return response()->json(['success' => true, 'token' => $token, 'room_id' => $roomId]);
     }
