@@ -4942,6 +4942,9 @@ _callRingingFallbackTimer: null,
 _hmsReconnectTimer: null,
 _groupCallEmptyTimer: null,
 _poorQualityToastAt: null,
+_callElapsedTimer: null,
+callElapsedDisplay: '',
+_callNow: 0,
 callMinimized: false,
 callConnectionWarning: false,
 callEndedSummary: null,
@@ -14469,6 +14472,9 @@ return;
 
 this.callState = 'in-call';
 this.callStartedAt = _answerRes.answered_at ? new Date(_answerRes.answered_at).getTime() : Date.now();
+this._callNow = Date.now();
+if (this._callElapsedTimer) clearInterval(this._callElapsedTimer);
+this._callElapsedTimer = setInterval(() => { this._callNow = Date.now(); }, 1000);
 this.incomingCallOffer = null;
 
 await this.hmsJoinRoom(this.currentCallId, this.callType);
@@ -14631,9 +14637,15 @@ if (target) hmsActions.attachVideo(peer.videoTrack, target).catch(() => {});
 });
 });
 if (peers && peers.length > 0) {
-if (this.callState === 'calling') this.callState = 'in-call';
+if (this.callState === 'calling') {
+    this.callState = 'in-call';
+    this.stopOutgoingRingtone();
+    if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTimer); this._callRingingFallbackTimer = null; }
+}
 if (this.callState === 'in-call') {
-    this.callStartedAt = this.callStartedAt || Date.now();
+    if (!this.callStartedAt) this.callStartedAt = Date.now();
+    if (!this._callNow) this._callNow = Date.now();
+    if (!this._callElapsedTimer) this._callElapsedTimer = setInterval(() => { this._callNow = Date.now(); }, 1000);
     if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 }
 } else if ((!peers || peers.length === 0) && this.callState === 'in-call' && this.callStartedAt) {
@@ -14810,7 +14822,9 @@ if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeo
 if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTimer); this._callRingingFallbackTimer = null; }
 if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsReconnectTimer = null; }
 if (this._groupCallEmptyTimer) { clearTimeout(this._groupCallEmptyTimer); this._groupCallEmptyTimer = null; }
+if (this._callElapsedTimer) { clearInterval(this._callElapsedTimer); this._callElapsedTimer = null; }
 this._poorQualityToastAt = null;
+this._callNow = 0;
 this.callIsRinging = false;
 this.stopOutgoingRingtone();
 
@@ -14922,8 +14936,8 @@ apply(Array.isArray(el) ? el[0] : el);
 },
 
 formatCallElapsed() {
-if (!this.callStartedAt) return '';
-const secs = Math.floor((Date.now() - this.callStartedAt) / 1000);
+if (!this.callStartedAt || !this._callNow) return '';
+const secs = Math.floor((this._callNow - this.callStartedAt) / 1000);
 const m = Math.floor(secs / 60).toString().padStart(2, '0');
 const s = (secs % 60).toString().padStart(2, '0');
 return `${m}:${s}`;
@@ -15058,8 +15072,12 @@ console.log('[CALL] call.answered received callId=' + data.call_id + ' myCallId=
 if (Number(data.call_id) !== Number(this.currentCallId)) return;
 console.log('[CALL] → switching callState to in-call');
 this.callState = 'in-call';
+this.stopOutgoingRingtone();
 // Sync call start time from server-stamped answered_at for accurate duration across both parties
 this.callStartedAt = data.answered_at ? new Date(data.answered_at).getTime() : (this.callStartedAt || Date.now());
+this._callNow = Date.now();
+if (this._callElapsedTimer) clearInterval(this._callElapsedTimer);
+this._callElapsedTimer = setInterval(() => { this._callNow = Date.now(); }, 1000);
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 if (this._callRingingFallbackTimer) { clearTimeout(this._callRingingFallbackTimer); this._callRingingFallbackTimer = null; }
 });
