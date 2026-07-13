@@ -14487,6 +14487,12 @@ window._hmsActions = hmsInstance.getActions();
 const hmsActions = window._hmsActions;
 const hmsStore = window._hmsStore;
 
+// Unsubscribe any lingering subscriptions from a previous call attempt
+if (this._hmsUnsubFns && this._hmsUnsubFns.length) {
+this._hmsUnsubFns.forEach(fn => { try { fn(); } catch (_) {} });
+this._hmsUnsubFns = [];
+}
+
 const tokenUrl = this.callRouteFor(this.callsHmsTokenRouteTemplate, callId);
 const res = await this.postCallAction(tokenUrl, {});
 if (!res?.success) {
@@ -14497,14 +14503,10 @@ return;
 try {
 const selfContact = (this.contacts || []).find(c => Number(c.id) === Number(this.currentUserId));
 const userName = selfContact?.name || 'مستخدم';
-
 await hmsActions.join({
 authToken: res.token,
 userName,
-settings: {
-isAudioMuted: this.callMuted,
-isVideoMuted: callType === 'voice',
-},
+settings: { isAudioMuted: false, isVideoMuted: callType === 'voice' },
 });
 } catch (err) {
 console.error('[HMS] join error:', err);
@@ -14512,15 +14514,28 @@ this.showToast('تعذّر الاتصال بخادم المكالمات', 'error
 return;
 }
 
-// Subscribe to local peer to attach local video once track is available
-hmsStore.subscribe((localPeer) => {
+this._hmsUnsubFns = [];
+
+// Log HMS errors to console for diagnostics (3008 = transient NoDataInTrack, not fatal)
+if (HMS.selectErrors) {
+let _seenErrCount = 0;
+this._hmsUnsubFns.push(hmsStore.subscribe((errors) => {
+if (!errors || errors.length <= _seenErrCount) return;
+const fresh = errors.slice(_seenErrCount);
+_seenErrCount = errors.length;
+fresh.forEach(e => console.warn('[HMS] sdk error:', e.code, e.name, e.message || ''));
+}, HMS.selectErrors));
+}
+
+// Attach local video when local peer track becomes available
+this._hmsUnsubFns.push(hmsStore.subscribe((localPeer) => {
 if (localPeer?.videoTrack && callType !== 'voice' && this.$refs.localVideo) {
 hmsActions.attachVideo(localPeer.videoTrack, this.$refs.localVideo).catch(() => {});
 }
-}, HMS.selectLocalPeer);
+}, HMS.selectLocalPeer));
 
-// Subscribe to remote peers to attach their video/audio and update UI
-hmsStore.subscribe((peers) => {
+// Attach remote peers' video and transition caller to in-call state
+this._hmsUnsubFns.push(hmsStore.subscribe((peers) => {
 this.$nextTick(() => {
 (peers || []).forEach(peer => {
 const uid = peer.customerUserId;
@@ -14533,21 +14548,24 @@ if (target) hmsActions.attachVideo(peer.videoTrack, target).catch(() => {});
 }
 });
 });
-// Caller side: transition to in-call once remote peer joins the room
 if (peers && peers.length > 0 && this.callState === 'calling') {
 this.callState = 'in-call';
 this.callStartedAt = this.callStartedAt || Date.now();
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 }
-}, HMS.selectRemotePeers);
+}, HMS.selectRemotePeers));
 
 // Connection health indicator
-hmsStore.subscribe((isConnected) => {
+this._hmsUnsubFns.push(hmsStore.subscribe((isConnected) => {
 if (this.callState === 'in-call') this.callConnectionWarning = !isConnected;
-}, HMS.selectIsConnectedToRoom);
+}, HMS.selectIsConnectedToRoom));
 },
 
 async hmsLeaveRoom() {
+if (this._hmsUnsubFns && this._hmsUnsubFns.length) {
+this._hmsUnsubFns.forEach(fn => { try { fn(); } catch (_) {} });
+this._hmsUnsubFns = [];
+}
 try {
 if (window._hmsActions) await window._hmsActions.leave();
 } catch (_) {}
