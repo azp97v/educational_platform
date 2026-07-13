@@ -348,6 +348,29 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
 
 <link rel="stylesheet" href="/css/messaging-app.css?v={{ filemtime(public_path('css/messaging-app.css')) }}">
 
+<!-- Sentry Browser SDK -->
+<script
+    src="https://js-de.sentry-cdn.com/021ff6ade06b8bf73a6467b845f06dbc.min.js"
+    crossorigin="anonymous"
+></script>
+<script>
+Sentry.onLoad(function() {
+    Sentry.init({
+        dsn: "https://021ff6ade06b8bf73a6467b845f06dbc@o4511728095199232.ingest.de.sentry.io/4511728109224016",
+        environment: "{{ app()->environment() }}",
+        integrations: [
+            Sentry.browserTracingIntegration(),
+            Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+        ],
+        tracesSampleRate: 0.2,
+        tracePropagationTargets: ["edu.ejlalmakkah.org.sa"],
+        replaysSessionSampleRate: 0.05,
+        replaysOnErrorSampleRate: 1.0,
+    });
+    Sentry.setUser({ id: {{ auth()->id() }}, role: "{{ auth()->user()->role }}" });
+});
+</script>
+
 </head>
 
 <body>
