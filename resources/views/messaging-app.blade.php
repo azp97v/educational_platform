@@ -14500,6 +14500,22 @@ this.showToast('تعذّر الحصول على رمز المكالمة', 'error'
 return;
 }
 
+// Pre-warm the microphone so the OS audio system has time to start
+// delivering frames before HMS calls getUserMedia internally.
+// Without this, the track can be live but muted (no frames yet) → HMS error 3015.
+try {
+const warmStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+await new Promise(r => setTimeout(r, 400));
+warmStream.getTracks().forEach(t => t.stop());
+} catch (micErr) {
+if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
+this.showToast('يرجى السماح للمتصفح بالوصول إلى الميكروفون', 'error');
+return;
+}
+// NotFoundError or other: proceed anyway, HMS will handle it
+console.warn('[HMS] mic pre-warm:', micErr.name);
+}
+
 try {
 const selfContact = (this.contacts || []).find(c => Number(c.id) === Number(this.currentUserId));
 const userName = selfContact?.name || 'مستخدم';
