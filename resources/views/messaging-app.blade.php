@@ -125,6 +125,7 @@ $callsPeerAnswerRouteTemplate = $buildCallRouteTemplate('peer-answer');
 $callsJoinRouteTemplate = $buildCallRouteTemplate('join');
 $callsInviteRouteTemplate = $buildCallRouteTemplate('invite');
 $callsHmsTokenRouteTemplate = $buildCallRouteTemplate('hms-token');
+$callsPendingRoute = $pickRoute($isTeacherRole ? ['teacher.calls.pending', 'calls.pending'] : ['calls.pending', 'teacher.calls.pending']);
 
 // TURN server config — set TURN_URL / TURN_USERNAME / TURN_CREDENTIAL in .env for production
 $turnIceConfig = [];
@@ -4521,6 +4522,7 @@ callsPeerAnswerRouteTemplate: @json($callsPeerAnswerRouteTemplate),
 callsJoinRouteTemplate: @json($callsJoinRouteTemplate),
 callsInviteRouteTemplate: @json($callsInviteRouteTemplate),
 callsHmsTokenRouteTemplate: @json($callsHmsTokenRouteTemplate),
+callsPendingRoute: @json($callsPendingRoute),
 turnIceConfig: @json($turnIceConfig),
 
 stickersIndexRoute: @json($stickersIndexRoute),
@@ -4930,6 +4932,7 @@ qrBgOptions: [
 ],
 
 // Call state
+_callPollTimer: null,
 
 callState: null, // null | 'calling' | 'in-call' | 'incoming'
 callDirection: null, // 'outgoing' | 'incoming' — tracked separately from callState
@@ -14642,6 +14645,40 @@ if (window._hmsActions) await window._hmsActions.leave();
 
 // ── end 100ms helpers ──────────────────────────────────────────────────────
 
+// ── Polling fallback for incoming calls ────────────────────────────────────
+// Fires every 5 s as a backup when the Pusher/Reverb WebSocket event is missed.
+startIncomingCallPoll() {
+if (this._callPollTimer || !this.callsPendingRoute) return;
+this._callPollTimer = setInterval(async () => {
+    if (this.callState) return; // Already handling a call
+    try {
+        const r = await fetch(this.callsPendingRoute, { headers: { 'Accept': 'application/json' } });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!data.call) return;
+        const callId = Number(data.call.call_id);
+        if (callId === Number(this.currentCallId)) return; // Already handling this call
+        console.log('[POLL] incoming call found via poll callId=' + callId);
+        if (!this.callState) {
+            this.callType = data.call.type;
+            this.isGroupCall = !!data.call.is_group;
+            this.callContact = { id: data.call.caller.id, name: data.call.caller.name, avatar_url: data.call.caller.avatar_url };
+            this.callParticipants = [{ id: Number(data.call.caller.id), name: data.call.caller.name, avatar_url: data.call.caller.avatar_url, stream: null }];
+            this.currentCallId = callId;
+            this.incomingCallOffer = data.call.offer;
+            this.callDirection = 'incoming';
+            this.callState = 'incoming';
+            this.postCallAction(this.callRouteFor(this.callsRingRouteTemplate, callId), {});
+            this.maybeShowCallNotification(this.callContact, this.callType);
+        }
+    } catch (_) {}
+}, 5000);
+},
+
+stopIncomingCallPoll() {
+if (this._callPollTimer) { clearInterval(this._callPollTimer); this._callPollTimer = null; }
+},
+
 async rejectIncomingCall() {
 if (this.currentCallId) {
 await this.postCallAction(this.callRouteFor(this.callsRejectRouteTemplate, this.currentCallId), {});
@@ -14689,6 +14726,7 @@ return { sdp: offer.sdp, type: offer.type };
 },
 
 cleanupCall() {
+this.stopIncomingCallPoll();
 if (this.callTimeoutTimer) { clearTimeout(this.callTimeoutTimer); this.callTimeoutTimer = null; }
 this.callIsRinging = false;
 this.stopOutgoingRingtone();
@@ -17279,6 +17317,7 @@ this.loadCallSettings();
 this.loadCallLogs(); // pre-load so call cards appear in chat on open
 this.callLogsLoaded = true;
 this.initCallSignaling();
+this.startIncomingCallPoll();
 
 this.initE2E();
 

@@ -342,6 +342,38 @@ class CallController extends Controller
     }
 
     /**
+     * Polling fallback: return any pending incoming call for the authenticated user.
+     * Used as backup when the Pusher/Reverb WebSocket event is not delivered.
+     */
+    public function pending(): \Illuminate\Http\JsonResponse
+    {
+        $userId = Auth::id();
+        $participant = CallParticipant::where('user_id', $userId)
+            ->where('status', 'ringing')
+            ->whereHas('call', fn ($q) => $q->where('status', 'ringing'))
+            ->with(['call', 'call.caller'])
+            ->latest()
+            ->first();
+
+        if (!$participant) {
+            return response()->json(['call' => null]);
+        }
+
+        $call = $participant->call;
+        return response()->json(['call' => [
+            'call_id'  => $call->id,
+            'type'     => $call->type,
+            'is_group' => (bool) $call->is_group,
+            'offer'    => null,
+            'caller'   => [
+                'id'         => $call->caller->id,
+                'name'       => $call->caller->name,
+                'avatar_url' => $call->caller->avatar_url,
+            ],
+        ]]);
+    }
+
+    /**
      * Generate a 100ms room + user token for the requesting participant.
      * The room is cached per call_id so all participants join the same room.
      */
