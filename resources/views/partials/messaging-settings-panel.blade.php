@@ -478,17 +478,26 @@
                     <div class="settings-stat-row">
                         <span class="settings-stat-row__label">الجلسات النشطة</span>
                         <strong>@{{ settingsSessionsList.length }}</strong>
+                        <button class="settings-ghost-btn" style="margin-right:auto;padding:2px 8px;font-size:12px;" @click="loadActiveSessions()" :disabled="settingsSessionsLoading">
+                            <i :class="settingsSessionsLoading ? 'ri-loader-4-line spin' : 'ri-refresh-line'"></i>
+                        </button>
                     </div>
 
-                    <div class="settings-list-empty" v-if="settingsSessionsLoading">جارٍ تحميل الجلسات...</div>
+                    <div class="settings-list-empty" v-if="settingsSessionsLoading"><i class="ri-loader-4-line spin"></i> جارٍ تحميل الجلسات...</div>
                     <div class="settings-list-empty" v-else-if="!settingsSessionsList.length">لا توجد جلسات نشطة أخرى.</div>
 
                     <div class="settings-contact-list" v-else>
-                        <div class="settings-contact-row" v-for="s in settingsSessionsList" :key="'sess-'+s.id">
-                            <span class="settings-contact-row__avatar session"><i class="ri-computer-line"></i></span>
+                        <div class="settings-contact-row" v-for="s in settingsSessionsList" :key="'sess-'+s.id"
+                             :class="{ 'session-current': s.is_current }">
+                            <span class="settings-contact-row__avatar session" :class="{ current: s.is_current }">
+                                <i :class="parseUserAgent(s.user_agent).icon"></i>
+                            </span>
                             <span class="settings-contact-row__body">
-                                <strong>@{{ s.is_current ? 'هذه الجلسة الحالية' : (s.user_agent || 'جهاز غير معروف') }}</strong>
-                                <small dir="ltr">@{{ s.ip_address }}</small>
+                                <strong>
+                                    @{{ s.is_current ? 'هذا الجهاز' : parseUserAgent(s.user_agent).name }}
+                                    <span v-if="s.is_current" class="session-current-badge">حالية</span>
+                                </strong>
+                                <small dir="ltr">@{{ s.ip_address }} · @{{ formatLastActivity(s.last_activity) }}</small>
                             </span>
                             <button v-if="!s.is_current" class="settings-ghost-btn danger" @click="terminateSessionById(s.id)">إنهاء</button>
                         </div>
