@@ -431,76 +431,59 @@
                 <p class="sn-section-label">موقع وعدد الإشعارات</p>
                 <div class="settings-group-card">
                     <div class="sn-screen-picker">
-                        <div class="sn-screen-monitor">
-                            <div class="sn-screen-inner" @mouseleave="snHoveredCorner=null">
 
-                                {{-- Corner hit areas --}}
+                        {{-- Virtual monitor: hover corner → real viewport preview --}}
+                        <div class="sn-screen-monitor">
+                            <div class="sn-screen-inner">
                                 <button class="sn-corner sn-corner--tl"
                                     :class="{active: settingsNotifications.notifPosition==='top-left'}"
-                                    @mouseenter="snHoveredCorner='top-left'"
+                                    @mouseenter="showSnPreview('top-left')"
                                     @click="settingsNotifications.notifPosition='top-left'; saveMessagingSettings();">
                                     <span class="sn-corner-dot"></span>
                                 </button>
                                 <button class="sn-corner sn-corner--tr"
                                     :class="{active: settingsNotifications.notifPosition==='top-right'}"
-                                    @mouseenter="snHoveredCorner='top-right'"
+                                    @mouseenter="showSnPreview('top-right')"
                                     @click="settingsNotifications.notifPosition='top-right'; saveMessagingSettings();">
                                     <span class="sn-corner-dot"></span>
                                 </button>
                                 <button class="sn-corner sn-corner--bl"
                                     :class="{active: settingsNotifications.notifPosition==='bottom-left'}"
-                                    @mouseenter="snHoveredCorner='bottom-left'"
+                                    @mouseenter="showSnPreview('bottom-left')"
                                     @click="settingsNotifications.notifPosition='bottom-left'; saveMessagingSettings();">
                                     <span class="sn-corner-dot"></span>
                                 </button>
                                 <button class="sn-corner sn-corner--br"
                                     :class="{active: settingsNotifications.notifPosition==='bottom-right'}"
-                                    @mouseenter="snHoveredCorner='bottom-right'"
+                                    @mouseenter="showSnPreview('bottom-right')"
                                     @click="settingsNotifications.notifPosition='bottom-right'; saveMessagingSettings();">
                                     <span class="sn-corner-dot"></span>
                                 </button>
-
-                                {{-- Live mini notification stack preview --}}
-                                <transition name="sn-mini-fade">
-                                    <div class="sn-mini-stack"
-                                        :class="`sn-pos-${snHoveredCorner || settingsNotifications.notifPosition}`"
-                                        v-if="snHoveredCorner || settingsNotifications.notifPosition">
-                                        <div class="sn-mini-card"
-                                            v-for="i in (snHoveredCorner ? 1 : settingsNotifications.notifMaxCount)"
-                                            :key="i"
-                                            :style="{
-                                                zIndex: 20 - i,
-                                                opacity: Math.max(0.25, 1 - (i-1) * 0.22),
-                                                transform: `translateY(${((snHoveredCorner||settingsNotifications.notifPosition).startsWith('bottom') ? -(i-1)*4 : (i-1)*4)}px) scale(${1-(i-1)*0.07})`
-                                            }">
-                                            <span class="sn-mini-av"></span>
-                                            <span class="sn-mini-lines">
-                                                <span class="sn-mini-l1"></span>
-                                                <span class="sn-mini-l2"></span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </transition>
-
+                                {{-- Active corner indicator --}}
+                                <div class="sn-screen-active-dot"
+                                    :class="`sn-dot-${settingsNotifications.notifPosition}`">
+                                </div>
                             </div>
                             <div class="sn-screen-stand"></div>
                         </div>
 
-                        {{-- Position label + count tabs side by side --}}
-                        <div class="sn-picker-controls">
-                            <p class="sn-pos-label">
-                                @{{ {'top-right':'أعلى اليمين','top-left':'أعلى اليسار','bottom-right':'أسفل اليمين','bottom-left':'أسفل اليسار'}[settingsNotifications.notifPosition] }}
-                            </p>
-                            <div class="sn-count-tabs">
-                                <button v-for="n in [1,2,3,4,5]" :key="n"
-                                    class="sn-count-tab"
-                                    :class="{active: settingsNotifications.notifMaxCount === n}"
-                                    @click="settingsNotifications.notifMaxCount=n; saveMessagingSettings();">
-                                    @{{ n }}
-                                </button>
-                            </div>
-                            <p class="settings-note" style="margin:0; padding:0;">عدد الإشعارات المتراكمة</p>
+                        {{-- Position label --}}
+                        <p class="sn-pos-label">
+                            @{{ {'top-right':'أعلى اليمين','top-left':'أعلى اليسار','bottom-right':'أسفل اليمين','bottom-left':'أسفل اليسار'}[settingsNotifications.notifPosition] }}
+                        </p>
+                        <p class="settings-note" style="padding:0 2px 8px; color: var(--text-secondary); font-size: 11px;">مرّر الماوس على زاوية لمعاينة موضع الإشعار على شاشتك</p>
+
+                        {{-- Count tabs below --}}
+                        <p class="sn-count-label">عدد الإشعارات المتراكمة</p>
+                        <div class="sn-count-tabs">
+                            <button v-for="n in [1,2,3,4,5]" :key="n"
+                                class="sn-count-tab"
+                                :class="{active: settingsNotifications.notifMaxCount === n}"
+                                @click="settingsNotifications.notifMaxCount=n; saveMessagingSettings(); snPreviewVisible && showSnPreview(snPreviewPos)">
+                                @{{ n }}
+                            </button>
                         </div>
+
                     </div>
                 </div>
 
