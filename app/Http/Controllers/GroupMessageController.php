@@ -298,6 +298,18 @@ class GroupMessageController extends Controller
         return response()->json(['success' => true, 'role' => $data['role']]);
     }
 
+    public function deleteGroup(Request $request, int $groupId)
+    {
+        $this->authorizeGroupAdmin($groupId);
+
+        DB::table('group_messages')->where('group_id', $groupId)->update(['deleted_at' => now()]);
+        DB::table('group_message_reads')->where('group_id', $groupId)->delete();
+        DB::table('group_participants')->where('group_id', $groupId)->delete();
+        DB::table('groups')->where('id', $groupId)->delete();
+
+        return response()->json(['success' => true]);
+    }
+
     public function myGroups(Request $request)
     {
         $user = Auth::user();
