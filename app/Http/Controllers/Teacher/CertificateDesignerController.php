@@ -249,9 +249,7 @@ class CertificateDesignerController extends Controller
             'name' => 'required|string|max:255',
             'username' => ['nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9_]+$/', function ($attribute, $value, $fail) {
                 if (!empty($value)) {
-                    if (User::where('username', $value)->exists()) {
-                        $fail('اسم المستخدم مُستخدم بالفعل في النظام.');
-                    } elseif (CertificateStudent::where('username', $value)->where('user_id', auth()->id())->exists()) {
+                    if (CertificateStudent::where('username', $value)->where('user_id', auth()->id())->exists()) {
                         $fail('اسم المستخدم مُستخدم بالفعل لأحد المستفيدين.');
                     }
                 }
@@ -307,10 +305,8 @@ class CertificateDesignerController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'username' => ['nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9_]+$/', function ($attribute, $value, $fail) use ($student) {
-                if (!empty($value) && strtolower($value) !== strtolower($student->username ?? '')) {
-                    if (User::where('username', $value)->exists()) {
-                        $fail('اسم المستخدم مُستخدم بالفعل في النظام.');
-                    } elseif (CertificateStudent::where('username', $value)->where('user_id', auth()->id())->where('id', '!=', $student->id)->exists()) {
+                if (!empty($value)) {
+                    if (CertificateStudent::where('username', $value)->where('user_id', auth()->id())->where('id', '!=', $student->id)->exists()) {
                         $fail('اسم المستخدم مُستخدم بالفعل لأحد المستفيدين.');
                     }
                 }
