@@ -39,8 +39,94 @@
             border: 1px solid var(--theme-border);
         }
         .btn-outline:hover { background: var(--theme-gold-soft); color: var(--text-primary); }
-        .btn-send { background: var(--theme-success); color: #000; }
-        .btn-send:hover { opacity: 0.85; transform: translateY(-2px); }
+        .btn-send {
+            background: linear-gradient(135deg, var(--theme-gold), var(--theme-gold-dark));
+            color: #000;
+        }
+        .btn-send:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(196,150,58,0.35); }
+
+        /* ── Email Modal ── */
+        .email-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .email-modal-overlay.open { display: flex; }
+        .email-modal {
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            border-radius: 28px; width: 100%; max-width: 500px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.55);
+            animation: emSlideUp 0.24s cubic-bezier(.22,.68,0,1.2);
+            overflow: hidden; font-family: 'Tajawal', sans-serif;
+        }
+        @keyframes emSlideUp { from{opacity:0;transform:translateY(28px) scale(.97)} to{opacity:1;transform:none} }
+        .em-header {
+            display: flex; align-items: center; gap: 14px;
+            padding: 22px 26px 18px; border-bottom: 1px solid var(--theme-border);
+        }
+        .em-icon {
+            width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+            background: rgba(198,166,117,0.15); border: 1px solid rgba(198,166,117,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: var(--theme-gold);
+        }
+        .em-header h2 { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 2px; }
+        .em-header p  { font-size: 12px; color: var(--text-secondary); }
+        .em-close {
+            margin-right: auto; background: none; border: none; cursor: pointer;
+            color: var(--text-secondary); font-size: 20px; padding: 4px; border-radius: 8px; transition: .18s;
+        }
+        .em-close:hover { color: var(--text-primary); background: var(--theme-surface-2); }
+        .em-body { padding: 22px 26px; }
+        .em-preview {
+            display: flex; gap: 14px; align-items: center;
+            background: var(--theme-surface-2); border: 1px solid var(--theme-border);
+            border-radius: 16px; padding: 14px; margin-bottom: 20px;
+        }
+        .em-preview img { width: 70px; height: 50px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
+        .em-preview .em-tname { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .em-recipient {
+            display: flex; gap: 12px;
+            background: rgba(198,166,117,0.06); border: 1px solid rgba(198,166,117,0.2);
+            border-radius: 14px; padding: 12px 16px; margin-bottom: 20px; align-items: center;
+        }
+        .em-avatar {
+            width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+            background: var(--theme-gold-soft); display: flex; align-items: center;
+            justify-content: center; font-size: 18px; color: var(--theme-gold);
+        }
+        .em-rname { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+        .em-remail { font-size: 12px; color: var(--text-secondary); direction: ltr; text-align: right; }
+        .em-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+        .em-textarea {
+            width: 100%; padding: 12px 14px; border-radius: 14px;
+            background: var(--theme-surface-2); border: 1px solid var(--theme-border);
+            color: var(--text-primary); font-family: 'Tajawal', sans-serif; font-size: 13px;
+            resize: none; min-height: 84px; line-height: 1.6; transition: border-color .2s;
+        }
+        .em-textarea:focus { outline: none; border-color: var(--theme-gold); }
+        .em-textarea::placeholder { color: var(--text-secondary); opacity: .6; }
+        .em-footer {
+            display: flex; gap: 10px; justify-content: flex-end;
+            padding: 16px 26px 22px; border-top: 1px solid var(--theme-border);
+        }
+        .btn-confirm-send {
+            background: linear-gradient(135deg, var(--theme-gold), var(--theme-gold-dark));
+            color: #000; border: none; border-radius: 14px;
+            padding: 11px 28px; font-weight: 700; font-size: 14px;
+            cursor: pointer; font-family: 'Tajawal', sans-serif;
+            display: inline-flex; align-items: center; gap: 8px; transition: .25s;
+        }
+        .btn-confirm-send:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(196,150,58,0.35); }
+        .btn-cancel-em {
+            background: var(--theme-surface-2); color: var(--text-secondary);
+            border: 1px solid var(--theme-border); border-radius: 14px;
+            padding: 11px 22px; font-weight: 600; font-size: 14px;
+            cursor: pointer; font-family: 'Tajawal', sans-serif; transition: .2s;
+        }
+        .btn-cancel-em:hover { color: var(--text-primary); background: var(--theme-surface); }
+
         .flash {
             width: 100%; max-width: 800px; margin: 12px auto; padding: 12px 20px;
             border-radius: 12px; font-size: 13px; font-weight: 600;
@@ -92,12 +178,10 @@
         <a href="{{ route('teacher.certificates.gallery', $student) }}" class="btn btn-outline">
             <i class="ri-arrow-right-line"></i> رجوع
         </a>
-        <form action="{{ route('teacher.certificates.email', [$student, $templateNum]) }}" method="POST" class="inline-form">
-            @csrf
-            <button type="submit" class="btn btn-send" id="sendCertBtn">
-                <i class="ri-mail-send-line"></i> إرسال للبريد
-            </button>
-        </form>
+        <button type="button" class="btn btn-send" id="openEmailModal"
+                @if(!$student->email) disabled title="لا يوجد بريد إلكتروني لهذا المستفيد" @endif>
+            <i class="ri-mail-send-line"></i> إرسال للبريد
+        </button>
     </div>
 
     @if(session('success'))
@@ -142,16 +226,77 @@
             </table>
         </div>
     </div>
+    {{-- Email Confirmation Modal --}}
+    <div class="email-modal-overlay" id="emailModal">
+        <div class="email-modal">
+            <div class="em-header">
+                <div class="em-icon"><i class="ri-mail-send-line"></i></div>
+                <div>
+                    <h2>إرسال الشهادة بالبريد</h2>
+                    <p>مراجعة بيانات الإرسال قبل التأكيد</p>
+                </div>
+                <button class="em-close" id="closeEmailModal" title="إغلاق"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="em-body">
+                {{-- Template preview --}}
+                <div class="em-preview">
+                    <img src="{{ asset('image/qw'.$templateNum.'.jpeg') }}" alt="القالب {{ $templateNum }}">
+                    <div>
+                        <div class="em-tname">
+                            @php
+                                $names = [1=>'القالب الكلاسيكي',2=>'القالب العصري',3=>'القالب الذهبي',4=>'الدرع الرقمي',5=>'القالب الأكاديمي',6=>'الإبداع الهندسي',7=>'الوسام المهني',8=>'الطراز الأكاديمي',9=>'مودرن جرافيك'];
+                            @endphp
+                            {{ $names[$templateNum] ?? 'القالب '.$templateNum }}
+                        </div>
+                        <div style="font-size:12px;color:var(--text-secondary);">القالب المختار</div>
+                    </div>
+                    <i class="ri-award-fill" style="font-size:22px;color:var(--theme-gold);flex-shrink:0;margin-right:auto;"></i>
+                </div>
+                {{-- Recipient --}}
+                <div class="em-recipient">
+                    <div class="em-avatar"><i class="ri-user-3-line"></i></div>
+                    <div>
+                        <div class="em-rname">{{ $student->name }}</div>
+                        <div class="em-remail">{{ $student->email ?: 'لم يُحدد بريد إلكتروني' }}</div>
+                    </div>
+                </div>
+                {{-- Personal message --}}
+                <label class="em-label" for="emMessage"><i class="ri-chat-1-line"></i> رسالة شخصية (اختيارية)</label>
+                <textarea id="emMessage" class="em-textarea" placeholder="أضف رسالة تشجيعية أو تهنئة شخصية للطالب..." maxlength="500"></textarea>
+            </div>
+            <div class="em-footer">
+                <button class="btn-cancel-em" id="cancelEmailModal">إلغاء</button>
+                <form id="emailForm" method="POST"
+                      action="{{ route('teacher.certificates.email', [$student, $templateNum]) }}"
+                      style="display:contents;">
+                    @csrf
+                    <input type="hidden" name="message" id="emMsgHidden">
+                    <button type="submit" class="btn-confirm-send">
+                        <i class="ri-send-plane-line"></i> إرسال الشهادة
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var f = document.getElementById('sendCertBtn')?.closest('form');
-            if (f) {
-                f.addEventListener('submit', function (e) {
-                    if (!confirm('إرسال الشهادة إلى {{ $student->email }}؟')) {
-                        e.preventDefault();
-                    }
-                });
-            }
+            const overlay = document.getElementById('emailModal');
+            const msgField = document.getElementById('emMessage');
+            const msgHidden = document.getElementById('emMsgHidden');
+            const form = document.getElementById('emailForm');
+
+            document.getElementById('openEmailModal')?.addEventListener('click', function () {
+                msgField.value = '';
+                overlay.classList.add('open');
+                setTimeout(() => msgField.focus(), 280);
+            });
+            function close() { overlay.classList.remove('open'); }
+            document.getElementById('closeEmailModal').addEventListener('click', close);
+            document.getElementById('cancelEmailModal').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+            form.addEventListener('submit', () => { msgHidden.value = msgField.value.trim(); });
         });
     </script>
     @include('components.account-theme-foot')
