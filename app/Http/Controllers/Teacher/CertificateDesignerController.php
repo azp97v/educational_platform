@@ -143,13 +143,9 @@ class CertificateDesignerController extends Controller
 
     public function createStudent()
     {
-        $teacherCourseIds = auth()->user()->courses()->pluck('id');
         $systemUsers = User::where('role', 'student')
-            ->whereHas('enrollments', function ($e) use ($teacherCourseIds) {
-                $e->whereIn('course_id', $teacherCourseIds)
-                  ->where('status', 'approved');
-            })
-            ->orderBy('name')->get(['id', 'name', 'email', 'username', 'avatar_url']);
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'username', 'avatar_url']);
 
         $courses = auth()->user()->courses()
             ->where('status', 'published')
@@ -168,13 +164,9 @@ class CertificateDesignerController extends Controller
     {
         $student = CertificateStudent::where('user_id', auth()->id())->findOrFail($id);
 
-        $teacherCourseIds = auth()->user()->courses()->pluck('id');
         $systemUsers = User::where('role', 'student')
-            ->whereHas('enrollments', function ($e) use ($teacherCourseIds) {
-                $e->whereIn('course_id', $teacherCourseIds)
-                  ->where('status', 'approved');
-            })
-            ->orderBy('name')->get(['id', 'name', 'email', 'username', 'avatar_url']);
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'username', 'avatar_url']);
 
         $courses = auth()->user()->courses()
             ->where('status', 'published')
