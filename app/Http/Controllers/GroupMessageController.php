@@ -23,6 +23,30 @@ class GroupMessageController extends Controller
         return $group;
     }
 
+    private function authorizeGroupAdmin(int $groupId): object
+    {
+        $group = DB::table('groups')->where('id', $groupId)->first();
+        abort_if(!$group, 404, 'المجموعة غير موجودة');
+        $isAdmin = DB::table('group_participants')
+            ->where('group_id', $groupId)
+            ->where('user_id', Auth::id())
+            ->where('role', 'admin')
+            ->exists();
+        abort_unless($isAdmin, 403, 'ليس لديك صلاحيات الإدارة');
+        return $group;
+    }
+
+    private function formatMember(object $m): array
+    {
+        return [
+            'id'        => $m->id,
+            'name'      => $m->name,
+            'avatar_url'=> $m->avatar_url ? asset('storage/' . $m->avatar_url) : null,
+            'role'      => $m->role,
+            'isAdmin'   => $m->role === 'admin',
+        ];
+    }
+
     private function formatMsg(object $msg): array
     {
         return [
@@ -154,6 +178,124 @@ class GroupMessageController extends Controller
             'success'  => true,
             'messages' => $messages->map(fn($m) => $this->formatMsg($m))->values(),
         ]);
+    }
+
+    public function info(Request $request, int $groupId)
+    {
+        $group = $this->authorizeGroupMember($groupId);
+        $user  = Auth::user();
+
+        $members = DB::table('group_participants as gp')
+            ->join('users as u', 'u.id', '=', 'gp.user_id')
+            ->where('gp.group_id', $groupId)
+            ->select('u.id', 'u.name', 'u.avatar_url', 'gp.role', 'gp.created_at as joined_at')
+            ->orderByRaw("CASE WHEN gp.role = 'admin' THEN 0 ELSE 1 END")
+            ->orderBy('u.name')
+            ->get();
+
+        $currentUserRole = $members->firstWhere('id', $user->id)?->role ?? 'member';
+
+        return response()->json([
+            'success' => true,
+            'group'   => [
+                'id'          => $group->id,
+                'name'        => $group->name,
+                'description' => $group->description ?? null,
+                'avatar_url'  => $group->avatar_path ? asset('storage/' . $group->avatar_path) : null,
+                'created_by'  => $group->created_by,
+                'members_count' => $members->count(),
+            ],
+            'members'         => $members->map(fn($m) => $this->formatMember($m))->values(),
+            'currentUserRole' => $currentUserRole,
+            'isAdmin'         => $currentUserRole === 'admin',
+        ]);
+    }
+
+    public function addMember(Request $request, int $groupId)
+    {
+        $this->authorizeGroupAdmin($groupId);
+        $data = $request->validate(['user_id' => ['required', 'integer', 'exists:users,id']]);
+
+        $already = DB::table('group_participants')
+            ->where('group_id', $groupId)->where('user_id', $data['user_id'])->exists();
+        if ($already) return response()->json(['success' => false, 'message' => 'المستخدم عضو بالفعل'], 422);
+
+        DB::table('group_participants')->insert([
+            'group_id'   => $groupId,
+            'user_id'    => $data['user_id'],
+            'role'       => 'member',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $u = DB::table('users')->where('id', $data['user_id'])->select('id','name','avatar_url')->first();
+        return response()->json(['success' => true, 'member' => $this->formatMember((object)['id'=>$u->id,'name'=>$u->name,'avatar_url'=>$u->avatar_url,'role'=>'member'])]);
+    }
+
+    public function removeMember(Request $request, int $groupId, int $userId)
+    {
+        $user  = Auth::user();
+        $this->authorizeGroupMember($groupId);
+        $isSelf = $user->id === $userId;
+
+        if (!$isSelf) $this->authorizeGroupAdmin($groupId);
+
+        DB::table('group_participants')->where('group_id', $groupId)->where('user_id', $userId)->delete();
+
+        // Ensure at least one admin
+        $hasAdmin = DB::table('group_participants')->where('group_id', $groupId)->where('role', 'admin')->exists();
+        if (!$hasAdmin) {
+            $oldest = DB::table('group_participants')->where('group_id', $groupId)->orderBy('created_at')->first();
+            if ($oldest) DB::table('group_participants')->where('id', $oldest->id)->update(['role' => 'admin', 'updated_at' => now()]);
+        }
+
+        return response()->json(['success' => true, 'left' => $isSelf]);
+    }
+
+    public function updateSettings(Request $request, int $groupId)
+    {
+        $this->authorizeGroupAdmin($groupId);
+        $data = $request->validate([
+            'name'        => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'avatar'      => ['nullable', 'image', 'max:2048'],
+        ]);
+
+        $updates = [];
+        if (!empty($data['name'])) $updates['name'] = trim($data['name']);
+        if (array_key_exists('description', $data)) $updates['description'] = $data['description'];
+        if ($request->hasFile('avatar')) {
+            $updates['avatar_path'] = $request->file('avatar')->store('group-avatars', 'public');
+        }
+        if (!empty($updates)) {
+            $updates['updated_at'] = now();
+            DB::table('groups')->where('id', $groupId)->update($updates);
+        }
+
+        $g = DB::table('groups')->where('id', $groupId)->first();
+        return response()->json([
+            'success' => true,
+            'group'   => [
+                'name'        => $g->name,
+                'description' => $g->description ?? null,
+                'avatar_url'  => $g->avatar_path ? asset('storage/' . $g->avatar_path) : null,
+            ],
+        ]);
+    }
+
+    public function changeRole(Request $request, int $groupId, int $userId)
+    {
+        $this->authorizeGroupAdmin($groupId);
+        $data = $request->validate(['role' => ['required', 'in:admin,member']]);
+
+        $isMember = DB::table('group_participants')->where('group_id', $groupId)->where('user_id', $userId)->exists();
+        if (!$isMember) return response()->json(['success' => false, 'message' => 'المستخدم ليس عضواً'], 422);
+
+        DB::table('group_participants')
+            ->where('group_id', $groupId)->where('user_id', $userId)
+            ->update(['role' => $data['role'], 'updated_at' => now()]);
+
+        return response()->json(['success' => true, 'role' => $data['role']]);
     }
 
     public function myGroups(Request $request)
