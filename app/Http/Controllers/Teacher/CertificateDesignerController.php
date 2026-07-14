@@ -821,7 +821,7 @@ class CertificateDesignerController extends Controller
 
     // ─── Email ──────────────────────────────────────────────────
 
-    public function sendEmail(CertificateStudent $student, $templateNum)
+    public function sendEmail(Request $request, CertificateStudent $student, $templateNum)
     {
         abort_if($student->user_id !== auth()->id(), 403);
 
@@ -833,8 +833,9 @@ class CertificateDesignerController extends Controller
             }
 
             $base64Image = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($imagePath));
+            $personalMessage = $request->input('message', '');
 
-            Mail::to($student->email)->send(new \App\Mail\CertificateMail($student, $templateNum, $base64Image));
+            Mail::to($student->email)->send(new \App\Mail\CertificateMail($student, $templateNum, $base64Image, $personalMessage));
 
             return back()->with('success', 'تم إرسال الشهادة إلى البريد (' . $student->email . ') بنجاح');
         } catch (\Exception $e) {
@@ -843,9 +844,11 @@ class CertificateDesignerController extends Controller
         }
     }
 
-    public function sendCustomEmail(CertificateStudent $student, CustomTemplate $template)
+    public function sendCustomEmail(Request $request, CertificateStudent $student, CustomTemplate $template)
     {
         abort_if($student->user_id !== auth()->id(), 403);
+
+        $personalMessage = $request->input('message', '');
 
         try {
             @ini_set('memory_limit', '256M');
@@ -887,11 +890,14 @@ class CertificateDesignerController extends Controller
             $mpdf->WriteHTML($html);
             $pdfOutput = $mpdf->Output('', 'S');
 
-            Mail::send([], [], function ($message) use ($student, $pdfOutput, $template) {
+            Mail::send([], [], function ($message) use ($student, $pdfOutput, $template, $personalMessage) {
                 $message->to($student->email)
                     ->subject('شهادة إتمام - ' . $template->name)
                     ->attachData($pdfOutput, "certificate_{$student->name}.pdf", ['mime' => 'application/pdf'])
-                    ->html(view('teacher.certificates.emails.certificate_notification', ['student' => $student])->render());
+                    ->html(view('teacher.certificates.emails.certificate_notification', [
+                        'student' => $student,
+                        'personalMessage' => $personalMessage,
+                    ])->render());
             });
 
             return back()->with('success', 'تم إرسال الشهادة إلى البريد (' . $student->email . ') بنجاح');

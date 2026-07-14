@@ -16,18 +16,21 @@ class CertificateMail extends Mailable
     public $student;
     public $templateNum;
     public $base64Image;
+    public $personalMessage;
 
-    public function __construct($student, $templateNum, $base64Image)
+    public function __construct($student, $templateNum, $base64Image, $personalMessage = '')
     {
         $this->student = $student;
         $this->templateNum = $templateNum;
         $this->base64Image = $base64Image;
+        $this->personalMessage = $personalMessage;
     }
 
     public function content(): Content
     {
         return new Content(
             view: 'teacher.certificates.emails.certificate_notification',
+            with: ['personalMessage' => $this->personalMessage],
         );
     }
 

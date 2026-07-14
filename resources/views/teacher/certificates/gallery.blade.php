@@ -128,6 +128,102 @@
         .type-banner.training { background: rgba(45,164,191,0.10); border: 1px solid rgba(45,164,191,0.3); color: #2dd4bf; }
         .type-banner i { font-size: 18px; flex-shrink: 0; }
 
+        /* ── Email Modal ── */
+        .email-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .email-modal-overlay.open { display: flex; }
+        .email-modal {
+            background: var(--theme-surface);
+            border: 1px solid var(--theme-border);
+            border-radius: 28px; width: 100%; max-width: 520px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.55);
+            animation: emSlideUp 0.24s cubic-bezier(.22,.68,0,1.2);
+            overflow: hidden;
+        }
+        @keyframes emSlideUp { from { opacity:0; transform:translateY(28px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .email-modal-header {
+            display: flex; align-items: center; gap: 14px;
+            padding: 22px 26px 18px;
+            border-bottom: 1px solid var(--theme-border);
+        }
+        .email-modal-header .em-icon {
+            width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+            background: rgba(198,166,117,0.15); border: 1px solid rgba(198,166,117,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: var(--theme-gold);
+        }
+        .email-modal-header h2 { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 2px; }
+        .email-modal-header p  { font-size: 12px; color: var(--text-secondary); }
+        .email-modal-close {
+            margin-right: auto; background: none; border: none; cursor: pointer;
+            color: var(--text-secondary); font-size: 20px; padding: 4px; border-radius: 8px;
+            line-height: 1; transition: 0.18s;
+        }
+        .email-modal-close:hover { color: var(--text-primary); background: var(--theme-surface-2); }
+        .email-modal-body { padding: 22px 26px; }
+        /* Preview strip */
+        .em-preview {
+            display: flex; gap: 14px; align-items: center;
+            background: var(--theme-surface-2); border: 1px solid var(--theme-border);
+            border-radius: 16px; padding: 14px; margin-bottom: 20px;
+        }
+        .em-preview img {
+            width: 70px; height: 50px; object-fit: cover;
+            border-radius: 10px; flex-shrink: 0;
+        }
+        .em-preview .em-info { flex: 1; }
+        .em-preview .em-template-name { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        /* Recipient row */
+        .em-recipient {
+            display: flex; gap: 12px;
+            background: rgba(198,166,117,0.06); border: 1px solid rgba(198,166,117,0.2);
+            border-radius: 14px; padding: 12px 16px; margin-bottom: 20px;
+            align-items: center;
+        }
+        .em-recipient .em-avatar {
+            width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+            background: var(--theme-gold-soft); display: flex; align-items: center;
+            justify-content: center; font-size: 18px; color: var(--theme-gold);
+        }
+        .em-recipient .em-rname { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+        .em-recipient .em-remail { font-size: 12px; color: var(--text-secondary); direction: ltr; text-align: right; }
+        /* Message field */
+        .em-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block; }
+        .em-textarea {
+            width: 100%; padding: 12px 14px; border-radius: 14px;
+            background: var(--theme-surface-2); border: 1px solid var(--theme-border);
+            color: var(--text-primary); font-family: 'Tajawal', sans-serif; font-size: 13px;
+            resize: none; min-height: 84px; line-height: 1.6;
+            transition: border-color 0.2s;
+        }
+        .em-textarea:focus { outline: none; border-color: var(--theme-gold); }
+        .em-textarea::placeholder { color: var(--text-secondary); opacity: .6; }
+        /* Footer */
+        .email-modal-footer {
+            display: flex; gap: 10px; justify-content: flex-end;
+            padding: 16px 26px 22px; border-top: 1px solid var(--theme-border);
+        }
+        .btn-send {
+            background: linear-gradient(135deg, var(--theme-gold), var(--theme-gold-dark));
+            color: #000; border: none; border-radius: 14px;
+            padding: 11px 28px; font-weight: 700; font-size: 14px;
+            cursor: pointer; font-family: 'Tajawal', sans-serif;
+            display: inline-flex; align-items: center; gap: 8px;
+            transition: 0.25s;
+        }
+        .btn-send:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(196,150,58,0.35); }
+        .btn-send:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+        .btn-cancel-em {
+            background: var(--theme-surface-2); color: var(--text-secondary);
+            border: 1px solid var(--theme-border); border-radius: 14px;
+            padding: 11px 22px; font-weight: 600; font-size: 14px;
+            cursor: pointer; font-family: 'Tajawal', sans-serif; transition: 0.2s;
+        }
+        .btn-cancel-em:hover { color: var(--text-primary); background: var(--theme-surface); }
+
         /* ── Recommended badge overlaid on preset card image ── */
         .template-card { position: relative; }
         .recommended-badge {
@@ -233,10 +329,12 @@
                                     <a href="{{ route('teacher.certificates.custom.show', [$student, $t]) }}" class="btn btn-outline btn-sm">معاينة</a>
                                     <a href="{{ route('teacher.certificates.custom.download', [$student, $t]) }}" class="btn btn-primary btn-sm">تحميل PDF</a>
                                     <a href="{{ route('teacher.certificates.custom.edit', [$student, $t]) }}" class="btn btn-outline btn-sm">تعديل</a>
-                                    <form method="POST" action="{{ route('teacher.certificates.custom.email', [$student, $t]) }}" style="display:inline;">
-                                        @csrf
-                                        <button type="submit" class="btn btn-outline btn-sm" style="width:100%;"><i class="ri-mail-send-line"></i> إرسال</button>
-                                    </form>
+                                    <button type="button" class="btn btn-outline btn-sm email-trigger" style="width:100%;"
+                                        data-action="{{ route('teacher.certificates.custom.email', [$student, $t]) }}"
+                                        data-name="{{ $t->name }}"
+                                        data-thumbnail="{{ $t->background_type === 'image' && $t->background_image ? asset('storage/'.$t->background_image) : asset('image/logono.png') }}">
+                                        <i class="ri-mail-send-line"></i> إرسال
+                                    </button>
                                 </div>
                                 <form method="POST" action="{{ route('teacher.certificates.custom.destroy', [$student, $t]) }}" style="display:block;width:100%;" class="gallery-delete-form">
                                     @csrf
@@ -284,10 +382,12 @@
                                 <a href="{{ route('teacher.certificates.preview', [$num, $student]) }}" class="btn btn-outline btn-sm">معاينة</a>
                                 <a href="{{ route('teacher.certificates.download', [$num, $student]) }}" class="btn btn-primary btn-sm">تحميل PDF</a>
                                 <a href="{{ route('teacher.certificates.custom.create', ['student' => $student, 'preset' => $num]) }}" class="btn btn-outline btn-sm">تعديل</a>
-                                <form method="POST" action="{{ route('teacher.certificates.email', [$student, $num]) }}" style="display:inline;">
-                                    @csrf
-                                    <button type="submit" class="btn btn-outline btn-sm" style="width:100%;"><i class="ri-mail-send-line"></i> إرسال</button>
-                                </form>
+                                <button type="button" class="btn btn-outline btn-sm email-trigger" style="width:100%;"
+                                    data-action="{{ route('teacher.certificates.email', [$student, $num]) }}"
+                                    data-name="{{ $p[1] }}"
+                                    data-thumbnail="{{ asset('image/'.$p[0]) }}">
+                                    <i class="ri-mail-send-line"></i> إرسال
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -296,14 +396,96 @@
         </div>
 
     </div>
+
+    {{-- Email Confirmation Modal --}}
+    <div class="email-modal-overlay" id="emailModal">
+        <div class="email-modal">
+            <div class="email-modal-header">
+                <div class="em-icon"><i class="ri-mail-send-line"></i></div>
+                <div>
+                    <h2>إرسال الشهادة بالبريد</h2>
+                    <p>مراجعة بيانات الإرسال قبل التأكيد</p>
+                </div>
+                <button class="email-modal-close" id="emailModalClose" title="إغلاق"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="email-modal-body">
+                {{-- Template preview --}}
+                <div class="em-preview">
+                    <img id="emThumbnail" src="" alt="قالب الشهادة">
+                    <div class="em-info">
+                        <div class="em-template-name" id="emTemplateName"></div>
+                        <div style="font-size:12px;color:var(--text-secondary);">القالب المختار</div>
+                    </div>
+                    <i class="ri-award-fill" style="font-size:22px;color:var(--theme-gold);flex-shrink:0;"></i>
+                </div>
+                {{-- Recipient --}}
+                <div class="em-recipient">
+                    <div class="em-avatar"><i class="ri-user-3-line"></i></div>
+                    <div>
+                        <div class="em-rname">{{ $student->name }}</div>
+                        <div class="em-remail">{{ $student->email ?: 'لم يُحدد بريد إلكتروني' }}</div>
+                    </div>
+                </div>
+                {{-- Personal message --}}
+                <label class="em-label" for="emMessage"><i class="ri-chat-1-line"></i> رسالة شخصية (اختيارية)</label>
+                <textarea id="emMessage" class="em-textarea" placeholder="أضف رسالة تشجيعية أو تهنئة شخصية للطالب..." maxlength="500"></textarea>
+            </div>
+            <div class="email-modal-footer">
+                <button class="btn-cancel-em" id="emailModalCancel">إلغاء</button>
+                <form id="emailForm" method="POST" action="" style="display:contents;">
+                    @csrf
+                    <input type="hidden" name="message" id="emMessageHidden">
+                    <button type="submit" class="btn-send" id="emailSendBtn"
+                        @if(!$student->email) disabled title="لا يوجد بريد إلكتروني لهذا الطالب" @endif>
+                        <i class="ri-send-plane-line"></i> إرسال الشهادة
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Delete confirmation
             document.querySelectorAll('.gallery-delete-form').forEach(function (f) {
                 f.addEventListener('submit', function (e) {
                     if (!confirm('هل أنت متأكد من حذف هذا القالب؟')) {
                         e.preventDefault();
                     }
                 });
+            });
+
+            // Email modal
+            const overlay   = document.getElementById('emailModal');
+            const form      = document.getElementById('emailForm');
+            const thumbnail = document.getElementById('emThumbnail');
+            const nameEl    = document.getElementById('emTemplateName');
+            const msgField  = document.getElementById('emMessage');
+            const msgHidden = document.getElementById('emMessageHidden');
+
+            function openEmail(btn) {
+                form.action      = btn.dataset.action;
+                thumbnail.src    = btn.dataset.thumbnail;
+                nameEl.textContent = btn.dataset.name;
+                msgField.value   = '';
+                overlay.classList.add('open');
+                setTimeout(() => msgField.focus(), 280);
+            }
+            function closeEmail() {
+                overlay.classList.remove('open');
+            }
+
+            document.querySelectorAll('.email-trigger').forEach(btn =>
+                btn.addEventListener('click', () => openEmail(btn))
+            );
+            document.getElementById('emailModalClose').addEventListener('click', closeEmail);
+            document.getElementById('emailModalCancel').addEventListener('click', closeEmail);
+            overlay.addEventListener('click', e => { if (e.target === overlay) closeEmail(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEmail(); });
+
+            // Sync textarea → hidden input before submit
+            form.addEventListener('submit', function () {
+                msgHidden.value = msgField.value.trim();
             });
         });
     </script>

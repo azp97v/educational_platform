@@ -34,6 +34,14 @@
                 <div class="details-row"><span class="label">التقدير</span><span class="value">{{ $student->degree }}</span></div>
             </div>
 
+            @if(!empty($personalMessage))
+            <div style="margin: 24px 0; padding: 18px 22px; background: linear-gradient(135deg, rgba(196,150,58,0.06), rgba(196,150,58,0.12)); border: 1px solid rgba(196,150,58,0.25); border-radius: 16px; text-align: right;">
+                <div style="font-size: 12px; font-weight: 700; color: #C4963A; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    ✉️ رسالة شخصية من معلمك
+                </div>
+                <p style="color: #334155; font-size: 15px; line-height: 1.8; white-space: pre-wrap; margin: 0;">{{ $personalMessage }}</p>
+            </div>
+            @endif
             <p>نتمنى لك مزيداً من التوفيق والنجاح في مسيرتك العلمية والعملية.</p>
         </div>
         <div class="footer">
