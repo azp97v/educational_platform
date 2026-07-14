@@ -484,6 +484,23 @@
                             </button>
                         </div>
 
+                        {{-- Display mode toggle --}}
+                        <p class="sn-count-label" style="margin-top:10px;">طريقة العرض</p>
+                        <div class="sn-display-mode-tabs">
+                            <button class="sn-mode-tab"
+                                :class="{active: settingsNotifications.notifDisplayMode === 'stacked'}"
+                                @click="settingsNotifications.notifDisplayMode='stacked'; saveMessagingSettings(); snPreviewVisible && showSnPreview(snPreviewPos)">
+                                <i class="ri-stack-line"></i>
+                                <span>مكدّسة</span>
+                            </button>
+                            <button class="sn-mode-tab"
+                                :class="{active: settingsNotifications.notifDisplayMode === 'separate'}"
+                                @click="settingsNotifications.notifDisplayMode='separate'; saveMessagingSettings(); snPreviewVisible && showSnPreview(snPreviewPos)">
+                                <i class="ri-layout-top-2-line"></i>
+                                <span>منفصلة</span>
+                            </button>
+                        </div>
+
                     </div>
                 </div>
 

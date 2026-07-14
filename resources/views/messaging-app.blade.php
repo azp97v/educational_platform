@@ -2357,16 +2357,19 @@ class="ie2-filter-card" :class="{active: imageEditorFilter===f.css}"
 <transition name="sn-preview-anim">
     <div v-if="snPreviewVisible"
          class="sn-preview-host"
-         :class="`sn-tc-${snPreviewPos}`"
-         style="pointer-events:none;">
+         :class="[`sn-tc-${snPreviewPos}`, `sn-mode-${settingsNotifications.notifDisplayMode}`]"
+         @mouseenter="snToastMouseEnter()"
+         @mouseleave="snToastMouseLeave()">
         <div v-for="i in settingsNotifications.notifMaxCount"
              :key="i"
              class="sn-toast-card"
-             :style="{
+             :style="settingsNotifications.notifDisplayMode === 'stacked' ? {
                  zIndex: 99999 - i,
-                 opacity: Math.max(0.15, 1 - (i-1) * 0.18),
-                 transform: `translateY(${snPreviewPos.startsWith('bottom') ? -(i-1)*8 : (i-1)*8}px) scale(${1-(i-1)*0.05})`,
-                 transitionDelay: `${(i-1)*55}ms`
+                 opacity: Math.max(0.12, 1 - (i-1) * 0.18),
+                 transform: `translateY(${snPreviewPos.startsWith('bottom') ? -(i-1)*9 : (i-1)*9}px) scale(${1-(i-1)*0.05})`,
+                 transitionDelay: `${(i-1)*60}ms`
+             } : {
+                 opacity: Math.max(0.5, 1 - (i-1) * 0.08)
              }">
             <div class="sn-toast-av"><i class="ri-user-3-fill"></i></div>
             <div class="sn-toast-body">
@@ -5747,6 +5750,8 @@ respectFocusMode: true,
 notifPosition: 'bottom-right',
 
 notifMaxCount: 3,
+
+notifDisplayMode: 'stacked',
 
 },
 
@@ -18521,28 +18526,54 @@ async deleteSettingsFolder(folderId) {
 },
 
 showSnPreview(pos) {
+    // Cancel any in-flight dismiss work
     clearTimeout(this._snPreviewTimer);
     clearTimeout(this._snPreviewAutoTimer);
+    clearTimeout(this._snPreviewDismissDelay);
     if (this._snMoveDismiss) {
         document.removeEventListener('mousemove', this._snMoveDismiss);
         this._snMoveDismiss = null;
     }
+    this._snToastHovered = false;
     this.snPreviewPos = pos;
     this.snPreviewVisible = true;
-    // Wait 250ms before watching for mouse movement (avoids immediate dismiss from the hover gesture itself)
+
+    // After 350ms buffer (lets the hover gesture settle), listen for mouse movement.
+    // Any movement dismisses UNLESS the mouse is over the toast card.
+    // We debounce 120ms so the user has time to move from the corner button to the toast.
     this._snPreviewTimer = setTimeout(() => {
         this._snMoveDismiss = () => {
-            this.snPreviewVisible = false;
-            document.removeEventListener('mousemove', this._snMoveDismiss);
-            this._snMoveDismiss = null;
+            if (this._snToastHovered) return;
+            clearTimeout(this._snPreviewDismissDelay);
+            this._snPreviewDismissDelay = setTimeout(() => {
+                if (this._snToastHovered) return;
+                this.snPreviewVisible = false;
+                document.removeEventListener('mousemove', this._snMoveDismiss);
+                this._snMoveDismiss = null;
+            }, 120);
         };
-        document.addEventListener('mousemove', this._snMoveDismiss, { once: true });
-        // Auto-dismiss after 5s
-        this._snPreviewAutoTimer = setTimeout(() => {
-            this.snPreviewVisible = false;
-            if (this._snMoveDismiss) { document.removeEventListener('mousemove', this._snMoveDismiss); this._snMoveDismiss = null; }
-        }, 5000);
-    }, 250);
+        document.addEventListener('mousemove', this._snMoveDismiss);
+    }, 350);
+},
+
+snToastMouseEnter() {
+    // Mouse entered the toast — freeze it, cancel any pending dismiss
+    this._snToastHovered = true;
+    clearTimeout(this._snPreviewAutoTimer);
+    clearTimeout(this._snPreviewDismissDelay);
+    if (this._snMoveDismiss) {
+        document.removeEventListener('mousemove', this._snMoveDismiss);
+        this._snMoveDismiss = null;
+    }
+},
+
+snToastMouseLeave() {
+    // Mouse left the toast — start 5-second countdown to dissolve
+    this._snToastHovered = false;
+    clearTimeout(this._snPreviewAutoTimer);
+    this._snPreviewAutoTimer = setTimeout(() => {
+        this.snPreviewVisible = false;
+    }, 5000);
 },
 
 async changeSettingsLanguage(locale) {
