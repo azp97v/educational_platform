@@ -2158,4 +2158,42 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $key = \App\Models\UserEncryptionKey::where('user_id', $user->id)->value('public_key');
         return response()->json(['public_key' => $key]);
     }
+
+    public function contactsUnread(Request $request)
+    {
+        $user = Auth::user();
+
+        $unreadCounts = Message::where('recipient_id', $user->id)
+            ->whereNull('read_at')
+            ->groupBy('sender_id')
+            ->select(DB::raw('sender_id, COUNT(*) as cnt, MAX(id) as last_id'))
+            ->get()
+            ->keyBy('sender_id');
+
+        if ($unreadCounts->isEmpty()) {
+            return response()->json(['success' => true, 'contacts' => []]);
+        }
+
+        $senderIds = $unreadCounts->keys()->all();
+        $senders = User::whereIn('id', $senderIds)->select('id', 'name', 'avatar_url')->get()->keyBy('id');
+
+        $lastMessages = Message::whereIn('id', $unreadCounts->pluck('last_id')->all())
+            ->select('id', 'sender_id', 'content', 'attachment_name', 'message_type')
+            ->get()
+            ->keyBy('sender_id');
+
+        $contacts = $unreadCounts->map(function ($row) use ($senders, $lastMessages) {
+            $sender = $senders->get($row->sender_id);
+            $msg = $lastMessages->get($row->sender_id);
+            return [
+                'id'          => $row->sender_id,
+                'name'        => $sender?->name ?? '?',
+                'avatar_url'  => $sender?->avatar_url,
+                'unreadCount' => (int) $row->cnt,
+                'lastMessage' => $msg ? ($msg->content ?: ($msg->attachment_name ?: 'مرفق')) : '',
+            ];
+        })->values()->all();
+
+        return response()->json(['success' => true, 'contacts' => $contacts]);
+    }
 }

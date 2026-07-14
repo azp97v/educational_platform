@@ -1101,16 +1101,23 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
         .call-btn {
             width: 56px; height: 56px; border-radius: 999px; border: none; cursor: pointer;
             display: flex; align-items: center; justify-content: center; font-size: 22px;
-            transition: transform var(--duration-fast) var(--ease-out), filter var(--duration-fast) var(--ease-out);
+            transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), filter 0.15s ease, box-shadow 0.15s ease;
         }
-        .call-btn:hover { transform: scale(1.08); filter: brightness(1.1); }
-        .call-btn:active { transform: scale(.94); }
+        .call-btn:hover { transform: scale(1.12); filter: brightness(1.15); }
+        .call-btn:active { transform: scale(.93); }
         .call-btn.end { background: linear-gradient(135deg, #ff5f6d, #c0392b); color: #fff; width: 64px; height: 64px; font-size: 26px; }
         .call-btn.mute, .call-btn.cam, .call-btn.speaker, .call-btn.switch-cam, .call-btn.add-participant {
-            background: var(--panel-2); color: var(--text); border: 1px solid var(--theme-border);
+            background: rgba(255,255,255,.10); color: rgba(255,255,255,.9);
+            border: 1px solid rgba(255,255,255,.18);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        }
+        .call-btn.mute:hover, .call-btn.cam:hover, .call-btn.speaker:hover {
+            background: rgba(255,255,255,.18);
+            box-shadow: 0 0 0 6px rgba(255,255,255,.06);
         }
         .call-btn.mute.active, .call-btn.cam.active, .call-btn.speaker.active {
             background: linear-gradient(135deg, var(--gold), var(--gold-2)); color: #000;
+            box-shadow: 0 0 0 4px rgba(196,150,58,.25);
         }
 
         /* ══ IN-CALL DEVICE PICKER ══ */
@@ -1118,7 +1125,23 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
             position: relative;
             display: flex;
             align-items: center;
+            flex-direction: column;
         }
+        /* Small caret above mic/cam/speaker when device list is available */
+        .call-btn-group::before {
+            content: '▲';
+            font-size: 7px;
+            color: rgba(255,255,255,.35);
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            pointer-events: none;
+            letter-spacing: 0;
+        }
+        .call-btn-group:hover::before { opacity: 1; }
         .call-device-picker {
             position: absolute;
             bottom: calc(100% + 14px);
