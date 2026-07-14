@@ -1867,7 +1867,7 @@
   $canCompleteInitial = ($currentProgressPct >= 90) || $isLessonCompleted;
 ?>
 let userNotes = [];
-let userQuestions = {!! json_encode($lessonQuestions->map(function($q){ return ['id'=>$q->id,'text'=>$q->question_text,'time'=>$q->created_at->format('Y-m-d H:i'),'status'=>$q->status]; })->values()) !!};
+let userQuestions = {!! json_encode($lessonQuestions->map(function($q){ return ['id'=>$q->id,'text'=>$q->question_text,'time'=>$q->created_at->format('Y-m-d H:i'),'status'=>$q->status,'answer'=>$q->answer_text ?? null,'answeredAt'=>$q->answered_at ? $q->answered_at->format('Y-m-d H:i') : null]; })->values()) !!};
 let isBookmarked = false;
 let currentRating = 0;
 let isDarkMode = true;
@@ -2480,12 +2480,21 @@ function displayQuestions() {
   const statusColor = { pending: '#c6a675', answered: '#34c759', closed: '#888' };
   list.innerHTML = userQuestions.map(q => {
     const st = q.status || 'pending';
+    const answerHtml = (st === 'answered' && q.answer)
+      ? `<div style="margin-top:0.7rem;padding:0.6rem 0.85rem;border-radius:10px;background:rgba(52,199,89,0.08);border:1px solid rgba(52,199,89,0.2);">
+           <div style="font-size:0.7rem;color:#34c759;font-weight:700;margin-bottom:0.3rem;display:flex;align-items:center;gap:0.35rem;">
+             <i class="ri-chat-3-line"></i> رد المعلم${q.answeredAt ? ' · ' + q.answeredAt : ''}
+           </div>
+           <div style="font-size:0.85rem;color:#e0e0e0;line-height:1.6;white-space:pre-wrap;">${escapeHtml(q.answer)}</div>
+         </div>`
+      : '';
     return `<div class="notes-item">
       <div class="notes-time">${q.time}</div>
       <div class="notes-text">${escapeHtml(q.text)}</div>
       <div style="margin-top:0.35rem;">
         <span style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:20px;background:${statusColor[st] || '#888'}22;color:${statusColor[st] || '#888'};font-weight:600;">${statusLabel[st] || st}</span>
       </div>
+      ${answerHtml}
     </div>`;
   }).join('');
 }
