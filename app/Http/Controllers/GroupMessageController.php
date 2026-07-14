@@ -30,7 +30,7 @@ class GroupMessageController extends Controller
         $isAdmin = DB::table('group_participants')
             ->where('group_id', $groupId)
             ->where('user_id', Auth::id())
-            ->where('role', 'admin')
+            ->whereIn('role', ['admin', 'owner'])
             ->exists();
         abort_unless($isAdmin, 403, 'ليس لديك صلاحيات الإدارة');
         return $group;
@@ -43,7 +43,7 @@ class GroupMessageController extends Controller
             'name'      => $m->name,
             'avatar_url'=> $m->avatar_url ? asset('storage/' . $m->avatar_url) : null,
             'role'      => $m->role,
-            'isAdmin'   => $m->role === 'admin',
+            'isAdmin'   => in_array($m->role, ['admin', 'owner']),
         ];
     }
 
@@ -103,8 +103,23 @@ class GroupMessageController extends Controller
 
     public function send(Request $request, int $groupId)
     {
-        $this->authorizeGroupMember($groupId);
-        $user = Auth::user();
+        $group = $this->authorizeGroupMember($groupId);
+        $user  = Auth::user();
+
+        // Announcement mode: only admins can send
+        if (!empty($group->only_admins_can_message)) {
+            $isAdmin = DB::table('group_participants')
+                ->where('group_id', $groupId)
+                ->where('user_id', $user->id)
+                ->whereIn('role', ['admin', 'owner'])
+                ->exists();
+            if (!$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'هذه المجموعة في وضع الإعلانات — فقط المشرفون يمكنهم إرسال الرسائل',
+                ], 403);
+            }
+        }
 
         $data = $request->validate([
             'content'  => ['nullable', 'string', 'max:10000'],
@@ -189,25 +204,30 @@ class GroupMessageController extends Controller
             ->join('users as u', 'u.id', '=', 'gp.user_id')
             ->where('gp.group_id', $groupId)
             ->select('u.id', 'u.name', 'u.avatar_url', 'gp.role', 'gp.created_at as joined_at')
-            ->orderByRaw("CASE WHEN gp.role = 'admin' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN gp.role IN ('admin','owner') THEN 0 ELSE 1 END")
             ->orderBy('u.name')
             ->get();
 
         $currentUserRole = $members->firstWhere('id', $user->id)?->role ?? 'member';
+        $isAdmin = in_array($currentUserRole, ['admin', 'owner']);
 
         return response()->json([
             'success' => true,
             'group'   => [
-                'id'          => $group->id,
-                'name'        => $group->name,
-                'description' => $group->description ?? null,
-                'avatar_url'  => $group->avatar_path ? asset('storage/' . $group->avatar_path) : null,
-                'created_by'  => $group->created_by,
-                'members_count' => $members->count(),
+                'id'                    => $group->id,
+                'name'                  => $group->name,
+                'description'           => $group->description ?? null,
+                'avatar_url'            => $group->avatar_path ? asset('storage/' . $group->avatar_path) : null,
+                'created_by'            => $group->created_by,
+                'members_count'         => $members->count(),
+                'only_admins_can_message' => (bool) ($group->only_admins_can_message ?? false),
+                'invite_url'            => ($isAdmin && !empty($group->invite_token))
+                                            ? url('/g/' . $group->invite_token)
+                                            : ((!empty($group->invite_token)) ? url('/g/' . $group->invite_token) : null),
             ],
             'members'         => $members->map(fn($m) => $this->formatMember($m))->values(),
             'currentUserRole' => $currentUserRole,
-            'isAdmin'         => $currentUserRole === 'admin',
+            'isAdmin'         => $isAdmin,
         ]);
     }
 
@@ -243,7 +263,8 @@ class GroupMessageController extends Controller
         DB::table('group_participants')->where('group_id', $groupId)->where('user_id', $userId)->delete();
 
         // Ensure at least one admin
-        $hasAdmin = DB::table('group_participants')->where('group_id', $groupId)->where('role', 'admin')->exists();
+        $hasAdmin = DB::table('group_participants')
+            ->where('group_id', $groupId)->whereIn('role', ['admin', 'owner'])->exists();
         if (!$hasAdmin) {
             $oldest = DB::table('group_participants')->where('group_id', $groupId)->orderBy('created_at')->first();
             if ($oldest) DB::table('group_participants')->where('id', $oldest->id)->update(['role' => 'admin', 'updated_at' => now()]);
@@ -256,14 +277,18 @@ class GroupMessageController extends Controller
     {
         $this->authorizeGroupAdmin($groupId);
         $data = $request->validate([
-            'name'        => ['nullable', 'string', 'max:120'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'avatar'      => ['nullable', 'image', 'max:2048'],
+            'name'                    => ['nullable', 'string', 'max:120'],
+            'description'             => ['nullable', 'string', 'max:500'],
+            'avatar'                  => ['nullable', 'image', 'max:2048'],
+            'only_admins_can_message' => ['nullable', 'boolean'],
         ]);
 
         $updates = [];
         if (!empty($data['name'])) $updates['name'] = trim($data['name']);
         if (array_key_exists('description', $data)) $updates['description'] = $data['description'];
+        if (array_key_exists('only_admins_can_message', $data)) {
+            $updates['only_admins_can_message'] = (bool) $data['only_admins_can_message'];
+        }
         if ($request->hasFile('avatar')) {
             $updates['avatar_path'] = $request->file('avatar')->store('group-avatars', 'public');
         }
@@ -276,9 +301,10 @@ class GroupMessageController extends Controller
         return response()->json([
             'success' => true,
             'group'   => [
-                'name'        => $g->name,
-                'description' => $g->description ?? null,
-                'avatar_url'  => $g->avatar_path ? asset('storage/' . $g->avatar_path) : null,
+                'name'                    => $g->name,
+                'description'             => $g->description ?? null,
+                'avatar_url'              => $g->avatar_path ? asset('storage/' . $g->avatar_path) : null,
+                'only_admins_can_message' => (bool) ($g->only_admins_can_message ?? false),
             ],
         ]);
     }
@@ -310,6 +336,53 @@ class GroupMessageController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function generateInviteLink(Request $request, int $groupId)
+    {
+        $this->authorizeGroupAdmin($groupId);
+
+        $token = Str::random(16);
+        DB::table('groups')->where('id', $groupId)->update(['invite_token' => $token, 'updated_at' => now()]);
+
+        return response()->json(['success' => true, 'url' => url('/g/' . $token)]);
+    }
+
+    public function revokeInviteLink(Request $request, int $groupId)
+    {
+        $this->authorizeGroupAdmin($groupId);
+
+        DB::table('groups')->where('id', $groupId)->update(['invite_token' => null, 'updated_at' => now()]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function joinViaLink(Request $request, string $token)
+    {
+        $user  = Auth::user();
+        $group = DB::table('groups')->where('invite_token', $token)->first();
+
+        if (!$group) {
+            return redirect('/')->with('flash_error', 'رابط الدعوة غير صالح أو تم إلغاؤه');
+        }
+
+        $already = DB::table('group_participants')
+            ->where('group_id', $group->id)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        if (!$already) {
+            DB::table('group_participants')->insert([
+                'group_id'   => $group->id,
+                'user_id'    => $user->id,
+                'role'       => 'member',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $redirectPath = $user->role === 'teacher' ? '/teacher/messaging' : '/student/messaging';
+        return redirect($redirectPath . '?group=' . $group->id);
+    }
+
     public function myGroups(Request $request)
     {
         $user = Auth::user();
@@ -324,8 +397,10 @@ class GroupMessageController extends Controller
             ->select(
                 'g.id',
                 'g.name',
+                'g.description',
                 'g.avatar_path',
                 'g.created_by',
+                'gp.role as my_role',
                 'gmr.last_read_message_id'
             )
             ->get();
@@ -347,10 +422,13 @@ class GroupMessageController extends Controller
                 ->whereNull('deleted_at')
                 ->count();
 
+            $membersCount = DB::table('group_participants')->where('group_id', $g->id)->count();
+
             $result[] = [
                 'id'              => 'group_' . $g->id,
                 '_groupId'        => $g->id,
                 'name'            => $g->name,
+                'description'     => $g->description ?? null,
                 'avatar_url'      => $g->avatar_path ? asset('storage/' . $g->avatar_path) : null,
                 'lastMessage'     => $lastMsg ? (($lastMsg->sender_name ?? '') . ': ' . Str::limit($lastMsg->content ?? '', 60)) : '',
                 'lastMessageTime' => $lastMsg ? Carbon::parse($lastMsg->created_at)->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP') : null,
@@ -359,6 +437,8 @@ class GroupMessageController extends Controller
                 'hasConversation' => true,
                 'isOnline'        => false,
                 'lastSeenAt'      => null,
+                '_isAdmin'        => in_array($g->my_role, ['admin', 'owner']),
+                '_membersCount'   => $membersCount,
             ];
         }
 

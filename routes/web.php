@@ -373,6 +373,8 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::put('/messaging/group/{groupId}/settings', [\App\Http\Controllers\GroupMessageController::class, 'updateSettings'])->name('messaging.group.settings');
     Route::post('/messaging/group/{groupId}/members/{userId}/role', [\App\Http\Controllers\GroupMessageController::class, 'changeRole'])->name('messaging.group.members.role');
     Route::delete('/messaging/group/{groupId}', [\App\Http\Controllers\GroupMessageController::class, 'deleteGroup'])->name('messaging.group.delete');
+    Route::post('/messaging/group/{groupId}/invite', [\App\Http\Controllers\GroupMessageController::class, 'generateInviteLink'])->name('messaging.group.invite.generate');
+    Route::delete('/messaging/group/{groupId}/invite', [\App\Http\Controllers\GroupMessageController::class, 'revokeInviteLink'])->name('messaging.group.invite.revoke');
     Route::put('/messages/{message}', [MessagingController::class, 'update'])->name('messages.update');
     Route::post('/messages/{message}/audio-position', [MessagingController::class, 'saveAudioPosition'])->name('messaging.audio-position');
     Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('messages.destroy');
@@ -456,6 +458,9 @@ Route::middleware('auth')->prefix('certificates')->name('certificate.')->group(f
     // Admin Only
     Route::post('/issue', [CertificateController::class, 'issue'])->middleware('role:admin')->name('issue');
 });
+
+// Group invite link — authenticated users join via shared link
+Route::middleware('auth')->get('/g/{token}', [\App\Http\Controllers\GroupMessageController::class, 'joinViaLink'])->name('group.join');
 
 // Public Certificate Verification
 Route::get('/verify-certificate', [CertificateController::class, 'verify'])->name('certificate.verify');
@@ -603,6 +608,8 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     Route::put('/messaging/group/{groupId}/settings', [\App\Http\Controllers\GroupMessageController::class, 'updateSettings'])->name('teacher.messaging.group.settings');
     Route::post('/messaging/group/{groupId}/members/{userId}/role', [\App\Http\Controllers\GroupMessageController::class, 'changeRole'])->name('teacher.messaging.group.members.role');
     Route::delete('/messaging/group/{groupId}', [\App\Http\Controllers\GroupMessageController::class, 'deleteGroup'])->name('teacher.messaging.group.delete');
+    Route::post('/messaging/group/{groupId}/invite', [\App\Http\Controllers\GroupMessageController::class, 'generateInviteLink'])->name('teacher.messaging.group.invite.generate');
+    Route::delete('/messaging/group/{groupId}/invite', [\App\Http\Controllers\GroupMessageController::class, 'revokeInviteLink'])->name('teacher.messaging.group.invite.revoke');
     Route::put('/messages/{message}', [MessagingController::class, 'update'])->name('teacher.messages.update');
     Route::post('/messages/{message}/audio-position', [MessagingController::class, 'saveAudioPosition'])->name('teacher.messaging.audio-position');
     Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('teacher.messages.destroy');
