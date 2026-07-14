@@ -1,4 +1,4 @@
-@php
+﻿@php
 
 $currentRole = auth()->check() ? strtolower((string) auth()->user()->role) : 'student';
 
@@ -499,6 +499,8 @@ Sentry.onLoad(function() {
 
 <img v-else-if="contact.avatar_url" :src="normalizeAvatarUrl(contact.avatar_url)" :alt="contact.name" v-on:error="handleAvatarError($event, contact)">
 
+<i v-else-if="contact.isGroup" class="ri-group-fill" style="font-size:20px;color:var(--gold);"></i>
+
 <span v-else>@{{ getAuthorInitial(contact.name) }}</span>
 
 </div>
@@ -511,7 +513,9 @@ Sentry.onLoad(function() {
 
 <div class="c-name">@{{ contact.name }} <span v-if="settingsChats.showFolderTags && getContactFolderTag(contact.id)" class="folder-tag-badge">@{{ getContactFolderTag(contact.id) }}</span> <span v-if="blockedByContact[String(contact.id)]" class="contact-blocked-badge">محظور @{{ formatBlockedTime(blockedByContact[String(contact.id)]) }}</span></div>
 
-<div class="c-prev" v-if="!contact.isTyping"><svg class="contact-status-reply-indicator" v-if="contact.lastMessageStatusRefId" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="3.5" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><path d="M14 8.5L18 12L14 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12H11.5C9.57 12 8 10.43 8 8.5V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>@{{ sanitizeDisplayText(contact.lastMessage, t.noMessages) }}</div>
+<div class="c-prev" v-if="contact.isGroup && !contact.lastMessage" style="color:var(--muted);font-size:11px;"><i class="ri-group-line"></i> @{{ (contact._membersCount || 0) + ' عضو' }}</div>
+
+<div class="c-prev" v-else-if="!contact.isTyping"><svg class="contact-status-reply-indicator" v-if="contact.lastMessageStatusRefId" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="12" r="3.5" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><path d="M14 8.5L18 12L14 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12H11.5C9.57 12 8 10.43 8 8.5V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>@{{ sanitizeDisplayText(contact.lastMessage, t.noMessages) }}</div>
 <div class="c-prev c-typing-preview" v-else><span class="c-typing-label">@{{ getTypingLabel(contact, true) }}</span><span class="c-typing-dots"><span></span><span></span><span></span></span></div>
 
 </div>
@@ -570,6 +574,10 @@ Sentry.onLoad(function() {
 
 <span v-if="Number(selectedContact.id) === -1" style="font-size:12px;color:var(--muted);">مساحة آمنة — احفظ ما تشاء</span>
 
+<template v-else-if="selectedContact.isGroup">
+<span style="font-size:12px;color:var(--muted);cursor:pointer;" @click="openGroupInfo()"><i class="ri-group-line" style="margin-left:3px;"></i>@{{ (selectedContact._membersCount || 0) + ' عضو' }}</span>
+</template>
+
 <template v-else>
 <span class="dot" :class="{ offline: !selectedContact.isOnline }"></span>
 
@@ -593,7 +601,7 @@ Sentry.onLoad(function() {
 
 <button class="h-icon-btn" @click="startCall('video')" title=""><i class="ri-vidicon-line"></i></button>
 
-<button class="h-icon-btn" @click="openProfile(selectedContact)" title=""><i class="ri-information-line"></i></button>
+<button class="h-icon-btn" @click="selectedContact.isGroup ? openGroupInfo() : openProfile(selectedContact)" title=""><i class="ri-information-line"></i></button>
 </template>
 
 <button class="h-icon-btn" @click.stop="toggleHeaderMenu" title=""><i class="ri-more-2-fill"></i></button>
@@ -602,7 +610,11 @@ Sentry.onLoad(function() {
 
 <button @mouseenter="headerSub='mute'" @mouseleave="headerSub=null"><i class="ri-volume-mute-line"></i> كتم المحادثة <i class="ri-arrow-left-s-line" style="margin-right:auto"></i></button>
 
-<button @click="openProfile(selectedContact)"><i class="ri-user-line"></i> ملف المستخدم</button>
+<button v-if="!selectedContact.isGroup" @click="openProfile(selectedContact)"><i class="ri-user-line"></i> ملف المستخدم</button>
+
+<button v-if="selectedContact && selectedContact.isGroup" @click="openGroupInfo()"><i class="ri-group-line"></i> معلومات المجموعة</button>
+
+<button v-if="selectedContact && selectedContact.isGroup && selectedContact._isAdmin" @click="headerMenuOpen=false; openGroupSettings()"><i class="ri-settings-3-line"></i> إعدادات المجموعة</button>
 
 <button @click="openWallpaperPicker"><i class="ri-palette-line"></i> خلفية المحادثة</button>
 
@@ -3120,6 +3132,73 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 </div>
 </div>
 
+<!-- Group Info Panel -->
+<div class="profile-modal" v-if="groupInfoOpen" @click.self="groupInfoOpen=false" style="z-index:1060;">
+<div class="profile-card" style="max-width:440px;">
+<div class="profile-banner" style="background:linear-gradient(135deg,#0a1628,#1a3a5c);height:140px;position:relative;border-radius:16px 16px 0 0;">
+<button class="profile-close" @click="groupInfoOpen=false"><i class="ri-close-line"></i></button>
+<div style="position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);">
+<div style="width:72px;height:72px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;border:3px solid var(--panel);overflow:hidden;">
+<img v-if="groupInfoData.avatar_url" :src="groupInfoData.avatar_url" style="width:100%;height:100%;object-fit:cover;">
+<i v-else class="ri-group-fill" style="font-size:32px;color:#000;"></i>
+</div></div></div>
+<div class="profile-body" style="padding-top:44px;">
+<div style="text-align:center;margin-bottom:4px;">
+<span v-if="!groupInfoEditing" style="font-size:18px;font-weight:700;color:var(--text);">@{{ groupInfoData.name }}</span>
+<div v-else style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;">
+<input v-model="groupInfoNameEdit" maxlength="120" style="font-size:15px;font-weight:600;border:none;border-bottom:2px solid var(--gold);background:transparent;color:var(--text);text-align:center;outline:none;padding:2px 6px;min-width:160px;">
+<button @click="saveGroupInfo()" style="background:var(--gold);color:#000;border:none;border-radius:8px;padding:4px 12px;cursor:pointer;font-size:13px;">حفظ</button>
+<button @click="groupInfoEditing=false" style="background:var(--input-bg);border:none;border-radius:8px;padding:4px 12px;cursor:pointer;font-size:13px;">إلغاء</button>
+</div>
+<div v-if="groupInfoData.description && !groupInfoEditing" style="font-size:12px;color:var(--muted);margin-top:4px;">@{{ groupInfoData.description }}</div>
+</div>
+<div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:12px;">@{{ (groupInfoData.members_count || 0) + ' عضو' }}</div>
+<div v-if="groupInfoIsAdmin" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap;">
+<button @click="groupInfoEditing=true; groupInfoNameEdit=groupInfoData.name; groupInfoDescEdit=groupInfoData.description||''" style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:6px 14px;cursor:pointer;font-size:12px;color:var(--text);"><i class="ri-edit-line"></i> تعديل الاسم</button>
+<label style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:6px 14px;cursor:pointer;font-size:12px;color:var(--text);"><i class="ri-image-edit-line"></i> تغيير الصورة<input type="file" accept="image/*" style="display:none;" @change="onGroupAvatarChange($event)"></label>
+</div>
+<div v-if="groupInfoIsAdmin" style="margin:0 0 14px 0;">
+<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;"><i class="ri-user-add-line"></i> إضافة عضو</div>
+<div style="display:flex;gap:6px;">
+<input v-model="groupAddMemberSearch" @input="searchGroupAddMember()" placeholder="ابحث عن مستخدم..." style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--input-bg);color:var(--text);font-size:13px;outline:none;">
+<button @click="groupAddMemberSearch=''; groupAddMemberResults=[];" style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;color:var(--muted);"><i class="ri-close-line"></i></button>
+</div>
+<div v-if="groupAddMemberResults.length" style="background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:140px;overflow-y:auto;">
+<div v-for="u in groupAddMemberResults" :key="u.id" @click="addGroupMember(u)" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);">
+<img v-if="u.avatar_url" :src="u.avatar_url" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+<div v-else style="width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#000;">@{{ (u.name||'?')[0] }}</div>
+<span style="font-size:13px;color:var(--text);">@{{ u.name }}</span>
+<span v-if="groupInfoMembers.some(m=>m.id===u.id)" style="font-size:11px;color:var(--muted);margin-right:auto;">عضو بالفعل</span>
+<i v-else class="ri-user-add-line" style="margin-right:auto;color:var(--gold);"></i>
+</div>
+</div>
+</div>
+<div style="font-size:13px;font-weight:600;color:var(--text);margin:8px 0 6px;"><i class="ri-group-line"></i> الأعضاء (@{{ groupInfoMembers.length }})</div>
+<div v-if="groupInfoLoading" style="text-align:center;padding:20px;color:var(--muted);">جاري التحميل...</div>
+<div v-else style="display:flex;flex-direction:column;gap:2px;max-height:280px;overflow-y:auto;">
+<div v-for="member in groupInfoMembers" :key="member.id" style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;">
+<div style="position:relative;flex-shrink:0;">
+<img v-if="member.avatar_url" :src="member.avatar_url" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
+<div v-else style="width:38px;height:38px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#000;">@{{ (member.name||'?')[0] }}</div>
+<span v-if="member.isAdmin" style="position:absolute;bottom:-2px;right:-2px;background:var(--gold);border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--panel);" title="مشرف"><i class="ri-star-fill" style="font-size:9px;color:#000;"></i></span>
+</div>
+<div style="flex:1;min-width:0;">
+<div style="font-size:13px;font-weight:600;color:var(--text);">@{{ member.name }}<span v-if="member.id===currentUserId" style="color:var(--muted);font-weight:400;"> (أنت)</span></div>
+<div style="font-size:11px;color:var(--muted);">@{{ member.isAdmin ? 'مشرف' : 'عضو' }}</div>
+</div>
+<div v-if="groupInfoIsAdmin && member.id !== currentUserId" style="display:flex;gap:4px;">
+<button v-if="!member.isAdmin" @click="changeGroupMemberRole(member, 'admin')" title="ترقية لمشرف" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--gold);"><i class="ri-star-line"></i></button>
+<button v-else @click="changeGroupMemberRole(member, 'member')" title="إلغاء الإشراف" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--muted);"><i class="ri-star-fill"></i></button>
+<button @click="removeGroupMember(member)" title="إزالة من المجموعة" style="background:none;border:1px solid #dc3545;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:#dc3545;"><i class="ri-user-unfollow-line"></i></button>
+</div>
+</div>
+</div>
+<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+<button @click="leaveGroup()" style="width:100%;background:none;border:1px solid #dc3545;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;font-weight:600;color:#dc3545;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-logout-box-line"></i> مغادرة المجموعة</button>
+</div>
+</div>
+</div>
+</div>
 <!-- ════ My Profile (sidebar) ════ -->
 <div class="profile-modal" v-if="myProfileOpen" @click.self="myProfileOpen = false">
 <div class="profile-card" style="max-width:420px;">
@@ -4721,6 +4800,19 @@ groupDraftAvatarPreview: '',
 activeUploadCount: 0,
 
 groupCreateLoading: false,
+
+// Group Info Panel
+groupInfoOpen: false,
+groupInfoLoading: false,
+groupInfoData: { name: '', description: '', avatar_url: null, members_count: 0 },
+groupInfoMembers: [],
+groupInfoIsAdmin: false,
+groupInfoEditing: false,
+groupInfoNameEdit: '',
+groupInfoDescEdit: '',
+groupAddMemberSearch: '',
+groupAddMemberResults: [],
+_groupAddMemberTimer: null,
 
 toastMessage: '',
 
@@ -6966,6 +7058,184 @@ this.groupCreateLoading = false;
 
 });
 
+},
+
+// ===== GROUP INFO / MANAGEMENT =====
+
+openGroupInfo() {
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+this.groupInfoOpen = true;
+this.groupInfoEditing = false;
+this.groupAddMemberSearch = '';
+this.groupAddMemberResults = [];
+this.groupInfoData = { name: contact.name, description: contact.description || '', avatar_url: contact.avatar_url, members_count: contact._membersCount || 0 };
+this.groupInfoIsAdmin = !!contact._isAdmin;
+this.groupInfoMembers = [];
+this.groupInfoLoading = true;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const infoUrl = baseUrl + '/messaging/group/' + groupId + '/info';
+fetch(infoUrl, { headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' } })
+.then(r => r.json())
+.then(d => {
+if (d.success) {
+this.groupInfoData = { ...d.group };
+this.groupInfoMembers = d.members || [];
+this.groupInfoIsAdmin = !!d.isAdmin;
+if (this.selectedContact && this.selectedContact._groupId === groupId) {
+this.selectedContact._isAdmin = !!d.isAdmin;
+this.selectedContact._membersCount = (d.members || []).length;
+}
+}
+}).catch(()=>{}).finally(() => { this.groupInfoLoading = false; });
+},
+
+openGroupSettings() { this.openGroupInfo(); },
+
+async saveGroupInfo() {
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const settingsUrl = baseUrl + '/messaging/group/' + groupId + '/settings';
+try {
+const r = await fetch(settingsUrl, {
+method: 'PUT',
+headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+body: JSON.stringify({ name: this.groupInfoNameEdit, description: this.groupInfoDescEdit })
+});
+const d = await r.json();
+if (d.success) {
+this.groupInfoData.name = d.group.name;
+this.groupInfoData.description = d.group.description;
+if (d.group.avatar_url) this.groupInfoData.avatar_url = d.group.avatar_url;
+const ci = this.contacts.findIndex(c => c.isGroup && c._groupId === groupId);
+if (ci !== -1) { this.contacts[ci].name = d.group.name; this.contacts[ci].description = d.group.description; if (d.group.avatar_url) this.contacts[ci].avatar_url = d.group.avatar_url; }
+if (this.selectedContact && this.selectedContact._groupId === groupId) { this.selectedContact.name = d.group.name; }
+this.showToast('تم تحديث إعدادات المجموعة', 'success');
+this.groupInfoEditing = false;
+} else { this.showToast('فشل التحديث', 'error'); }
+} catch(e) { this.showToast('خطأ في التحديث', 'error'); }
+},
+
+async onGroupAvatarChange(event) {
+const file = event.target.files[0];
+if (!file) return;
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const settingsUrl = baseUrl + '/messaging/group/' + groupId + '/settings';
+const fd = new FormData(); fd.append('avatar', file); fd.append('_method', 'PUT');
+try {
+const r = await fetch(settingsUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }, body: fd });
+const d = await r.json();
+if (d.success && d.group.avatar_url) {
+this.groupInfoData.avatar_url = d.group.avatar_url;
+const ci = this.contacts.findIndex(c => c.isGroup && c._groupId === groupId);
+if (ci !== -1) this.contacts[ci].avatar_url = d.group.avatar_url;
+if (this.selectedContact && this.selectedContact._groupId === groupId) this.selectedContact.avatar_url = d.group.avatar_url;
+this.showToast('تم تغيير صورة المجموعة', 'success');
+} else { this.showToast('فشل رفع الصورة', 'error'); }
+} catch(e) { this.showToast('خطأ في رفع الصورة', 'error'); }
+},
+
+searchGroupAddMember() {
+clearTimeout(this._groupAddMemberTimer);
+const q = (this.groupAddMemberSearch || '').trim();
+if (!q) { this.groupAddMemberResults = []; return; }
+this._groupAddMemberTimer = setTimeout(async () => {
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const searchUrl = baseUrl + '/messaging/users/search';
+try {
+const r = await fetch(searchUrl + '?q=' + encodeURIComponent(q), { headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' } });
+const d = await r.json();
+this.groupAddMemberResults = (d.users || d.data || []).slice(0, 8);
+} catch(e) { this.groupAddMemberResults = []; }
+}, 300);
+},
+
+async addGroupMember(user) {
+if (this.groupInfoMembers.some(m => m.id === user.id)) { this.showToast('المستخدم عضو بالفعل', 'info'); return; }
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const addUrl = baseUrl + '/messaging/group/' + groupId + '/members';
+try {
+const r = await fetch(addUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ user_id: user.id }) });
+const d = await r.json();
+if (d.success) {
+this.groupInfoMembers.push(d.member);
+this.groupInfoData.members_count = (this.groupInfoData.members_count || 0) + 1;
+const ci = this.contacts.findIndex(c => c.isGroup && c._groupId === groupId);
+if (ci !== -1) this.contacts[ci]._membersCount = this.groupInfoData.members_count;
+if (this.selectedContact && this.selectedContact._groupId === groupId) this.selectedContact._membersCount = this.groupInfoData.members_count;
+this.groupAddMemberSearch = ''; this.groupAddMemberResults = [];
+this.showToast('تمت الإضافة بنجاح', 'success');
+} else { this.showToast(d.message || 'فشل الإضافة', 'error'); }
+} catch(e) { this.showToast('خطأ في الإضافة', 'error'); }
+},
+
+async removeGroupMember(member) {
+if (!confirm('هل تريد إزالة ' + member.name + ' من المجموعة؟')) return;
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const removeUrl = baseUrl + '/messaging/group/' + groupId + '/members/' + member.id;
+try {
+const r = await fetch(removeUrl, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' } });
+const d = await r.json();
+if (d.success) {
+this.groupInfoMembers = this.groupInfoMembers.filter(m => m.id !== member.id);
+this.groupInfoData.members_count = Math.max(0, (this.groupInfoData.members_count || 1) - 1);
+const ci = this.contacts.findIndex(c => c.isGroup && c._groupId === groupId);
+if (ci !== -1) this.contacts[ci]._membersCount = this.groupInfoData.members_count;
+if (this.selectedContact && this.selectedContact._groupId === groupId) this.selectedContact._membersCount = this.groupInfoData.members_count;
+this.showToast('تمت الإزالة', 'success');
+} else { this.showToast(d.message || 'فشل الحذف', 'error'); }
+} catch(e) { this.showToast('خطأ في الحذف', 'error'); }
+},
+
+async changeGroupMemberRole(member, role) {
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const roleUrl = baseUrl + '/messaging/group/' + groupId + '/members/' + member.id + '/role';
+try {
+const r = await fetch(roleUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ role }) });
+const d = await r.json();
+if (d.success) {
+const m = this.groupInfoMembers.find(m => m.id === member.id);
+if (m) { m.role = role; m.isAdmin = role === 'admin'; }
+this.showToast(role === 'admin' ? 'تم التعيين كمشرف' : 'تم إلغاء الإشراف', 'success');
+} else { this.showToast('فشل تغيير الصلاحية', 'error'); }
+} catch(e) { this.showToast('خطأ', 'error'); }
+},
+
+async leaveGroup() {
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+if (!confirm('هل تريد مغادرة هذه المجموعة؟')) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+const removeUrl = baseUrl + '/messaging/group/' + groupId + '/members/' + this.currentUserId;
+try {
+const r = await fetch(removeUrl, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' } });
+const d = await r.json();
+if (d.success) {
+this.groupInfoOpen = false;
+this.contacts = this.contacts.filter(c => !(c.isGroup && c._groupId === groupId));
+if (this.selectedContact && this.selectedContact._groupId === groupId) {
+this.selectedContact = null;
+this.messages = [];
+}
+this.showToast('غادرت المجموعة', 'info');
+} else { this.showToast(d.message || 'فشل المغادرة', 'error'); }
+} catch(e) { this.showToast('خطأ في المغادرة', 'error'); }
 },
 
 getMessageAuthorName(message) {

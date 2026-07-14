@@ -65,7 +65,7 @@ class MessagingController extends Controller
             $members = $participantIds->push($user->id)->unique()->map(fn ($id) => [
                 'group_id' => $groupId,
                 'user_id' => (int) $id,
-                'role' => ((int) $id === (int) $user->id) ? 'owner' : 'member',
+                'role' => ((int) $id === (int) $user->id) ? 'admin' : 'member',
                 'created_at' => now(),
                 'updated_at' => now(),
             ])->values()->all();
@@ -208,8 +208,16 @@ class MessagingController extends Controller
             ->leftJoin('group_message_reads as gmr', function ($j) use ($user) {
                 $j->on('gmr.group_id', '=', 'g.id')->where('gmr.user_id', '=', $user->id);
             })
-            ->select('g.id', 'g.name', 'g.avatar_path', 'gmr.last_read_message_id')
+            ->select('g.id', 'g.name', 'g.avatar_path', 'g.description', 'g.created_by', 'gmr.last_read_message_id', 'gp.role as my_role')
             ->get();
+
+        // Batch member counts
+        $groupIds = $groups->pluck('id');
+        $memberCounts = DB::table('group_participants')
+            ->whereIn('group_id', $groupIds)
+            ->groupBy('group_id')
+            ->select('group_id', DB::raw('COUNT(*) as cnt'))
+            ->pluck('cnt', 'group_id');
 
         $result = [];
         foreach ($groups as $g) {
@@ -232,6 +240,7 @@ class MessagingController extends Controller
                 'id'              => 'group_' . $g->id,
                 '_groupId'        => $g->id,
                 'name'            => $g->name,
+                'description'     => $g->description ?? null,
                 'avatar_url'      => $g->avatar_path ? asset('storage/' . $g->avatar_path) : null,
                 'lastMessage'     => $lastMsg ? (Str::limit(($lastMsg->sender_name ?? '') . ': ' . ($lastMsg->content ?? ''), 60)) : '',
                 'lastMessageTime' => $lastMsg ? \Carbon\Carbon::parse($lastMsg->created_at)->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP') : null,
@@ -241,6 +250,9 @@ class MessagingController extends Controller
                 'isOnline'        => false,
                 'lastSeenAt'      => null,
                 'selected'        => false,
+                '_membersCount'   => (int) ($memberCounts[$g->id] ?? 0),
+                '_isAdmin'        => in_array($g->my_role, ['admin', 'owner']),
+                '_createdBy'      => $g->created_by,
             ];
         }
         return $result;
