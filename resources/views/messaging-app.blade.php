@@ -354,7 +354,7 @@ $wallpaperGetRoute   = $wallpaperGetRoute ?? $pickRoute($isTeacherRole ? ['teach
     crossorigin="anonymous"
 ></script>
 <script>
-Sentry.onLoad(function() {
+if (typeof Sentry !== 'undefined') Sentry.onLoad(function() {
     Sentry.init({
         dsn: "https://021ff6ade06b8bf73a6467b845f06dbc@o4511728095199232.ingest.de.sentry.io/4511728109224016",
         environment: "{{ app()->environment() }}",
@@ -511,7 +511,7 @@ Sentry.onLoad(function() {
 
 <div class="c-body">
 
-<div class="c-name">@{{ contact.name }} <span v-if="settingsChats.showFolderTags && getContactFolderTag(contact.id)" class="folder-tag-badge">@{{ getContactFolderTag(contact.id) }}</span> <span v-if="blockedByContact[String(contact.id)]" class="contact-blocked-badge">محظور @{{ formatBlockedTime(blockedByContact[String(contact.id)]) }}</span></div>
+<div class="c-name"><i v-if="contact.isGroup" class="ri-group-line" style="font-size:12px;color:var(--muted);margin-left:3px;"></i>@{{ contact.name }} <span v-if="settingsChats.showFolderTags && getContactFolderTag(contact.id)" class="folder-tag-badge">@{{ getContactFolderTag(contact.id) }}</span> <span v-if="blockedByContact[String(contact.id)]" class="contact-blocked-badge">محظور @{{ formatBlockedTime(blockedByContact[String(contact.id)]) }}</span></div>
 
 <div class="c-prev" v-if="contact.isGroup && !contact.lastMessage" style="color:var(--muted);font-size:11px;"><i class="ri-group-line"></i> @{{ (contact._membersCount || 0) + ' عضو' }}</div>
 
@@ -561,6 +561,7 @@ Sentry.onLoad(function() {
 </template>
 <template v-else>
 <img v-if="selectedContact.avatar_url" :src="normalizeAvatarUrl(selectedContact.avatar_url)" :alt="selectedContact.name" v-on:error="handleAvatarError($event, selectedContact)">
+<i v-else-if="selectedContact.isGroup" class="ri-group-fill" style="font-size:22px;color:var(--gold);"></i>
 <span v-else>@{{ getAuthorInitial(selectedContact.name) }}</span>
 </template>
 
@@ -568,7 +569,7 @@ Sentry.onLoad(function() {
 
 <div>
 
-<h3 style="cursor:pointer;" @click="Number(selectedContact.id) !== -1 ? openProfile(selectedContact) : null">@{{ selectedContact.name }}</h3>
+<h3 style="cursor:pointer;" @click="selectedContact.isGroup ? openGroupInfo() : (Number(selectedContact.id) !== -1 ? openProfile(selectedContact) : null)">@{{ selectedContact.name }}</h3>
 
 <div class="h-status">
 
@@ -597,9 +598,9 @@ Sentry.onLoad(function() {
 <template v-if="Number(selectedContact.id) !== -1">
 <button class="h-icon-btn" @click="openSearchPanel" title=""><i class="ri-search-line"></i></button>
 
-<button class="h-icon-btn" @click="startCall('voice')" title=""><i class="ri-phone-line"></i></button>
+<button v-if="!selectedContact.isGroup" class="h-icon-btn" @click="startCall('voice')" title=""><i class="ri-phone-line"></i></button>
 
-<button class="h-icon-btn" @click="startCall('video')" title=""><i class="ri-vidicon-line"></i></button>
+<button v-if="!selectedContact.isGroup" class="h-icon-btn" @click="startCall('video')" title=""><i class="ri-vidicon-line"></i></button>
 
 <button class="h-icon-btn" @click="selectedContact.isGroup ? openGroupInfo() : openProfile(selectedContact)" title=""><i class="ri-information-line"></i></button>
 </template>
@@ -622,9 +623,11 @@ Sentry.onLoad(function() {
 
 <button @click="openSavedMessages"><i class="ri-bookmark-line"></i> الرسائل المحفوظة</button>
 
-<button @click="clearChatHistory"><i class="ri-eraser-line"></i> مسح المحادثة</button>
+<button v-if="!selectedContact.isGroup" @click="clearChatHistory"><i class="ri-eraser-line"></i> مسح المحادثة</button>
 
-<button class="danger"><i class="ri-delete-bin-6-line"></i> حذف المحادثة</button>
+<button v-if="!selectedContact.isGroup" class="danger"><i class="ri-delete-bin-6-line"></i> حذف المحادثة</button>
+
+<button v-if="selectedContact.isGroup" class="danger" @click="headerMenuOpen=false; leaveGroup()"><i class="ri-logout-box-line"></i> مغادرة المجموعة</button>
 
 <div class="chat-menu-sub" v-if="headerSub==='mute'" @mouseenter="headerSub='mute'" @mouseleave="headerSub=null">
 
@@ -2502,7 +2505,7 @@ class="ie2-filter-card" :class="{active: imageEditorFilter===f.css}"
 <button @click="contextReply">
 <i class="ri-reply-line"></i> رد على الرسالة
 </button>
-<button v-if="messageContextMessage && Number(messageContextMessage.senderId) !== Number(currentUserId)" @click="openProfile(selectedContact); closeMessageContext()">
+<button v-if="messageContextMessage && Number(messageContextMessage.senderId) !== Number(currentUserId) && !selectedContact.isGroup" @click="openProfile(selectedContact); closeMessageContext()">
 <i class="ri-user-line"></i> الملف الشخصي
 </button>
 <button @click="contextCopy">
@@ -7651,12 +7654,13 @@ this.cancelRecording(true);
 
 if (window.innerWidth <= 1080) this.showSidebar = false;
 
-this.loadWallpaperForContact(contact.id);
+if (!contact.isGroup) this.loadWallpaperForContact(contact.id);
 
 this.$nextTick(() => this.applyChatThemeVars());
 
-// Fetch partner E2E key for this contact
-this.fetchPartnerE2EKey(contact.id);
+// Fetch partner E2E key for individual contacts only
+if (!contact.isGroup) this.fetchPartnerE2EKey(contact.id);
+else { this.e2eEnabled = false; this.e2ePartnerHasKey = false; }
 
 // Full load for initial contact switch, then start SSE
 
@@ -8671,6 +8675,7 @@ notifyTyping() {
 
 if (!this.selectedContact || !this.typingRoute || this.typingRoute === '#') return;
 if (Number(this.selectedContact.id) === -1) return; // skip for saved messages
+if (this.selectedContact.isGroup) return; // no typing for groups
 
 if (!this.typingPingTimer) {
 
@@ -8698,6 +8703,7 @@ return short ? 'يكتب' : 'يكتب الآن...';
 sendTypingState(isTyping, mediaType = null) {
 
 if (!this.selectedContact || !this.typingRoute || this.typingRoute === '#') return;
+if (this.selectedContact.isGroup) return; // no typing for groups
 
 fetch(this.typingRoute, {
 
@@ -14216,6 +14222,7 @@ this.groupDraftSelection = [];
 openProfile(contact) {
 
 if (!contact) return;
+if (contact.isGroup) { this.openGroupInfo(); return; }
 
 this.profileModalContact = this.normalizeProfileContact(contact);
 
@@ -14953,6 +14960,7 @@ if (!contacts.length) return;
 
 const invalid = contacts.find(c => Number(c.id) === -1 || c.canCall === false);
 if (invalid) { this.showToast('لا يمكنك الاتصال بهذا المستخدم بسبب إعدادات الخصوصية', 'error'); return; }
+if (!contactsOverride && contacts.find(c => c.isGroup)) { this.showToast('الاتصال غير متاح داخل المجموعات', 'info'); return; }
 
 const isGroup = contacts.length > 1;
 this.callType = type;
@@ -18214,7 +18222,7 @@ keepalive: true,
 
 }).catch(() => {});
 
-}, 12000);
+}, 30000);
 
 // Resume SSE when tab becomes visible again
 
