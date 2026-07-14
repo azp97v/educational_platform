@@ -52,6 +52,7 @@ class StatusController extends Controller
                 's.media_pos_y',
                 's.media_scale',
                 's.media_rotate',
+                's.media_fit',
                 's.duration_hours',
                 's.expires_at',
                 's.created_at',
@@ -92,6 +93,7 @@ class StatusController extends Controller
                 'mediaPosY' => isset($s->media_pos_y) ? (float) $s->media_pos_y : 50,
                 'mediaScale' => isset($s->media_scale) ? (float) $s->media_scale : 1,
                 'mediaRotate' => isset($s->media_rotate) ? (float) $s->media_rotate : 0,
+                'mediaFit' => $s->media_fit ?? 'contain',
                 'durationHours' => (int) ($s->duration_hours ?: 24),
                 'expiresAt' => Carbon::parse($s->expires_at)->toISOString(),
                 'createdAt' => Carbon::parse($s->created_at)->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
@@ -147,7 +149,7 @@ class StatusController extends Controller
                 's.text_content', 's.text_color', 's.text_objects',
                 's.text_pos_x', 's.text_pos_y', 's.text_rotate', 's.text_bg_style',
                 's.font_style', 's.font_size', 's.bg_color', 's.filter_style',
-                's.media_pos_x', 's.media_pos_y', 's.media_scale', 's.media_rotate',
+                's.media_pos_x', 's.media_pos_y', 's.media_scale', 's.media_rotate', 's.media_fit',
                 's.duration_hours', 's.expires_at', 's.created_at', 's.views_count'
             )
             ->orderByDesc('s.created_at')
@@ -176,6 +178,7 @@ class StatusController extends Controller
                 'mediaPosY'   => isset($s->media_pos_y) ? (float) $s->media_pos_y : 50,
                 'mediaScale'  => isset($s->media_scale) ? (float) $s->media_scale : 1,
                 'mediaRotate' => isset($s->media_rotate) ? (float) $s->media_rotate : 0,
+                'mediaFit'    => $s->media_fit ?? 'contain',
                 'durationHours' => (int) ($s->duration_hours ?: 24),
                 'expiresAt'   => Carbon::parse($s->expires_at)->toISOString(),
                 'createdAt'   => Carbon::parse($s->created_at)->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
@@ -210,6 +213,7 @@ class StatusController extends Controller
             'media_pos_y' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'media_scale' => ['nullable', 'numeric', 'min:0.1', 'max:10'],
             'media_rotate' => ['nullable', 'numeric', 'min:-360', 'max:360'],
+            'media_fit'    => ['nullable', 'in:contain,cover'],
             'privacy_type' => ['nullable', 'in:all,contacts,selected,except'],
             'media' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv', 'extensions:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv'],
             'audio' => ['nullable', 'file', 'max:5120', 'mimes:mp3,wav,m4a,ogg,webm', 'extensions:mp3,wav,m4a,ogg,webm'],
@@ -274,6 +278,9 @@ class StatusController extends Controller
             $insertData['media_pos_y'] = isset($data['media_pos_y']) ? (float) $data['media_pos_y'] : null;
             $insertData['media_scale'] = isset($data['media_scale']) ? (float) $data['media_scale'] : 1;
             $insertData['media_rotate'] = isset($data['media_rotate']) ? (float) $data['media_rotate'] : 0;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('user_statuses', 'media_fit')) {
+            $insertData['media_fit'] = in_array($data['media_fit'] ?? '', ['contain', 'cover']) ? $data['media_fit'] : 'contain';
         }
 
         $createdId = DB::table('user_statuses')->insertGetId($insertData);
@@ -404,6 +411,7 @@ class StatusController extends Controller
             'media_pos_y' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'media_scale' => ['nullable', 'numeric', 'min:0.1', 'max:10'],
             'media_rotate' => ['nullable', 'numeric', 'min:-360', 'max:360'],
+            'media_fit'    => ['nullable', 'in:contain,cover'],
             'privacy_type' => ['nullable', 'in:all,contacts,selected,except'],
             'media' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv', 'extensions:jpg,jpeg,png,webp,gif,mp4,mov,webm,mkv'],
             'audio' => ['nullable', 'file', 'max:5120', 'mimes:mp3,wav,m4a,ogg,webm', 'extensions:mp3,wav,m4a,ogg,webm'],
@@ -473,6 +481,9 @@ class StatusController extends Controller
             $updateData['media_pos_y'] = isset($data['media_pos_y']) ? (float) $data['media_pos_y'] : null;
             $updateData['media_scale'] = isset($data['media_scale']) ? (float) $data['media_scale'] : 1;
             $updateData['media_rotate'] = isset($data['media_rotate']) ? (float) $data['media_rotate'] : 0;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('user_statuses', 'media_fit')) {
+            $updateData['media_fit'] = in_array($data['media_fit'] ?? '', ['contain', 'cover']) ? $data['media_fit'] : 'contain';
         }
 
         DB::table('user_statuses')->where('id', (int) $status)->update($updateData);

@@ -1681,17 +1681,22 @@ key="mic-action"
 <button class="status-viewer-close" @click="closeStatusViewer"><i class="ri-close-line"></i></button>
 </div>
 
-<div class="status-viewer-media-backdrop" v-if="(currentStatus.content_url || currentStatus.contentUrl)" :style="{ backgroundImage: 'url(' + (currentStatus.contentUrl || ('/storage/' + currentStatus.content_url)) + ')' }"></div>
+<div class="status-viewer-media-backdrop" v-if="currentStatus.type === 'image' && (currentStatus.content_url || currentStatus.contentUrl)" :style="{ backgroundImage: 'url(' + (currentStatus.contentUrl || ('/storage/' + currentStatus.content_url)) + ')' }"></div>
 
 <img v-if="currentStatus.type === 'image' && (currentStatus.content_url || currentStatus.contentUrl)" class="status-viewer-img"
      :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))" alt=""
-     :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', width:'100%', height:'100%', objectFit:'cover', maxWidth:'none', maxHeight:'none' }"
+     :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', width:'100%', height:'100%', objectFit: currentStatus.mediaFit || 'contain', maxWidth:'none', maxHeight:'none' }"
      @load="statusViewerReady = true; startStatusProgress()">
 
-<video v-else-if="currentStatus.type === 'video' && (currentStatus.content_url || currentStatus.contentUrl)" ref="statusViewerVideo" class="status-viewer-img" autoplay playsinline :muted="statusViewerMuted"
-      :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))"
-      :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', width:'100%', height:'100%', objectFit:'cover', maxWidth:'none', maxHeight:'none' }"
-      @loadedmetadata="onStatusVideoReady" @canplay="onStatusVideoReady"></video>
+<template v-else-if="currentStatus.type === 'video' && (currentStatus.content_url || currentStatus.contentUrl)">
+  <video class="status-viewer-img" autoplay muted loop playsinline
+         :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))"
+         style="object-fit:cover;filter:blur(28px) brightness(.45);pointer-events:none;z-index:1;position:absolute;inset:0;width:100%;height:100%;"></video>
+  <video ref="statusViewerVideo" class="status-viewer-img" autoplay playsinline :muted="statusViewerMuted"
+         :src="(currentStatus.contentUrl || ('/storage/' + currentStatus.content_url))"
+         :style="{ position:'absolute', top:(currentStatus.mediaPosY??50)+'%', left:(currentStatus.mediaPosX??50)+'%', transform:'translate(-50%,-50%) rotate('+(currentStatus.mediaRotate??0)+'deg) scale('+(currentStatus.mediaScale??1)+')', width:'100%', height:'100%', objectFit: currentStatus.mediaFit || 'contain', maxWidth:'none', maxHeight:'none', zIndex: 2 }"
+         @loadedmetadata="onStatusVideoReady" @canplay="onStatusVideoReady"></video>
+</template>
 
   <div v-for="(layer, lIdx) in getStatusTextLayers(currentStatus)" :key="'txt-'+lIdx"
        class="status-viewer-text-layer"
@@ -1833,14 +1838,18 @@ key="mic-action"
       <img v-if="statusEditor.type==='image' && statusEditor.mediaPreview"
            class="sc-media draggable-media" :src="statusEditor.mediaPreview" alt=""
            @click="handlePreviewBgClick"
-           :style="{ transform: 'translate(-50%,-50%) rotate('+(statusEditor.mediaRotate||0)+'deg) scale('+(statusEditor.mediaScale||1)+')', top: (statusEditor.mediaPosY||50)+'%', left: (statusEditor.mediaPosX||50)+'%' }"
+           :style="{ transform: 'translate(-50%,-50%) rotate('+(statusEditor.mediaRotate||0)+'deg) scale('+(statusEditor.mediaScale||1)+')', top: (statusEditor.mediaPosY||50)+'%', left: (statusEditor.mediaPosX||50)+'%', objectFit: statusEditor.mediaFit || 'contain', maxWidth: 'none', maxHeight: 'none' }"
            @pointerdown.prevent.stop="startStatusMediaDrag($event)">
-      <video v-else-if="statusEditor.type==='video' && statusEditor.mediaPreview"
-             class="sc-media draggable-media" autoplay muted loop playsinline
-             :src="statusEditor.mediaPreview"
-             @click="handlePreviewBgClick"
-             :style="{ transform: 'translate(-50%,-50%) rotate('+(statusEditor.mediaRotate||0)+'deg) scale('+(statusEditor.mediaScale||1)+')', top: (statusEditor.mediaPosY||50)+'%', left: (statusEditor.mediaPosX||50)+'%' }"
-             @pointerdown.prevent.stop="startStatusMediaDrag($event)"></video>
+      <template v-else-if="statusEditor.type==='video' && statusEditor.mediaPreview">
+        <video class="sc-media sc-bg-video-blur" autoplay muted loop playsinline
+               :src="statusEditor.mediaPreview"
+               style="object-fit:cover;filter:blur(28px) brightness(.5);pointer-events:none;z-index:1;"></video>
+        <video class="sc-media draggable-media" autoplay muted loop playsinline
+               :src="statusEditor.mediaPreview"
+               @click="handlePreviewBgClick"
+               :style="{ transform: 'translate(-50%,-50%) rotate('+(statusEditor.mediaRotate||0)+'deg) scale('+(statusEditor.mediaScale||1)+')', top: (statusEditor.mediaPosY||50)+'%', left: (statusEditor.mediaPosX||50)+'%', objectFit: statusEditor.mediaFit || 'contain', maxWidth: 'none', maxHeight: 'none', zIndex: 2 }"
+               @pointerdown.prevent.stop="startStatusMediaDrag($event)"></video>
+      </template>
       <div v-else class="sc-media-placeholder" @click="handlePreviewBgClick">
         <span v-if="!statusEditor.texts.length">انقر لكتابة نص، أو اسحب لتغيير الفلاتر</span>
       </div>
@@ -1923,6 +1932,9 @@ key="mic-action"
           <button class="sc-btn" @click.stop="autoPickStatusBg"><i class="ri-palette-line"></i></button>
           <button class="sc-btn" @click.stop="triggerStatusMedia"><i class="ri-image-add-line"></i></button>
           <button class="sc-btn" @click.stop="statusDrawerOpen = true"><i class="ri-emotion-line"></i></button>
+          <button v-if="statusEditor.type !== 'text' && statusEditor.mediaPreview" class="sc-btn" @click.stop="cycleMediaFit" :title="statusEditor.mediaFit === 'contain' ? 'ملء الشاشة' : 'المقاس الطبيعي'">
+            <i :class="statusEditor.mediaFit === 'contain' ? 'ri-fullscreen-line' : 'ri-fullscreen-exit-line'"></i>
+          </button>
           <button class="sc-btn sc-text-btn" @click.stop="handlePreviewBgClick">Aa</button>
         </div>
       </div>
@@ -5519,6 +5531,7 @@ mediaPosX: 50,
 mediaPosY: 50,
 mediaScale: 1,
 mediaRotate: 0,
+mediaFit: 'contain',
 audioFile: null,
 texts: [],
 activeTextIndex: -1,
@@ -14541,9 +14554,11 @@ try {
             time: v.viewedAtText || '',
             liked: !!v.liked,
         }));
-        // Sync the displayed count with actual unique viewer count
-        const st = this.myStatuses[idx];
-        if (st) st.viewsCount = j.data.length;
+        const realCount = j.data.length;
+        [this.myStatusHistory, this.myStatuses].forEach(arr => {
+            const found = arr.find(s2 => Number(s2.id) === Number(s?.id));
+            if (found) found.viewsCount = realCount;
+        });
     }
 } catch (_) {}
 },
@@ -17031,6 +17046,10 @@ startHandleDrag(mode, e) {
     window.addEventListener('pointercancel', onUp);
 },
 
+cycleMediaFit() {
+this.statusEditor.mediaFit = this.statusEditor.mediaFit === 'contain' ? 'cover' : 'contain';
+},
+
 cycleTextBgStyle() {
 const order = ['none', 'translucent', 'solid', 'neon'];
 const idx = order.indexOf(this.statusEditor.textBgStyle || 'none');
@@ -17222,6 +17241,7 @@ if (this.statusEditor.mediaPosX != null) fd.append('media_pos_x', this.statusEdi
 if (this.statusEditor.mediaPosY != null) fd.append('media_pos_y', this.statusEditor.mediaPosY);
 fd.append('media_scale', this.statusEditor.mediaScale ?? 1);
 fd.append('media_rotate', this.statusEditor.mediaRotate ?? 0);
+fd.append('media_fit', this.statusEditor.mediaFit || 'contain');
 
 fd.append('privacy_type', this.statusEditor.privacyType);
 
@@ -17549,6 +17569,7 @@ mediaPosX: s.mediaPosX ?? 50,
 mediaPosY: s.mediaPosY ?? 50,
 mediaScale: s.mediaScale ?? 1,
 mediaRotate: s.mediaRotate ?? 0,
+mediaFit: s.mediaFit || 'contain',
 
 audioFile: null,
 
