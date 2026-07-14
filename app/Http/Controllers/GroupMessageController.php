@@ -162,13 +162,10 @@ class GroupMessageController extends Controller
         $name    = $file->getClientOriginalName() ?: basename($path);
         $caption = trim($data['content'] ?? '');
 
+        // Use ENUM-safe values: 'audio' for audio files, 'file' for everything else.
+        // The frontend derives the display type (image/video/file) from attachment_type (MIME).
         $ext = strtolower($file->getClientOriginalExtension());
-        $msgType = match(true) {
-            in_array($ext, ['jpg','jpeg','png','gif','webp'])        => 'image',
-            in_array($ext, ['mp4','mov','avi','mkv','webm'])         => 'video',
-            in_array($ext, ['mp3','wav','m4a','ogg'])                => 'audio',
-            default                                                   => 'file',
-        };
+        $msgType = in_array($ext, ['mp3','wav','m4a','ogg']) ? 'audio' : 'file';
 
         $msgId = DB::table('group_messages')->insertGetId([
             'group_id'        => $groupId,

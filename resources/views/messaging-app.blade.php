@@ -6719,7 +6719,7 @@ return n;
 
 normalizeGroupMessage(msg) {
 if (!msg) return null;
-return {
+const n = {
 id: msg.id,
 groupId: msg.groupId ?? msg.group_id,
 senderId: msg.senderId ?? msg.sender_id,
@@ -6747,6 +6747,10 @@ _resumePos: 0,
 mediaLoaded: true,
 readAt: null,
 };
+// Derive actual display type from MIME (mirrors normalizeMessage behavior)
+n.messageType = this.getMessageType(n);
+if (n.messageType !== 'image' && n.messageType !== 'video') n.mediaLoaded = true;
+return n;
 },
 
 onMediaLoaded(message) {
@@ -8350,7 +8354,8 @@ auth()->user()->role === 'teacher'
 const groupFileUrl = baseUrl + '/messaging/group/' + groupId + '/file';
 
 const pendingFiles = [...this.pendingAttachments];
-this.clearAllAttachments();
+// Clear the UI bar immediately but defer URL revocation until uploads complete
+this.pendingAttachments = [];
 
 // If files present: send each file, first file gets the text as caption
 if (pendingFiles.length > 0) {
@@ -8358,10 +8363,9 @@ for (let i = 0; i < pendingFiles.length; i++) {
 const att = pendingFiles[i];
 const caption = (i === 0 && text) ? text : '';
 const tempId = this.pendingMessageCounter--;
-const tempMsg = this.normalizeGroupMessage({ id: tempId, group_id: groupId, senderId: this.currentUserId, senderName: this.userName || '', content: caption || att.name, messageType: att.previewType || 'file', createdAt: new Date().toISOString(), isGroup: true });
+const tempMsg = this.normalizeGroupMessage({ id: tempId, group_id: groupId, senderId: this.currentUserId, senderName: this.userName || '', content: caption || att.name, attachmentMime: att.mime || '', attachmentName: att.name, createdAt: new Date().toISOString(), isGroup: true });
 tempMsg.pending = true;
 tempMsg.attachmentUrl = att.previewUrl || null;
-tempMsg.attachmentName = att.name;
 this.messages.push(tempMsg);
 this.normalizeMessageOrder();
 this.scrollToBottom(true);
@@ -8387,6 +8391,8 @@ if (idx !== -1) this.messages[idx].failed = true;
 this.showToast('تعذر إرسال المرفق', 'error');
 }
 }
+// Revoke blob URLs now that uploads are done
+pendingFiles.forEach(a => { if (a.previewUrl) URL.revokeObjectURL(a.previewUrl); });
 this.replyingToMessage = null;
 this.updateContactPreview();
 this.scrollToBottom(true);
