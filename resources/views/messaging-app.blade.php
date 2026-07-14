@@ -3150,142 +3150,298 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 
 <!-- Group Info Panel -->
 <div class="profile-modal" v-if="groupInfoOpen" @click.self="groupInfoOpen=false" style="z-index:1060;">
-<div class="profile-card" style="max-width:460px;">
+<div class="profile-card" style="max-width:460px;padding:0;overflow:hidden;border-radius:16px;">
 
-<!-- Banner -->
-<div style="background:linear-gradient(135deg,#0a1628,#1a3a5c);height:130px;position:relative;border-radius:16px 16px 0 0;flex-shrink:0;">
-<button class="profile-close" @click="groupInfoOpen=false"><i class="ri-close-line"></i></button>
-<div style="position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);">
-<div style="position:relative;display:inline-block;">
-<div style="width:80px;height:80px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;border:3px solid var(--panel);overflow:hidden;">
-<img v-if="groupInfoData.avatar_url" :src="groupInfoData.avatar_url" style="width:100%;height:100%;object-fit:cover;">
-<i v-else class="ri-group-fill" style="font-size:34px;color:#000;"></i>
-</div>
-<label v-if="groupInfoIsAdmin" style="position:absolute;bottom:2px;right:2px;width:24px;height:24px;border-radius:50%;background:var(--gold);border:2px solid var(--panel);display:flex;align-items:center;justify-content:center;cursor:pointer;" title="تغيير الصورة">
-<i class="ri-camera-fill" style="font-size:12px;color:#000;"></i>
-<input type="file" accept="image/*" style="display:none;" @change="onGroupAvatarChange($event)">
-</label>
-</div></div></div>
-
-<!-- Body -->
-<div class="profile-body" style="padding-top:52px;max-height:80vh;overflow-y:auto;">
-
-<!-- Name + Description -->
-<div style="text-align:center;margin-bottom:6px;">
-<div v-if="!groupInfoEditing">
-<div style="font-size:18px;font-weight:700;color:var(--text);">@{{ groupInfoData.name }}</div>
-<div v-if="groupInfoData.description" style="font-size:12px;color:var(--muted);margin-top:4px;padding:0 16px;line-height:1.5;">@{{ groupInfoData.description }}</div>
-<button v-if="groupInfoIsAdmin" @click="groupInfoEditing=true; groupInfoNameEdit=groupInfoData.name; groupInfoDescEdit=groupInfoData.description||''" style="margin-top:8px;background:none;border:1px solid var(--border);border-radius:10px;padding:5px 14px;cursor:pointer;font-size:12px;color:var(--muted);"><i class="ri-edit-line"></i> تعديل المجموعة</button>
-</div>
-<div v-else style="padding:0 8px;text-align:right;">
-<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">اسم المجموعة</div>
-<input v-model="groupInfoNameEdit" maxlength="120" style="width:100%;font-size:15px;font-weight:600;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text);outline:none;padding:8px 10px;box-sizing:border-box;">
-<div style="font-size:11px;color:var(--muted);margin:10px 0 4px;">وصف المجموعة</div>
-<textarea v-model="groupInfoDescEdit" maxlength="500" placeholder="أضف وصفاً للمجموعة..." style="width:100%;min-height:72px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text);font-size:13px;padding:8px 10px;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;direction:rtl;"></textarea>
-<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;">
-<button @click="saveGroupInfo()" style="background:var(--gold);color:#000;border:none;border-radius:10px;padding:8px 22px;cursor:pointer;font-size:13px;font-weight:600;">حفظ</button>
-<button @click="groupInfoEditing=false" style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px 18px;cursor:pointer;font-size:13px;">إلغاء</button>
-</div>
-</div>
+<!-- Top Bar -->
+<div style="display:flex;align-items:center;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--border);gap:10px;min-height:52px;flex-shrink:0;">
+  <button v-if="groupInfoSubView" @click="groupInfoSubView=null" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text);display:flex;align-items:center;"><i class="ri-arrow-right-line" style="font-size:20px;"></i></button>
+  <button v-else @click="groupInfoOpen=false" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text);display:flex;align-items:center;"><i class="ri-close-line" style="font-size:20px;"></i></button>
+  <span style="font-size:16px;font-weight:700;color:var(--text);flex:1;">
+    <span v-if="!groupInfoSubView">معلومات المجموعة</span>
+    <span v-else-if="groupInfoSubView==='permissions'">صلاحيات المجموعة</span>
+    <span v-else-if="groupInfoSubView==='invite'">رابط الدعوة</span>
+  </span>
 </div>
 
-<div style="text-align:center;font-size:12px;color:var(--muted);margin:6px 0 16px;">@{{ (groupInfoData.members_count || 0) + ' عضو' }}</div>
+<!-- MAIN VIEW -->
+<div v-if="!groupInfoSubView" class="profile-body" style="max-height:85vh;overflow-y:auto;">
 
-<!-- Quick action buttons: call + mute -->
-<div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;">
-<button @click="groupInfoOpen=false; startGroupCall('voice')" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:12px 18px;cursor:pointer;min-width:74px;">
-<i class="ri-phone-line" style="font-size:20px;color:var(--gold);"></i>
-<span style="font-size:11px;color:var(--text);">صوتية</span>
-</button>
-<button @click="groupInfoOpen=false; startGroupCall('video')" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:12px 18px;cursor:pointer;min-width:74px;">
-<i class="ri-vidicon-line" style="font-size:20px;color:var(--gold);"></i>
-<span style="font-size:11px;color:var(--text);">مرئية</span>
-</button>
-<button @click="groupInfoOpen=false; muteOptionsOpen=true" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:12px 18px;cursor:pointer;min-width:74px;">
-<i class="ri-volume-mute-line" style="font-size:20px;color:var(--muted);"></i>
-<span style="font-size:11px;color:var(--text);">كتم</span>
-</button>
-</div>
+  <!-- Avatar banner -->
+  <div style="background:linear-gradient(135deg,#0a1628,#1a3a5c);padding:28px 0 48px;text-align:center;position:relative;">
+    <div style="display:inline-block;position:relative;">
+      <div style="width:90px;height:90px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,0.2);overflow:hidden;margin:0 auto;">
+        <img v-if="groupInfoData.avatar_url" :src="groupInfoData.avatar_url" style="width:100%;height:100%;object-fit:cover;">
+        <i v-else class="ri-group-fill" style="font-size:38px;color:#000;"></i>
+      </div>
+      <label v-if="groupInfoIsAdmin" style="position:absolute;bottom:2px;right:2px;width:28px;height:28px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid #0a1628;" title="تغيير الصورة">
+        <i class="ri-camera-fill" style="font-size:13px;color:#000;"></i>
+        <input type="file" accept="image/*" style="display:none;" @change="onGroupAvatarChange($event)">
+      </label>
+    </div>
+  </div>
 
-<div style="border-top:1px solid var(--border);margin-bottom:14px;"></div>
+  <!-- Name + Description card -->
+  <div style="background:var(--panel);padding:16px 20px;margin-top:-28px;border-radius:16px 16px 0 0;position:relative;">
 
-<!-- Add member (admin only) -->
-<div v-if="groupInfoIsAdmin" style="margin-bottom:14px;">
-<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;"><i class="ri-user-add-line"></i> إضافة عضو</div>
-<div style="display:flex;gap:6px;">
-<input v-model="groupAddMemberSearch" @input="searchGroupAddMember()" placeholder="ابحث عن مستخدم..." style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--input-bg);color:var(--text);font-size:13px;outline:none;">
-<button @click="groupAddMemberSearch=''; groupAddMemberResults=[];" style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;color:var(--muted);"><i class="ri-close-line"></i></button>
-</div>
-<div v-if="groupAddMemberResults.length" style="background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:140px;overflow-y:auto;">
-<div v-for="u in groupAddMemberResults" :key="u.id" @click="addGroupMember(u)" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);">
-<img v-if="u.avatar_url" :src="u.avatar_url" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-<div v-else style="width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#000;">@{{ (u.name||'?')[0] }}</div>
-<span style="font-size:13px;color:var(--text);">@{{ u.name }}</span>
-<span v-if="groupInfoMembers.some(m=>m.id===u.id)" style="font-size:11px;color:var(--muted);margin-right:auto;">عضو بالفعل</span>
-<i v-else class="ri-user-add-line" style="margin-right:auto;color:var(--gold);"></i>
-</div>
-</div>
-</div>
+    <!-- Name -->
+    <div style="margin-bottom:12px;">
+      <div v-if="!groupInfoNameEditing" style="display:flex;align-items:center;gap:8px;" :style="groupInfoIsAdmin ? 'cursor:pointer' : ''" @click="groupInfoIsAdmin && (groupInfoNameEditing=true, groupInfoNameEdit=groupInfoData.name)">
+        <div style="font-size:19px;font-weight:700;color:var(--text);flex:1;">@{{ groupInfoData.name }}</div>
+        <i v-if="groupInfoIsAdmin" class="ri-pencil-line" style="color:var(--muted);font-size:16px;flex-shrink:0;"></i>
+      </div>
+      <div v-else style="display:flex;gap:8px;align-items:center;">
+        <input v-model="groupInfoNameEdit" maxlength="120" @keyup.enter="saveGroupName()" @keyup.escape="groupInfoNameEditing=false" autofocus style="flex:1;font-size:17px;font-weight:600;border:none;border-bottom:2px solid var(--gold);background:transparent;color:var(--text);outline:none;padding:4px 0;">
+        <button @click="saveGroupName()" style="background:var(--gold);border:none;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600;color:#000;">حفظ</button>
+        <button @click="groupInfoNameEditing=false" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--muted);">x</button>
+      </div>
+    </div>
 
-<!-- Members list -->
-<div style="font-size:13px;font-weight:600;color:var(--text);margin:0 0 8px;"><i class="ri-group-line"></i> الأعضاء (@{{ groupInfoMembers.length }})</div>
-<div v-if="groupInfoLoading" style="text-align:center;padding:20px;color:var(--muted);">جاري التحميل...</div>
-<div v-else style="display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto;">
-<div v-for="member in groupInfoMembers" :key="member.id" style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;">
-<div style="position:relative;flex-shrink:0;">
-<img v-if="member.avatar_url" :src="member.avatar_url" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
-<div v-else style="width:40px;height:40px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#000;">@{{ (member.name||'?')[0] }}</div>
-<span v-if="member.isAdmin" style="position:absolute;bottom:-2px;right:-2px;background:var(--gold);border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--panel);" title="مشرف"><i class="ri-star-fill" style="font-size:9px;color:#000;"></i></span>
-</div>
-<div style="flex:1;min-width:0;">
-<div style="font-size:13px;font-weight:600;color:var(--text);">@{{ member.name }}<span v-if="member.id===currentUserId" style="color:var(--muted);font-weight:400;"> (أنت)</span></div>
-<div style="font-size:11px;color:var(--muted);">@{{ member.isAdmin ? 'مشرف' : 'عضو' }}</div>
-</div>
-<div v-if="groupInfoIsAdmin && member.id !== currentUserId" style="display:flex;gap:4px;">
-<button v-if="!member.isAdmin" @click="changeGroupMemberRole(member, 'admin')" title="ترقية لمشرف" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--gold);"><i class="ri-star-line"></i></button>
-<button v-else @click="changeGroupMemberRole(member, 'member')" title="إلغاء الإشراف" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--muted);"><i class="ri-star-fill"></i></button>
-<button @click="removeGroupMember(member)" title="إزالة من المجموعة" style="background:none;border:1px solid #dc3545;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:#dc3545;"><i class="ri-user-unfollow-line"></i></button>
-</div>
-</div>
-</div>
+    <!-- Member count -->
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">@{{ (groupInfoData.members_count || groupInfoMembers.length || 0) }} عضو</div>
 
-<!-- Announcement Mode (admin only) -->
-<div v-if="groupInfoIsAdmin" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
-<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">
-<div>
-<div style="font-size:13px;font-weight:600;color:var(--text);"><i class="ri-megaphone-line"></i> وضع الإعلانات</div>
-<div style="font-size:11px;color:var(--muted);margin-top:2px;">فقط المشرفون يمكنهم إرسال الرسائل</div>
-</div>
-<div @click="toggleGroupAnnouncement()" style="position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;" :style="groupIsAnnouncement ? 'background:var(--gold)' : 'background:var(--border)'">
-<div style="position:absolute;top:3px;transition:left 0.2s;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);" :style="groupIsAnnouncement ? 'left:23px' : 'left:3px'"></div>
-</div>
-</div>
-</div>
+    <!-- Description -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;">
+      <div v-if="!groupInfoDescEditing">
+        <div style="font-size:12px;color:var(--gold);font-weight:600;margin-bottom:4px;">الوصف</div>
+        <div style="display:flex;align-items:flex-start;gap:8px;" :style="groupInfoIsAdmin ? 'cursor:pointer' : ''" @click="groupInfoIsAdmin && (groupInfoDescEditing=true, groupInfoDescEdit=groupInfoData.description||'')">
+          <div style="font-size:13px;flex:1;line-height:1.5;" :style="groupInfoData.description ? 'color:var(--text)' : 'color:var(--muted);font-style:italic'">@{{ groupInfoData.description || (groupInfoIsAdmin ? 'أضف وصفاً للمجموعة...' : 'لا يوجد وصف') }}</div>
+          <i v-if="groupInfoIsAdmin" class="ri-pencil-line" style="color:var(--muted);font-size:14px;flex-shrink:0;margin-top:2px;"></i>
+        </div>
+      </div>
+      <div v-else>
+        <div style="font-size:12px;color:var(--gold);font-weight:600;margin-bottom:6px;">الوصف</div>
+        <textarea v-model="groupInfoDescEdit" maxlength="500" placeholder="أضف وصفاً للمجموعة..." @keyup.escape="groupInfoDescEditing=false" style="width:100%;min-height:72px;border:none;border-bottom:2px solid var(--gold);background:transparent;color:var(--text);font-size:13px;padding:4px 0;outline:none;resize:none;box-sizing:border-box;font-family:inherit;direction:rtl;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button @click="saveGroupDesc()" style="background:var(--gold);border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;color:#000;">حفظ</button>
+          <button @click="groupInfoDescEditing=false" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--muted);">إلغاء</button>
+        </div>
+      </div>
+    </div>
 
-<!-- Invite Link -->
-<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
-<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;"><i class="ri-link"></i> رابط الدعوة</div>
-<div v-if="groupInviteUrl" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-<div style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;">@{{ groupInviteUrl }}</div>
-<button @click="copyGroupInviteLink()" title="نسخ الرابط" style="flex-shrink:0;background:var(--gold);border:none;border-radius:10px;padding:7px 11px;cursor:pointer;"><i class="ri-file-copy-line" style="color:#000;"></i></button>
-</div>
-<div v-if="groupInfoIsAdmin" style="display:flex;gap:6px;">
-<button v-if="!groupInviteUrl" @click="generateGroupInviteLink()" style="flex:1;background:var(--gold);border:none;border-radius:10px;padding:8px;cursor:pointer;font-size:12px;font-weight:600;color:#000;"><i class="ri-link-m"></i> إنشاء رابط دعوة</button>
-<button v-if="groupInviteUrl" @click="revokeGroupInviteLink(false)" title="تجديد الرابط" style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;font-size:12px;color:var(--text);"><i class="ri-refresh-line"></i> تجديد</button>
-<button v-if="groupInviteUrl" @click="revokeGroupInviteLink(true)" title="إلغاء الرابط" style="background:var(--input-bg);border:1px solid #dc3545;border-radius:10px;padding:8px 11px;cursor:pointer;font-size:12px;color:#dc3545;"><i class="ri-delete-bin-line"></i></button>
-</div>
-<div v-if="!groupInviteUrl && !groupInfoIsAdmin" style="font-size:12px;color:var(--muted);text-align:center;padding:4px;">لا يوجد رابط دعوة حالياً</div>
-</div>
+  </div>
 
-<!-- Bottom actions -->
-<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;display:flex;flex-direction:column;gap:8px;">
-<button @click="leaveGroup()" style="width:100%;background:none;border:1px solid #dc3545;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;font-weight:600;color:#dc3545;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-logout-box-line"></i> مغادرة المجموعة</button>
-<button v-if="groupInfoIsAdmin" @click="deleteGroup()" style="width:100%;background:#dc3545;border:none;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-delete-bin-6-line"></i> حذف المجموعة نهائياً</button>
-</div>
+  <!-- Quick Actions -->
+  <div style="background:var(--panel);margin-top:8px;padding:14px 16px;">
+    <div style="display:flex;justify-content:space-around;">
+      <button @click="groupInfoOpen=false; startGroupCall('voice')" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
+        <div style="width:46px;height:46px;border-radius:50%;background:rgba(212,175,55,0.15);display:flex;align-items:center;justify-content:center;"><i class="ri-phone-line" style="font-size:22px;color:var(--gold);"></i></div>
+        <span style="font-size:11px;color:var(--muted);">صوتية</span>
+      </button>
+      <button @click="groupInfoOpen=false; startGroupCall('video')" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
+        <div style="width:46px;height:46px;border-radius:50%;background:rgba(212,175,55,0.15);display:flex;align-items:center;justify-content:center;"><i class="ri-vidicon-line" style="font-size:22px;color:var(--gold);"></i></div>
+        <span style="font-size:11px;color:var(--muted);">مرئية</span>
+      </button>
+      <button @click="groupInfoOpen=false; muteOptionsOpen=true" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
+        <div style="width:46px;height:46px;border-radius:50%;background:rgba(108,108,108,0.12);display:flex;align-items:center;justify-content:center;"><i class="ri-volume-mute-line" style="font-size:22px;color:var(--muted);"></i></div>
+        <span style="font-size:11px;color:var(--muted);">كتم</span>
+      </button>
+      <button @click="groupInfoOpen=false" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;">
+        <div style="width:46px;height:46px;border-radius:50%;background:rgba(108,108,108,0.12);display:flex;align-items:center;justify-content:center;"><i class="ri-search-line" style="font-size:22px;color:var(--muted);"></i></div>
+        <span style="font-size:11px;color:var(--muted);">بحث</span>
+      </button>
+    </div>
+  </div>
 
-</div>
-</div>
-</div>
+  <!-- Settings Rows -->
+  <div style="background:var(--panel);margin-top:8px;">
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);">
+      <div style="width:36px;height:36px;border-radius:10px;background:#2196F3;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-image-line" style="color:#fff;font-size:18px;"></i></div>
+      <div style="flex:1;">
+        <div style="font-size:14px;color:var(--text);">الوسائط والملفات</div>
+        <div v-if="groupMediaCount" style="font-size:12px;color:var(--muted);">@{{ groupMediaCount }} ملف</div>
+      </div>
+      <i class="ri-arrow-left-s-line" style="color:var(--muted);font-size:20px;"></i>
+    </div>
+    <div class="gip-row" style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;" @click="groupInfoOpen=false; muteOptionsOpen=true">
+      <div style="width:36px;height:36px;border-radius:10px;background:#9C27B0;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-notification-line" style="color:#fff;font-size:18px;"></i></div>
+      <div style="flex:1;font-size:14px;color:var(--text);">الإشعارات</div>
+      <i class="ri-arrow-left-s-line" style="color:var(--muted);font-size:20px;"></i>
+    </div>
+  </div>
+
+  <!-- Admin Settings -->
+  <div v-if="groupInfoIsAdmin" style="background:var(--panel);margin-top:8px;">
+    <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">إعدادات المجموعة</div>
+    <div @click="groupInfoSubView='permissions'" class="gip-row" style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;">
+      <div style="width:36px;height:36px;border-radius:10px;background:#FF5722;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-shield-check-line" style="color:#fff;font-size:18px;"></i></div>
+      <div style="flex:1;">
+        <div style="font-size:14px;color:var(--text);">صلاحيات المجموعة</div>
+        <div style="font-size:12px;color:var(--muted);">إرسال، إضافة، تعديل</div>
+      </div>
+      <i class="ri-arrow-left-s-line" style="color:var(--muted);font-size:20px;"></i>
+    </div>
+    <div @click="groupInfoSubView='invite'" class="gip-row" style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;">
+      <div style="width:36px;height:36px;border-radius:10px;background:#4CAF50;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-link" style="color:#fff;font-size:18px;"></i></div>
+      <div style="flex:1;">
+        <div style="font-size:14px;color:var(--text);">رابط دعوة المجموعة</div>
+        <div v-if="groupInviteUrl" style="font-size:12px;color:#4CAF50;">رابط نشط</div>
+        <div v-else style="font-size:12px;color:var(--muted);">لا يوجد رابط</div>
+      </div>
+      <i class="ri-arrow-left-s-line" style="color:var(--muted);font-size:20px;"></i>
+    </div>
+  </div>
+  <div v-else-if="groupInviteUrl" style="background:var(--panel);margin-top:8px;">
+    <div @click="groupInfoSubView='invite'" class="gip-row" style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;">
+      <div style="width:36px;height:36px;border-radius:10px;background:#4CAF50;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-link" style="color:#fff;font-size:18px;"></i></div>
+      <div style="flex:1;font-size:14px;color:var(--text);">رابط دعوة المجموعة</div>
+      <i class="ri-arrow-left-s-line" style="color:var(--muted);font-size:20px;"></i>
+    </div>
+  </div>
+
+  <!-- Members Section -->
+  <div style="background:var(--panel);margin-top:8px;">
+    <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">الأعضاء (@{{ groupInfoMembers.length }})</div>
+
+    <div v-if="groupInfoMembers.length > 5" style="padding:8px 14px 4px;">
+      <div style="display:flex;align-items:center;gap:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:6px 12px;">
+        <i class="ri-search-line" style="color:var(--muted);font-size:14px;"></i>
+        <input v-model="groupMemberSearch" placeholder="بحث في الأعضاء..." style="border:none;background:transparent;color:var(--text);font-size:13px;outline:none;flex:1;direction:rtl;">
+      </div>
+    </div>
+
+    <div v-if="groupInfoIsAdmin || groupInfoData.who_can_add_members === 'all'" class="gip-row" style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;">
+      <div style="width:40px;height:40px;border-radius:50%;background:rgba(212,175,55,0.15);border:2px dashed var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-user-add-line" style="color:var(--gold);font-size:18px;"></i></div>
+      <span style="font-size:14px;color:var(--gold);font-weight:600;">إضافة عضو</span>
+    </div>
+
+    <div v-if="groupInviteUrl" @click="copyGroupInviteLink()" class="gip-row" style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;">
+      <div style="width:40px;height:40px;border-radius:50%;background:rgba(76,175,80,0.15);border:2px dashed #4CAF50;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ri-link" style="color:#4CAF50;font-size:18px;"></i></div>
+      <span style="font-size:14px;color:#4CAF50;font-weight:600;">دعوة عبر رابط</span>
+    </div>
+
+    <div v-if="groupInfoLoading" style="text-align:center;padding:20px;color:var(--muted);"><i class="ri-loader-4-line"></i> جاري التحميل...</div>
+
+    <div v-else>
+      <div v-for="member in groupInfoMembers.filter(m => !groupMemberSearch || m.name.toLowerCase().includes(groupMemberSearch.toLowerCase()))" :key="member.id" style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);">
+        <div style="position:relative;flex-shrink:0;">
+          <img v-if="member.avatar_url" :src="member.avatar_url" style="width:42px;height:42px;border-radius:50%;object-fit:cover;">
+          <div v-else style="width:42px;height:42px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#000;">@{{ (member.name||'?')[0] }}</div>
+          <span v-if="member.isAdmin" style="position:absolute;bottom:-2px;right:-2px;background:var(--gold);border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--panel);" title="مشرف"><i class="ri-star-fill" style="font-size:9px;color:#000;"></i></span>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:600;color:var(--text);">@{{ member.name }}<span v-if="member.id===currentUserId" style="color:var(--muted);font-weight:400;"> (أنت)</span></div>
+          <div style="font-size:12px;color:var(--muted);">@{{ member.isAdmin ? 'مشرف' : 'عضو' }}</div>
+        </div>
+        <div v-if="groupInfoIsAdmin && member.id !== currentUserId" style="display:flex;gap:4px;">
+          <button v-if="!member.isAdmin" @click="changeGroupMemberRole(member, 'admin')" title="ترقية لمشرف" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--gold);"><i class="ri-star-line"></i></button>
+          <button v-else @click="changeGroupMemberRole(member, 'member')" title="إلغاء الإشراف" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:var(--muted);"><i class="ri-star-fill"></i></button>
+          <button @click="removeGroupMember(member)" title="إزالة من المجموعة" style="background:none;border:1px solid #dc3545;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;color:#dc3545;"><i class="ri-user-unfollow-line"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="groupInfoIsAdmin" style="padding:10px 14px;border-top:1px solid var(--border);">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">إضافة عضو جديد</div>
+      <div style="display:flex;gap:6px;">
+        <input v-model="groupAddMemberSearch" @input="searchGroupAddMember()" placeholder="ابحث بالاسم..." style="flex:1;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--input-bg);color:var(--text);font-size:13px;outline:none;">
+        <button v-if="groupAddMemberSearch" @click="groupAddMemberSearch=''; groupAddMemberResults=[];" style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;color:var(--muted);"><i class="ri-close-line"></i></button>
+      </div>
+      <div v-if="groupAddMemberResults.length" style="background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:150px;overflow-y:auto;">
+        <div v-for="u in groupAddMemberResults" :key="u.id" @click="addGroupMember(u)" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);">
+          <img v-if="u.avatar_url" :src="u.avatar_url" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+          <div v-else style="width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#000;">@{{ (u.name||'?')[0] }}</div>
+          <span style="font-size:13px;color:var(--text);">@{{ u.name }}</span>
+          <span v-if="groupInfoMembers.some(m=>m.id===u.id)" style="font-size:11px;color:var(--muted);margin-right:auto;">عضو</span>
+          <i v-else class="ri-user-add-line" style="margin-right:auto;color:var(--gold);"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div style="background:var(--panel);margin-top:8px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;margin-bottom:8px;">
+    <button @click="leaveGroup()" style="width:100%;background:none;border:1px solid #dc3545;border-radius:12px;padding:11px;cursor:pointer;font-size:13px;font-weight:600;color:#dc3545;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-logout-box-line"></i> مغادرة المجموعة</button>
+    <button v-if="groupInfoIsAdmin" @click="deleteGroup()" style="width:100%;background:#dc3545;border:none;border-radius:12px;padding:11px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-delete-bin-6-line"></i> حذف المجموعة نهائياً</button>
+  </div>
+
+</div><!-- end main view -->
+
+<!-- PERMISSIONS SUB-VIEW -->
+<div v-if="groupInfoSubView==='permissions'" class="profile-body" style="max-height:85vh;overflow-y:auto;padding:8px 0;">
+
+  <div style="background:var(--panel);margin-bottom:8px;">
+    <div style="padding:12px 18px 6px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">من يمكنه إرسال الرسائل</div>
+      <div style="font-size:12px;color:var(--muted);">التحكم في من يمكنه إرسال رسائل في المجموعة</div>
+    </div>
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="who_can_send" :checked="groupInfoData.who_can_send==='all'" @change="saveGroupPermission('who_can_send','all')" style="accent-color:var(--gold);width:18px;height:18px;">
+      <div>
+        <div style="font-size:14px;color:var(--text);">جميع الأعضاء</div>
+        <div style="font-size:12px;color:var(--muted);">يمكن لكل عضو إرسال الرسائل</div>
+      </div>
+    </label>
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="who_can_send" :checked="groupInfoData.who_can_send==='admins'" @change="saveGroupPermission('who_can_send','admins')" style="accent-color:var(--gold);width:18px;height:18px;">
+      <div>
+        <div style="font-size:14px;color:var(--text);">المشرفون فقط</div>
+        <div style="font-size:12px;color:var(--muted);">وضع الإعلانات — فقط المشرفون يرسلون</div>
+      </div>
+    </label>
+  </div>
+
+  <div style="background:var(--panel);margin-bottom:8px;">
+    <div style="padding:12px 18px 6px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">من يمكنه إضافة أعضاء</div>
+      <div style="font-size:12px;color:var(--muted);">من يمكنه دعوة وإضافة أعضاء جدد</div>
+    </div>
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="who_can_add" :checked="groupInfoData.who_can_add_members==='all'" @change="saveGroupPermission('who_can_add_members','all')" style="accent-color:var(--gold);width:18px;height:18px;">
+      <div style="font-size:14px;color:var(--text);">جميع الأعضاء</div>
+    </label>
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="who_can_add" :checked="groupInfoData.who_can_add_members==='admins'" @change="saveGroupPermission('who_can_add_members','admins')" style="accent-color:var(--gold);width:18px;height:18px;">
+      <div style="font-size:14px;color:var(--text);">المشرفون فقط</div>
+    </label>
+  </div>
+
+  <div style="background:var(--panel);margin-bottom:8px;">
+    <div style="padding:12px 18px 6px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">من يمكنه تعديل المجموعة</div>
+      <div style="font-size:12px;color:var(--muted);">تعديل اسم المجموعة ووصفها وصورتها</div>
+    </div>
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="who_can_edit" :checked="groupInfoData.who_can_edit_info==='all'" @change="saveGroupPermission('who_can_edit_info','all')" style="accent-color:var(--gold);width:18px;height:18px;">
+      <div style="font-size:14px;color:var(--text);">جميع الأعضاء</div>
+    </label>
+    <label style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);cursor:pointer;">
+      <input type="radio" name="who_can_edit" :checked="groupInfoData.who_can_edit_info==='admins'" @change="saveGroupPermission('who_can_edit_info','admins')" style="accent-color:var(--gold);width:18px;height:18px;">
+      <div style="font-size:14px;color:var(--text);">المشرفون فقط</div>
+    </label>
+  </div>
+
+</div><!-- end permissions sub-view -->
+
+<!-- INVITE LINK SUB-VIEW -->
+<div v-if="groupInfoSubView==='invite'" class="profile-body" style="max-height:85vh;overflow-y:auto;padding:16px;">
+
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="width:64px;height:64px;border-radius:50%;background:rgba(76,175,80,0.15);border:2px solid #4CAF50;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><i class="ri-link" style="font-size:28px;color:#4CAF50;"></i></div>
+    <div style="font-size:14px;color:var(--muted);">شارك هذا الرابط مع من تريد دعوته للانضمام للمجموعة</div>
+  </div>
+
+  <div v-if="groupInviteUrl" style="margin-bottom:16px;">
+    <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text);word-break:break-all;direction:ltr;text-align:left;line-height:1.6;">@{{ groupInviteUrl }}</div>
+  </div>
+  <div v-else style="background:var(--input-bg);border:1px dashed var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;">
+    <div style="font-size:13px;color:var(--muted);">لا يوجد رابط دعوة حالياً</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <button v-if="groupInviteUrl" @click="copyGroupInviteLink()" style="width:100%;background:var(--gold);border:none;border-radius:12px;padding:12px;cursor:pointer;font-size:14px;font-weight:600;color:#000;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="ri-file-copy-line"></i> نسخ الرابط</button>
+    <button v-if="!groupInviteUrl && groupInfoIsAdmin" @click="generateGroupInviteLink()" style="width:100%;background:var(--gold);border:none;border-radius:12px;padding:12px;cursor:pointer;font-size:14px;font-weight:600;color:#000;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="ri-link-m"></i> إنشاء رابط دعوة</button>
+    <div v-if="groupInfoIsAdmin && groupInviteUrl" style="display:flex;gap:8px;">
+      <button @click="revokeGroupInviteLink(false)" style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:11px;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-refresh-line"></i> تجديد الرابط</button>
+      <button @click="revokeGroupInviteLink(true)" style="background:var(--input-bg);border:1px solid #dc3545;border-radius:12px;padding:11px 14px;cursor:pointer;font-size:13px;color:#dc3545;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-delete-bin-line"></i> إلغاء</button>
+    </div>
+  </div>
+
+</div><!-- end invite sub-view -->
+
+</div><!-- profile-card -->
+</div><!-- profile-modal -->
+<style>.gip-row{transition:background 0.15s;}.gip-row:hover{background:rgba(128,128,128,0.06);}</style>
+
 
 <!-- ════ My Profile (sidebar) ════ -->
 <div class="profile-modal" v-if="myProfileOpen" @click.self="myProfileOpen = false">
@@ -4892,7 +5048,7 @@ groupCreateLoading: false,
 // Group Info Panel
 groupInfoOpen: false,
 groupInfoLoading: false,
-groupInfoData: { name: '', description: '', avatar_url: null, members_count: 0, only_admins_can_message: false },
+groupInfoData: { name: '', description: '', avatar_url: null, members_count: 0, only_admins_can_message: false, who_can_send: 'all', who_can_add_members: 'admins', who_can_edit_info: 'admins' },
 groupInfoMembers: [],
 groupInfoIsAdmin: false,
 groupInfoEditing: false,
@@ -4903,6 +5059,11 @@ groupAddMemberResults: [],
 _groupAddMemberTimer: null,
 groupInviteUrl: '',
 groupIsAnnouncement: false,
+groupInfoSubView: null,
+groupMemberSearch: '',
+groupMediaCount: 0,
+groupInfoNameEditing: false,
+groupInfoDescEditing: false,
 
 toastMessage: '',
 
@@ -7157,9 +7318,14 @@ const contact = this.selectedContact;
 if (!contact || !contact.isGroup) return;
 this.groupInfoOpen = true;
 this.groupInfoEditing = false;
+this.groupInfoSubView = null;
+this.groupMemberSearch = '';
+this.groupInfoNameEditing = false;
+this.groupInfoDescEditing = false;
+this.groupMediaCount = 0;
 this.groupAddMemberSearch = '';
 this.groupAddMemberResults = [];
-this.groupInfoData = { name: contact.name, description: contact.description || '', avatar_url: contact.avatar_url, members_count: contact._membersCount || 0 };
+this.groupInfoData = { name: contact.name, description: contact.description || '', avatar_url: contact.avatar_url, members_count: contact._membersCount || 0, only_admins_can_message: false, who_can_send: 'all', who_can_add_members: 'admins', who_can_edit_info: 'admins' };
 this.groupInfoIsAdmin = !!contact._isAdmin;
 this.groupInfoMembers = [];
 this.groupInfoLoading = true;
@@ -7170,11 +7336,12 @@ fetch(infoUrl, { headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'applicati
 .then(r => r.json())
 .then(d => {
 if (d.success) {
-this.groupInfoData = { ...d.group };
+this.groupInfoData = { ...d.group, who_can_send: d.group.who_can_send || 'all', who_can_add_members: d.group.who_can_add_members || 'admins', who_can_edit_info: d.group.who_can_edit_info || 'admins' };
 this.groupInfoMembers = d.members || [];
 this.groupInfoIsAdmin = !!d.isAdmin;
 this.groupInviteUrl = d.group.invite_url || '';
 this.groupIsAnnouncement = !!(d.group.only_admins_can_message);
+this.groupMediaCount = d.group.media_count || 0;
 if (this.selectedContact && this.selectedContact._groupId === groupId) {
 this.selectedContact._isAdmin = !!d.isAdmin;
 this.selectedContact._membersCount = (d.members || []).length;
@@ -7394,6 +7561,76 @@ this.groupInfoData.only_admins_can_message = newVal;
 this.showToast(newVal ? 'وضع الإعلانات مُفعَّل — فقط المشرفون يرسلون' : 'وضع الإعلانات مُعطَّل', 'success');
 } else { this.showToast('فشل تغيير الإعداد', 'error'); }
 } catch(e) { this.showToast('خطأ في الإعداد', 'error'); }
+},
+
+async saveGroupName() {
+const name = (this.groupInfoNameEdit || '').trim();
+if (!name) return;
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+try {
+const r = await fetch(baseUrl + '/messaging/group/' + groupId + '/settings', {
+method: 'PUT',
+headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+body: JSON.stringify({ name })
+});
+const d = await r.json();
+if (d.success) {
+this.groupInfoData.name = d.group.name;
+this.groupInfoNameEdit = d.group.name;
+const ci = this.contacts.findIndex(c => c.isGroup && c._groupId === groupId);
+if (ci !== -1) this.contacts[ci].name = d.group.name;
+if (this.selectedContact && this.selectedContact._groupId === groupId) this.selectedContact.name = d.group.name;
+this.showToast('تم تحديث اسم المجموعة', 'success');
+this.groupInfoNameEditing = false;
+} else { this.showToast('فشل التحديث', 'error'); }
+} catch(e) { this.showToast('خطأ في التحديث', 'error'); }
+},
+
+async saveGroupDesc() {
+const contact = this.selectedContact;
+if (!contact || !contact.isGroup) return;
+const groupId = contact._groupId;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+try {
+const r = await fetch(baseUrl + '/messaging/group/' + groupId + '/settings', {
+method: 'PUT',
+headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+body: JSON.stringify({ description: this.groupInfoDescEdit })
+});
+const d = await r.json();
+if (d.success) {
+this.groupInfoData.description = d.group.description;
+this.groupInfoDescEdit = d.group.description || '';
+this.showToast('تم تحديث الوصف', 'success');
+this.groupInfoDescEditing = false;
+} else { this.showToast('فشل التحديث', 'error'); }
+} catch(e) { this.showToast('خطأ في التحديث', 'error'); }
+},
+
+async saveGroupPermission(key, value) {
+const groupId = this.selectedContact?._groupId;
+if (!groupId || !this.groupInfoIsAdmin) return;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+try {
+const r = await fetch(baseUrl + '/messaging/group/' + groupId + '/permissions', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+body: JSON.stringify({ [key]: value })
+});
+const d = await r.json();
+if (d.success) {
+this.groupInfoData[key] = value;
+if (key === 'who_can_send') {
+this.groupIsAnnouncement = value === 'admins';
+this.groupInfoData.only_admins_can_message = value === 'admins';
+if (this.selectedContact) this.selectedContact.only_admins_can_message = value === 'admins';
+}
+this.showToast('تم تحديث الإعداد', 'success');
+} else { this.showToast(d.message || 'فشل التحديث', 'error'); }
+} catch(e) { this.showToast('خطأ في التحديث', 'error'); }
 },
 
 async deleteGroup() {
