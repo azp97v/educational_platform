@@ -5723,6 +5723,8 @@ notifMaxCount: 3,
 
 },
 
+snHoveredCorner: null,
+
 settingsMedia: {
 
 autoDownloadImages: true,
@@ -18519,11 +18521,15 @@ async requestDesktopNotifications() {
 
 maybeShowDesktopNotification(contact, msg) {
     if (!this.settingsNotifications.desktopEnabled) return;
+    const isGroup = !!(contact?.isGroup || contact?.is_group);
+    if (isGroup && !this.settingsNotifications.groups) return;
+    if (!isGroup && !this.settingsNotifications.privateChats) return;
     if (typeof document !== 'undefined' && document.hasFocus()) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    const body = this.settingsNotifications.previewEnabled ? (msg.content || 'مرفق جديد') : 'رسالة جديدة';
+    const title = this.settingsNotifications.showName ? (contact?.name || 'رسالة جديدة') : 'رسالة جديدة';
+    const body  = this.settingsNotifications.showText  ? (msg.content || 'مرفق جديد')   : 'رسالة جديدة';
     try {
-        new Notification(contact?.name || 'رسالة جديدة', { body, icon: contact?.avatar_url || undefined });
+        new Notification(title, { body, icon: contact?.avatar_url || undefined });
     } catch (_) {}
 },
 
@@ -18545,8 +18551,12 @@ startContactsBgPoll() {
                 if (Number(c.id) === selectedId) continue;
                 const prev = this._prevUnread[c.id] || 0;
                 if (c.unreadCount > prev && !document.hasFocus()) {
-                    const body = this.settingsNotifications.previewEnabled ? (c.lastMessage || 'رسالة جديدة') : 'رسالة جديدة';
-                    try { new Notification(c.name || 'رسالة جديدة', { body, icon: c.avatar_url || undefined }); } catch (_) {}
+                    const isGrp = !!(c.isGroup || c.is_group);
+                    if (isGrp && !this.settingsNotifications.groups) { this._prevUnread[c.id] = c.unreadCount; continue; }
+                    if (!isGrp && !this.settingsNotifications.privateChats) { this._prevUnread[c.id] = c.unreadCount; continue; }
+                    const title = this.settingsNotifications.showName ? (c.name || 'رسالة جديدة') : 'رسالة جديدة';
+                    const body  = this.settingsNotifications.showText  ? (c.lastMessage || 'رسالة جديدة') : 'رسالة جديدة';
+                    try { new Notification(title, { body, icon: c.avatar_url || undefined }); } catch (_) {}
                 }
                 this._prevUnread[c.id] = c.unreadCount;
                 const existing = this.contacts.find(ct => Number(ct.id) === Number(c.id));
