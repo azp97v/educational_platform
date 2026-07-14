@@ -2031,6 +2031,19 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         ];
     }
 
+    protected function accountPayload(User $user): array
+    {
+        return [
+            'id'         => $user->id,
+            'name'       => $user->name,
+            'username'   => $user->username,
+            'email'      => $user->email,
+            'role'       => $user->role,
+            'avatar_url' => $user->avatar_url,
+            'created_at' => $user->created_at?->toIso8601String(),
+        ];
+    }
+
     public function exportMyData(Request $request)
     {
         $user = Auth::user();
