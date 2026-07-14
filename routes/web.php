@@ -693,6 +693,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
         Route::get('/students/{student}/profile', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'studentProfile'])->name('student.profile');
 
         // Template Gallery & Presets
+        Route::get('/gallery', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'globalGallery'])->name('global-gallery');
         Route::get('/students/{student}/gallery', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'gallery'])->name('gallery');
         Route::get('/preview/{templateNum}/{student}', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'preview'])->name('preview');
         Route::get('/download/{templateNum}/{student}', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'download'])->name('download');
