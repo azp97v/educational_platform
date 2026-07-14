@@ -1693,7 +1693,7 @@ key="mic-action"
 
   <div v-for="(layer, lIdx) in getStatusTextLayers(currentStatus)" :key="'txt-'+lIdx"
        class="status-viewer-text-layer"
-       style="position:absolute; white-space:pre-wrap; z-index:10; font-weight:600; max-width:90%; word-break:break-word;"
+       style="position:absolute; white-space:pre-wrap; z-index:10; font-weight:600; max-width:calc(100% - 40px); word-break:break-word; line-height:1.35; width:max-content;"
        :style="{
          fontFamily: layer.isSticker ? undefined : (layer.fontStyle || 'Tajawal'),
          fontSize: layer.isSticker ? undefined : ((layer.fontSize || 42)+'px'),
@@ -1858,8 +1858,8 @@ key="mic-action"
                color: (t.textBgStyle==='neon') ? '#fff' : (t.textColor || '#ffffff'),
                fontWeight: 600,
                textAlign: t.textAlign || 'center',
-               top: (t.textPosY || 50)+'%',
-               left: (t.textPosX || 50)+'%',
+               top: (t.textPosY ?? 50)+'%',
+               left: (t.textPosX ?? 50)+'%',
                transform: 'translate(-50%,-50%) rotate('+(t.rotate||0)+'deg) scale('+(t.scale||1)+')',
                textShadow: (t.textBgStyle||'none')==='none' ? '0 2px 8px rgba(0,0,0,.7)' : ((t.textBgStyle==='neon') ? '0 0 8px ' + (t.textColor || '#ffffff') + ', 0 0 16px ' + (t.textColor || '#ffffff') : 'none'),
                background: (t.textBgStyle==='solid') ? 'rgba(0,0,0,0.75)' : ((t.textBgStyle==='translucent') ? 'rgba(0,0,0,0.38)' : 'transparent'),

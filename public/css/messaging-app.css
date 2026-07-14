@@ -3425,12 +3425,12 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
     display: flex; align-items: center; justify-content: center;
 }
 
-/* Desktop: match viewer canvas width to editor canvas (420px) so absolute font sizes
-   and percentage positions are pixel-perfect identical in edit vs publish mode.
-   Height stays 100% (full overlay) so progress-bars/header remain correctly positioned. */
+/* Desktop: match viewer canvas to editor canvas (420×90vh) so absolute font sizes
+   and percentage positions are pixel-perfect identical in edit vs publish mode. */
 @media (min-width: 768px) {
     .status-viewer-content {
         max-width: 420px;
+        height: 90vh;
         border-radius: 24px;
         box-shadow: 0 20px 60px rgba(0,0,0,0.6);
         border: 1px solid rgba(255,255,255,0.08);
