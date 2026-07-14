@@ -363,6 +363,10 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::get('/messaging/delta', [MessagingController::class, 'delta'])->name('messaging.delta');
     Route::get('/messaging/stream', [MessagingController::class, 'stream'])->name('messaging.stream');
     Route::post('/messaging/group', [MessagingController::class, 'createGroup'])->name('messaging.group');
+    Route::get('/messaging/groups', [\App\Http\Controllers\GroupMessageController::class, 'myGroups'])->name('messaging.groups');
+    Route::get('/messaging/group/{groupId}/messages', [\App\Http\Controllers\GroupMessageController::class, 'load'])->name('messaging.group.load');
+    Route::post('/messaging/group/{groupId}/messages', [\App\Http\Controllers\GroupMessageController::class, 'send'])->middleware('throttle:30,1')->name('messaging.group.send');
+    Route::get('/messaging/group/{groupId}/delta', [\App\Http\Controllers\GroupMessageController::class, 'delta'])->name('messaging.group.delta');
     Route::put('/messages/{message}', [MessagingController::class, 'update'])->name('messages.update');
     Route::post('/messages/{message}/audio-position', [MessagingController::class, 'saveAudioPosition'])->name('messaging.audio-position');
     Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('messages.destroy');
@@ -583,6 +587,10 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     Route::get('/messaging/delta', [MessagingController::class, 'delta'])->name('teacher.messaging.delta');
     Route::get('/messaging/stream', [MessagingController::class, 'stream'])->name('teacher.messaging.stream');
     Route::post('/messaging/group', [MessagingController::class, 'createGroup'])->name('teacher.messaging.group');
+    Route::get('/messaging/groups', [\App\Http\Controllers\GroupMessageController::class, 'myGroups'])->name('teacher.messaging.groups');
+    Route::get('/messaging/group/{groupId}/messages', [\App\Http\Controllers\GroupMessageController::class, 'load'])->name('teacher.messaging.group.load');
+    Route::post('/messaging/group/{groupId}/messages', [\App\Http\Controllers\GroupMessageController::class, 'send'])->middleware('throttle:30,1')->name('teacher.messaging.group.send');
+    Route::get('/messaging/group/{groupId}/delta', [\App\Http\Controllers\GroupMessageController::class, 'delta'])->name('teacher.messaging.group.delta');
     Route::put('/messages/{message}', [MessagingController::class, 'update'])->name('teacher.messages.update');
     Route::post('/messages/{message}/audio-position', [MessagingController::class, 'saveAudioPosition'])->name('teacher.messaging.audio-position');
     Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('teacher.messages.destroy');
