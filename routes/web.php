@@ -361,6 +361,7 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::post('/messaging/read', [MessagingController::class, 'markAsRead'])->name('messaging.read');
     Route::post('/messaging/read-single', [MessagingController::class, 'markSingleMessageAsRead'])->name('messaging.read-single');
     Route::get('/messaging/delta', [MessagingController::class, 'delta'])->name('messaging.delta');
+    Route::get('/messaging/contacts-unread', [MessagingController::class, 'contactsUnread'])->middleware('throttle:6,1')->name('messaging.contacts-unread');
     Route::get('/messaging/stream', [MessagingController::class, 'stream'])->name('messaging.stream');
     Route::post('/messaging/group', [MessagingController::class, 'createGroup'])->name('messaging.group');
     Route::get('/messaging/groups', [\App\Http\Controllers\GroupMessageController::class, 'myGroups'])->name('messaging.groups');
@@ -598,6 +599,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     Route::post('/messaging/read', [MessagingController::class, 'markAsRead'])->name('teacher.messaging.read');
     Route::post('/messaging/read-single', [MessagingController::class, 'markSingleMessageAsRead'])->name('teacher.messaging.read-single');
     Route::get('/messaging/delta', [MessagingController::class, 'delta'])->name('teacher.messaging.delta');
+    Route::get('/messaging/contacts-unread', [MessagingController::class, 'contactsUnread'])->middleware('throttle:6,1')->name('teacher.messaging.contacts-unread');
     Route::get('/messaging/stream', [MessagingController::class, 'stream'])->name('teacher.messaging.stream');
     Route::post('/messaging/group', [MessagingController::class, 'createGroup'])->name('teacher.messaging.group');
     Route::get('/messaging/groups', [\App\Http\Controllers\GroupMessageController::class, 'myGroups'])->name('teacher.messaging.groups');

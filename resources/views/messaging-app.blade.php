@@ -60,6 +60,8 @@ $loadRoute = $loadRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.load'
 
 $deltaRoute = $deltaRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.delta', 'messaging.delta', 'student.messaging.delta'] : ['student.messaging.delta', 'messaging.delta', 'teacher.messaging.delta']);
 
+$contactsUnreadRoute = $pickRoute($isTeacherRole ? ['teacher.messaging.contacts-unread', 'messaging.contacts-unread', 'student.messaging.contacts-unread'] : ['student.messaging.contacts-unread', 'messaging.contacts-unread', 'teacher.messaging.contacts-unread']);
+
 $audioRoute = $audioRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.audio', 'messaging.audio', 'student.messaging.audio'] : ['student.messaging.audio', 'messaging.audio', 'teacher.messaging.audio']);
 
 $fileRoute = $fileRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.file', 'messaging.file', 'student.messaging.file'] : ['student.messaging.file', 'messaging.file', 'teacher.messaging.file']);
@@ -2437,7 +2439,7 @@ class="ie2-filter-card" :class="{active: imageEditorFilter===f.css}"
 
 </div>
 
-<div style="display:flex;justify-content:flex-end;gap:8px;">
+<div v-if="!includeExcludeMode" style="display:flex;justify-content:flex-end;gap:8px;">
 
 <button class="profile-action-btn" @click="resetFolderDraft">إلغاء</button>
 
@@ -4272,7 +4274,7 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <div class="sp-info-row">
 <i class="ri-notification-3-line sp-info-icon"></i>
 <span style="flex:1;font-size:14px;color:var(--text);">نغمة الرنين</span>
-<select v-model="callSettings.ringtone" @change="saveCallSettings" style="min-width:120px;">
+<select v-model="callSettings.ringtone" @change="previewTone(callSettings.ringtone); saveCallSettings()" style="min-width:120px;">
 <option v-for="t in toneList" :key="t.id" :value="t.id">@{{ t.label }}</option>
 </select>
 </div>
@@ -11978,6 +11980,7 @@ const d = await saveRes.json();
 if (d.success) {
 this.stickerList = [d.data, ...this.stickerList];
 this.showToast('تم حفظ الملصق في مكتبتك', 'success');
+this.stickerViewer = null;
 } else {
 this.showToast(d.message || 'تعذر حفظ الملصق', 'error');
 }
@@ -16633,6 +16636,7 @@ addEmojiToStatus(e) {
 },
 startStatusTextDrag(e, ti) {
     this.statusEditor.activeTextIndex = ti;
+    this.statusEditor.fontSize = this.statusEditor.texts[ti]?.fontSize || 28;
     this.statusTextSelected = true;
     this.handleGestureStart(e, this.statusEditor.texts[ti], true);
 },
@@ -16680,6 +16684,7 @@ handlePreviewBgClick(e) {
             // Move existing empty text
             active.textPosX = Math.round(x);
             active.textPosY = Math.round(y);
+            this.statusEditor.fontSize = active.fontSize || 28;
             this.statusFocusState = 2;
             this.statusTextSelected = true;
             this.$nextTick(() => {
@@ -16704,6 +16709,7 @@ handlePreviewBgClick(e) {
       rotate: 0,
       textBgStyle: 'none',
     };
+    this.statusEditor.fontSize = 28;
     this.statusEditor.texts.push(layer);
     this.statusEditor.activeTextIndex = this.statusEditor.texts.length - 1;
     this.statusTextSelected = true;
@@ -18453,6 +18459,35 @@ maybeShowDesktopNotification(contact, msg) {
     } catch (_) {}
 },
 
+startContactsBgPoll() {
+    if (this._contactsBgPollTimer) return;
+    const ROUTE = @json($contactsUnreadRoute ?? '#');
+    if (!ROUTE || ROUTE === '#') return;
+    this._prevUnread = {};
+    this._contactsBgPollTimer = setInterval(async () => {
+        if (!this.settingsNotifications.desktopEnabled) return;
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        try {
+            const r = await fetch(ROUTE, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!r.ok) return;
+            const d = await r.json();
+            if (!d.success) return;
+            for (const c of (d.contacts || [])) {
+                const selectedId = this.selectedContact ? Number(this.selectedContact.id) : -1;
+                if (Number(c.id) === selectedId) continue;
+                const prev = this._prevUnread[c.id] || 0;
+                if (c.unreadCount > prev && !document.hasFocus()) {
+                    const body = this.settingsNotifications.previewEnabled ? (c.lastMessage || 'رسالة جديدة') : 'رسالة جديدة';
+                    try { new Notification(c.name || 'رسالة جديدة', { body, icon: c.avatar_url || undefined }); } catch (_) {}
+                }
+                this._prevUnread[c.id] = c.unreadCount;
+                const existing = this.contacts.find(ct => Number(ct.id) === Number(c.id));
+                if (existing) existing.unreadCount = c.unreadCount;
+            }
+        } catch (_) {}
+    }, 30000);
+},
+
 maybeShowCallNotification(contact, type) {
     if (typeof document !== 'undefined' && document.hasFocus()) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -18734,6 +18769,15 @@ this.scheduleDeltaRefresh();
 
 }
 
+// Sync desktop notification permission state with browser reality
+if ('Notification' in window && Notification.permission !== 'granted') {
+    this.settingsNotifications.desktopEnabled = false;
+    this.settingNotifyEnabled = false;
+}
+
+// Background contacts poll for desktop notifications
+this.startContactsBgPoll();
+
 // Activity ping: lightweight and presence-friendly
 
 this.pingTimer = setInterval(() => {
@@ -18978,6 +19022,8 @@ if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler)
 if (this.refreshTimer) { clearTimeout(this.refreshTimer); this.refreshTimer = null; }
 
 if (this.pingTimer) clearInterval(this.pingTimer);
+
+if (this._contactsBgPollTimer) { clearInterval(this._contactsBgPollTimer); this._contactsBgPollTimer = null; }
 
 if (this.highlightTimer) clearTimeout(this.highlightTimer);
 
