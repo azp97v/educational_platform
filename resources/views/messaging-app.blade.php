@@ -2353,6 +2353,33 @@ class="ie2-filter-card" :class="{active: imageEditorFilter===f.css}"
 
 @include('partials.messaging-settings-panel')
 
+{{-- ── Desktop notification position preview (fixed to viewport) ── --}}
+<transition name="sn-preview-anim">
+    <div v-if="snPreviewVisible"
+         class="sn-preview-host"
+         :class="`sn-tc-${snPreviewPos}`"
+         style="pointer-events:none;">
+        <div v-for="i in settingsNotifications.notifMaxCount"
+             :key="i"
+             class="sn-toast-card"
+             :style="{
+                 zIndex: 99999 - i,
+                 opacity: Math.max(0.15, 1 - (i-1) * 0.18),
+                 transform: `translateY(${snPreviewPos.startsWith('bottom') ? -(i-1)*8 : (i-1)*8}px) scale(${1-(i-1)*0.05})`,
+                 transitionDelay: `${(i-1)*55}ms`
+             }">
+            <div class="sn-toast-av"><i class="ri-user-3-fill"></i></div>
+            <div class="sn-toast-body">
+                <p class="sn-toast-name">@{{ settingsNotifications.showName ? 'أحمد محمد' : '■■■■■■■' }}</p>
+                <p class="sn-toast-msg">@{{ settingsNotifications.showText ? 'مرحباً، كيف حالك؟' : '■■■■■■■■■■■' }}</p>
+            </div>
+            <div class="sn-toast-right">
+                <span class="sn-toast-time">الآن</span>
+                <span class="sn-toast-close-btn"><i class="ri-close-line"></i></span>
+            </div>
+        </div>
+    </div>
+</transition>
 
 <div class="folders-modal" v-if="foldersManagerOpen" @click.self="closeFoldersManager">
 
@@ -5724,6 +5751,8 @@ notifMaxCount: 3,
 },
 
 snHoveredCorner: null,
+snPreviewVisible: false,
+snPreviewPos: 'bottom-right',
 
 settingsMedia: {
 
@@ -18489,6 +18518,31 @@ async deleteSettingsFolder(folderId) {
             this.showToast('تم حذف المجلد', 'success');
         }
     } catch (_) {}
+},
+
+showSnPreview(pos) {
+    clearTimeout(this._snPreviewTimer);
+    clearTimeout(this._snPreviewAutoTimer);
+    if (this._snMoveDismiss) {
+        document.removeEventListener('mousemove', this._snMoveDismiss);
+        this._snMoveDismiss = null;
+    }
+    this.snPreviewPos = pos;
+    this.snPreviewVisible = true;
+    // Wait 250ms before watching for mouse movement (avoids immediate dismiss from the hover gesture itself)
+    this._snPreviewTimer = setTimeout(() => {
+        this._snMoveDismiss = () => {
+            this.snPreviewVisible = false;
+            document.removeEventListener('mousemove', this._snMoveDismiss);
+            this._snMoveDismiss = null;
+        };
+        document.addEventListener('mousemove', this._snMoveDismiss, { once: true });
+        // Auto-dismiss after 5s
+        this._snPreviewAutoTimer = setTimeout(() => {
+            this.snPreviewVisible = false;
+            if (this._snMoveDismiss) { document.removeEventListener('mousemove', this._snMoveDismiss); this._snMoveDismiss = null; }
+        }, 5000);
+    }, 250);
 },
 
 async changeSettingsLanguage(locale) {
