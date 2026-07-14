@@ -1134,6 +1134,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $data = $request->validate([
             'recipient_id' => ['required', 'integer', 'exists:users,id'],
             'file' => ['nullable', 'file', 'max:20480', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,mp4,mov,avi,mkv,webm,mp3,wav,m4a,ogg,zip,rar,7z', 'extensions:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,mp4,mov,avi,mkv,webm,mp3,wav,m4a,ogg,zip,rar,7z'],
+            'content' => ['nullable', 'string', 'max:2000'],
             'reply_to' => ['nullable', 'integer', 'exists:messages,id'],
             'is_sensitive' => ['nullable', 'boolean'],
             'kind' => ['nullable', 'string', 'in:sticker_static,sticker_animated,gif'],
@@ -1178,10 +1179,11 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                 $name = $file->getClientOriginalName() ?: basename($path);
             }
 
+            $caption = trim($data['content'] ?? '');
             $message = Message::create([
                 'sender_id' => $sender->id,
                 'recipient_id' => $recipient->id,
-                'content' => $name,
+                'content' => $caption ?: $name,
                 'attachment_path' => $path,
                 'attachment_type' => $mime,
                 'attachment_kind' => $kind,

@@ -1089,9 +1089,9 @@ style="min-width:110px;max-width:220px;border:1px solid var(--soft-2);border-rad
 
 <div style="margin-top:6px;font-size:11px;color:var(--muted);">@{{ getPendingAttachmentLabel(att) }}</div>
 
-<img v-if="att.previewType === 'image' && att.previewUrl" :src="att.previewUrl" alt="" style="margin-top:6px;width:100%;max-height:90px;object-fit:cover;border-radius:8px;">
+<img v-if="att.previewType === 'image' && att.previewUrl" :src="att.previewUrl" alt="" style="margin-top:6px;width:100%;max-height:90px;object-fit:cover;border-radius:8px;cursor:pointer;" @click="openAttachmentPreview(att)" title="معاينة الصورة">
 
-<video v-else-if="att.previewType === 'video' && att.previewUrl" :src="att.previewUrl" preload="metadata" muted style="margin-top:6px;width:100%;max-height:90px;object-fit:cover;border-radius:8px;background:color-mix(in srgb, var(--panel-2) 88%, transparent);"></video>
+<video v-else-if="att.previewType === 'video' && att.previewUrl" :src="att.previewUrl" preload="metadata" muted style="margin-top:6px;width:100%;max-height:90px;object-fit:cover;border-radius:8px;background:color-mix(in srgb, var(--panel-2) 88%, transparent);cursor:pointer;" @click="openAttachmentPreview(att)" title="معاينة الفيديو"></video>
 
 <div v-if="att.uploading || att.progress > 0" style="margin-top:8px;">
 
@@ -8338,14 +8338,62 @@ const text = this.messageInput.trim();
 // Handle group message send
 if (this.selectedContact && this.selectedContact.isGroup) {
 const groupId = this.selectedContact._groupId;
-if (!groupId || !text) return;
+if (!groupId || (!text && !this.pendingAttachments.length)) return;
 this.messageInput = '';
 this.showEmojiPicker = false;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
 const groupSendUrl = @json(
 auth()->user()->role === 'teacher'
 ? (\Illuminate\Support\Facades\Route::has('teacher.messaging.group.send') ? route('teacher.messaging.group.send', ['groupId' => '__GID__']) : null)
 : (\Illuminate\Support\Facades\Route::has('student.messaging.group.send') ? route('student.messaging.group.send', ['groupId' => '__GID__']) : null)
 );
+const groupFileUrl = baseUrl + '/messaging/group/' + groupId + '/file';
+
+const pendingFiles = [...this.pendingAttachments];
+this.clearAllAttachments();
+
+// If files present: send each file, first file gets the text as caption
+if (pendingFiles.length > 0) {
+for (let i = 0; i < pendingFiles.length; i++) {
+const att = pendingFiles[i];
+const caption = (i === 0 && text) ? text : '';
+const tempId = this.pendingMessageCounter--;
+const tempMsg = this.normalizeGroupMessage({ id: tempId, group_id: groupId, senderId: this.currentUserId, senderName: this.userName || '', content: caption || att.name, messageType: att.previewType || 'file', createdAt: new Date().toISOString(), isGroup: true });
+tempMsg.pending = true;
+tempMsg.attachmentUrl = att.previewUrl || null;
+tempMsg.attachmentName = att.name;
+this.messages.push(tempMsg);
+this.normalizeMessageOrder();
+this.scrollToBottom(true);
+try {
+const fd = new FormData();
+fd.append('file', att.file);
+if (caption) fd.append('content', caption);
+if (this.replyingToMessage?.id) fd.append('reply_to', this.replyingToMessage.id);
+const r = await fetch(groupFileUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }, body: fd });
+const d = await r.json();
+if (d.success) {
+const idx = this.messages.findIndex(m => Number(m.id) === Number(tempId));
+if (idx !== -1) { this.messages[idx] = this.normalizeGroupMessage(d.message); this.messages[idx].pending = false; }
+this.lastKnownMessageId = Math.max(Number(this.lastKnownMessageId || 0), Number(d.message.id || 0));
+} else {
+const idx = this.messages.findIndex(m => Number(m.id) === Number(tempId));
+if (idx !== -1) this.messages[idx].failed = true;
+this.showToast(d.message || 'فشل إرسال المرفق', 'error');
+}
+} catch(_) {
+const idx = this.messages.findIndex(m => Number(m.id) === Number(tempId));
+if (idx !== -1) this.messages[idx].failed = true;
+this.showToast('تعذر إرسال المرفق', 'error');
+}
+}
+this.replyingToMessage = null;
+this.updateContactPreview();
+this.scrollToBottom(true);
+return;
+}
+
+// Text-only group message
 if (!groupSendUrl) { this.showToast('Group send route not configured.', 'error'); return; }
 const tempId = this.pendingMessageCounter--;
 const tempMsg = this.normalizeGroupMessage({ id: tempId, group_id: groupId, senderId: this.currentUserId, senderName: this.userName || '', content: text, messageType: 'text', createdAt: new Date().toISOString(), isGroup: true });
@@ -8389,7 +8437,9 @@ const recipientId = Number(this.selectedContact?.id || 0);
 
 if (!recipientId) return;
 
-if (text) {
+// Only send text as a standalone message when there are no pending file attachments.
+// When files are present, the text becomes the caption for the first file (handled below).
+if (text && !this.pendingAttachments.length) {
 
 const msg = this.normalizeMessage({
 id: this.pendingMessageCounter--,
@@ -8468,11 +8518,12 @@ this.markMessageFailed(msg.id, this.t.sendFailed || 'تعذر إرسال الر�
 if (this.pendingAttachments.length) {
 
 const files = [...this.pendingAttachments];
+const fileCaption = text; // text is caption for first attachment (may be empty)
 
-for (const f of files) {
-
-await this.enqueueSend(async () => this.sendFileMessage(f.file));
-
+for (let _fi = 0; _fi < files.length; _fi++) {
+const _att = files[_fi];
+const _cap = (_fi === 0 && fileCaption) ? fileCaption : '';
+await this.enqueueSend(async () => this.sendFileMessage(_att.file, _cap));
 }
 
 this.clearAllAttachments();
@@ -8586,15 +8637,16 @@ this.markMessageFailed(msg.id, this.t.uploadFailed || 'تعذر إرسال ال�
 
 },
 
-async sendFileMessage(file) {
+async sendFileMessage(file, caption) {
 
 if (!file || !this.selectedContact) return;
 
+const displayContent = (caption && caption.trim()) ? caption.trim() : (file.name || '\u0645\u0631\u0641\u0642');
 const msg = this.normalizeMessage({
 id: this.pendingMessageCounter--,
 sender_id: this.currentUserId,
 recipient_id: this.selectedContact.id,
-content: file.name || '\u0645\u0631\u0641\u0642',
+content: displayContent,
 attachment_name: file.name || '\u0645\u0631\u0641\u0642',
 attachment_type: file.type || 'application/octet-stream',
 replyTo: this.replyingToMessage || null,
@@ -8631,6 +8683,8 @@ const fd = new FormData();
 fd.append('recipient_id', this.selectedContact.id);
 
 fd.append('file', file);
+
+if (caption && caption.trim()) fd.append('content', caption.trim());
 
 if (this.replyingToMessage?.id) fd.append('reply_to', this.replyingToMessage.id);
 
@@ -9801,6 +9855,38 @@ this.showToast(`تم إضافة ${mediaFiles.length} ملفات — اضغط ✏
 
 e.target.value = '';
 
+},
+
+openAttachmentPreview(att) {
+if (!att?.previewUrl) return;
+const type = att.previewType || 'file';
+if (type !== 'image' && type !== 'video') return;
+// Build a synthetic message object for the media modal
+const syntheticMsg = {
+id: 'preview_' + Date.now(),
+attachmentUrl: att.previewUrl,
+attachmentName: att.name || '',
+attachmentMime: att.mime || '',
+messageType: type,
+content: att.name || '',
+senderId: this.currentUserId,
+createdAt: new Date().toISOString(),
+};
+this.mediaModal = {
+url: att.previewUrl,
+type,
+name: att.name || '',
+caption: '',
+isSticker: false,
+senderName: this.userName || '',
+senderInitial: this.getAuthorInitial(this.userName || ''),
+senderAvatar: null,
+metaTime: '',
+message: syntheticMsg,
+index: 0,
+};
+this.mediaModalList = [syntheticMsg];
+this.mediaModalMoreOpen = false;
 },
 
 addPendingAttachment(file, editable = false) {
