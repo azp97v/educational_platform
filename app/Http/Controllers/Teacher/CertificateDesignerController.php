@@ -143,13 +143,13 @@ class CertificateDesignerController extends Controller
 
     public function createStudent()
     {
+        $teacherCourseIds = auth()->user()->courses()->pluck('id');
         $systemUsers = User::where('role', 'student')
-            ->where(function ($q) {
-                $q->where('teacher_id', auth()->id())
-                  ->orWhereHas('enrollments', function ($e) {
-                      $e->whereIn('course_id', auth()->user()->courses()->pluck('id'));
-                  });
-            })->orderBy('name')->get(['id', 'name', 'email', 'username', 'avatar_url']);
+            ->whereHas('enrollments', function ($e) use ($teacherCourseIds) {
+                $e->whereIn('course_id', $teacherCourseIds)
+                  ->where('status', 'approved');
+            })
+            ->orderBy('name')->get(['id', 'name', 'email', 'username', 'avatar_url']);
 
         $courses = auth()->user()->courses()
             ->where('status', 'published')
@@ -168,13 +168,13 @@ class CertificateDesignerController extends Controller
     {
         $student = CertificateStudent::where('user_id', auth()->id())->findOrFail($id);
 
+        $teacherCourseIds = auth()->user()->courses()->pluck('id');
         $systemUsers = User::where('role', 'student')
-            ->where(function ($q) {
-                $q->where('teacher_id', auth()->id())
-                  ->orWhereHas('enrollments', function ($e) {
-                      $e->whereIn('course_id', auth()->user()->courses()->pluck('id'));
-                  });
-            })->orderBy('name')->get(['id', 'name', 'email', 'username', 'avatar_url']);
+            ->whereHas('enrollments', function ($e) use ($teacherCourseIds) {
+                $e->whereIn('course_id', $teacherCourseIds)
+                  ->where('status', 'approved');
+            })
+            ->orderBy('name')->get(['id', 'name', 'email', 'username', 'avatar_url']);
 
         $courses = auth()->user()->courses()
             ->where('status', 'published')
@@ -388,6 +388,17 @@ class CertificateDesignerController extends Controller
         $student->delete();
         return redirect()->route('teacher.certificates.students')
             ->with('success', 'تم حذف الطالب بنجاح');
+    }
+
+    // ─── Global Template Gallery (no student required) ──────────
+
+    public function globalGallery()
+    {
+        $students = CertificateStudent::where('user_id', auth()->id())
+            ->orderBy('name')
+            ->get(['id', 'name', 'course']);
+
+        return view('teacher.certificates.global-gallery', compact('students'));
     }
 
     // ─── Template Gallery ───────────────────────────────────────

@@ -177,6 +177,9 @@
                 <div class="sub">إدارة الطلاب المستفيدين من شهادات الإنجاز — {{ $students->total() }} مستفيد</div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <a href="{{ route('teacher.certificates.global-gallery') }}" class="btn btn-gold">
+                    <i class="ri-layout-grid-line"></i> معرض القوالب
+                </a>
                 <a href="{{ route('teacher.certificates.students.create') }}" class="btn btn-primary">
                     <i class="ri-user-add-line"></i> إضافة مستفيد
                 </a>
