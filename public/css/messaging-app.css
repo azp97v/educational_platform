@@ -1307,7 +1307,9 @@ html[data-theme="light"] .voice-player-bar .vpb-track:hover {
         }
         .folders-editor { padding: 12px; border-top: 1px solid var(--theme-border); display:grid; gap:10px; }
         .picker-grid { display:grid; grid-template-columns: repeat(8, 1fr); gap:8px; max-height:180px; overflow:auto; }
-        .picker-grid button { border:1px solid var(--theme-border); background:var(--panel-2); border-radius:8px; min-height:34px; cursor:pointer; color:var(--text);}
+        .picker-grid button { border:1px solid var(--theme-border); background:var(--panel-2); border-radius:8px; min-height:34px; cursor:pointer; color:var(--text); transition: background .15s, border-color .15s, color .15s; }
+        .picker-grid button:hover { background: color-mix(in srgb, var(--gold) 15%, var(--panel-2)); border-color: var(--gold); color: var(--gold); }
+        .picker-grid button.active { background: color-mix(in srgb, var(--gold) 28%, transparent); border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
         .splitter { width: 8px; cursor: col-resize; background: transparent; position: relative; flex-shrink: 0; z-index: 9; touch-action: none; }
         .splitter::before { content: ''; position: absolute; inset: 0 2px; background: color-mix(in srgb, var(--theme-border) 70%, transparent); }
         .splitter:hover::before, .splitter.dragging::before { background: color-mix(in srgb, var(--gold) 50%, transparent); }

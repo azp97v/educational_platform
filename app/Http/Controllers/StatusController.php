@@ -136,6 +136,58 @@ class StatusController extends Controller
         ]);
     }
 
+    public function getMyStatusHistory(Request $request)
+    {
+        $user = Auth::user();
+
+        $rows = DB::table('user_statuses as s')
+            ->where('s.user_id', $user->id)
+            ->select(
+                's.id', 's.user_id', 's.type', 's.content_url', 's.audio_url',
+                's.text_content', 's.text_color', 's.text_objects',
+                's.text_pos_x', 's.text_pos_y', 's.text_rotate', 's.text_bg_style',
+                's.font_style', 's.font_size', 's.bg_color', 's.filter_style',
+                's.media_pos_x', 's.media_pos_y', 's.media_scale', 's.media_rotate',
+                's.duration_hours', 's.expires_at', 's.created_at', 's.views_count'
+            )
+            ->orderByDesc('s.created_at')
+            ->get();
+
+        $history = $rows->map(function ($s) {
+            return [
+                'id'          => (int) $s->id,
+                'userId'      => (int) $s->user_id,
+                'user_id'     => (int) $s->user_id,
+                'type'        => $s->type,
+                'contentUrl'  => $this->getSecureAttachmentUrl($s->content_url),
+                'audioUrl'    => $this->getSecureAttachmentUrl($s->audio_url),
+                'textContent' => $s->text_content,
+                'textColor'   => $s->text_color ?: '#ffffff',
+                'text_layers' => $s->text_objects,
+                'textPosX'    => (int) ($s->text_pos_x ?? 50),
+                'textPosY'    => (int) ($s->text_pos_y ?? 50),
+                'textRotate'  => (int) ($s->text_rotate ?? 0),
+                'textBgStyle' => $s->text_bg_style ?: 'none',
+                'fontStyle'   => $s->font_style ?: 'Tajawal',
+                'fontSize'    => (int) ($s->font_size ?: 24),
+                'bgColor'     => $s->bg_color ?: 'linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)',
+                'filterStyle' => $s->filter_style,
+                'mediaPosX'   => isset($s->media_pos_x) ? (float) $s->media_pos_x : 50,
+                'mediaPosY'   => isset($s->media_pos_y) ? (float) $s->media_pos_y : 50,
+                'mediaScale'  => isset($s->media_scale) ? (float) $s->media_scale : 1,
+                'mediaRotate' => isset($s->media_rotate) ? (float) $s->media_rotate : 0,
+                'durationHours' => (int) ($s->duration_hours ?: 24),
+                'expiresAt'   => Carbon::parse($s->expires_at)->toISOString(),
+                'createdAt'   => Carbon::parse($s->created_at)->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
+                'viewsCount'  => (int) ($s->views_count ?: 0),
+                'is_mine'     => true,
+                'isExpired'   => Carbon::parse($s->expires_at)->isPast(),
+            ];
+        })->values()->all();
+
+        return response()->json(['success' => true, 'data' => $history]);
+    }
+
     public function createStatus(Request $request)
     {
         $user = Auth::user();
