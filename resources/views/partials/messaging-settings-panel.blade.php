@@ -253,18 +253,23 @@
 
             <div class="settings-drawer__body">
 
-                {{-- ── معاينة الإشعار ─────────────────────────── --}}
+                {{-- ── معاينة الإشعار (TikTok-style card) ─────── --}}
                 <p class="sn-section-label">معاينة الإشعار</p>
-                <div class="settings-group-card">
-                    <div class="sn-preview-notif">
-                        <div class="sn-preview-avatar"><i class="ri-user-3-fill"></i></div>
-                        <div class="sn-preview-body">
-                            <span class="sn-preview-name" v-if="settingsNotifications.showName">أحمد محمد</span>
-                            <span class="sn-preview-name sn-redacted" v-else>●●●●●●</span>
-                            <span class="sn-preview-text" v-if="settingsNotifications.showText">مرحباً، كيف حالك؟</span>
-                            <span class="sn-preview-text sn-redacted" v-else>●●●●●●●●●●●</span>
+                <div class="settings-group-card sn-preview-group">
+                    <div class="sn-notif-card">
+                        <div class="sn-nc-avatar">
+                            <i class="ri-user-3-fill"></i>
                         </div>
-                        <span class="sn-preview-time">الآن</span>
+                        <div class="sn-nc-body">
+                            <p class="sn-nc-name" v-if="settingsNotifications.showName">أحمد محمد</p>
+                            <p class="sn-nc-name sn-nc-blur" v-else>■■■■■■■</p>
+                            <p class="sn-nc-msg" v-if="settingsNotifications.showText">مرحباً، كيف حالك؟</p>
+                            <p class="sn-nc-msg sn-nc-blur" v-else>■■■■■■■■■■■</p>
+                        </div>
+                        <div class="sn-nc-right">
+                            <span class="sn-nc-time">الآن</span>
+                            <button class="sn-nc-close"><i class="ri-close-line"></i></button>
+                        </div>
                     </div>
                     <div class="sn-preview-checks">
                         <label class="sn-check-label">
@@ -348,7 +353,7 @@
                     </div>
                 </div>
 
-                {{-- ── المكالمات ─────────────────────────────────── --}}
+                {{-- ── المكالمات + بطاقة المكالمة ───────────────── --}}
                 <p class="sn-section-label">المكالمات</p>
                 <div class="settings-group-card">
                     <div class="settings-inline-card">
@@ -357,6 +362,23 @@
                             <small>استقبال المكالمات الواردة على هذا المتصفح</small>
                         </div>
                         <button class="sp-toggle" :class="{on: settingsNotifications.acceptCallsOnDevice}" @click="settingsNotifications.acceptCallsOnDevice=!settingsNotifications.acceptCallsOnDevice; saveMessagingSettings();"></button>
+                    </div>
+                    {{-- Call card preview --}}
+                    <div class="sn-call-card">
+                        <div class="sn-call-glow"></div>
+                        <div class="sn-call-avatar-wrap">
+                            <div class="sn-call-ring sn-call-ring--1"></div>
+                            <div class="sn-call-ring sn-call-ring--2"></div>
+                            <div class="sn-call-avatar"><i class="ri-user-3-fill"></i></div>
+                        </div>
+                        <div class="sn-call-info">
+                            <span class="sn-call-label">مكالمة صوتية واردة</span>
+                            <strong class="sn-call-name">أحمد محمد</strong>
+                        </div>
+                        <div class="sn-call-actions">
+                            <button class="sn-call-btn sn-call-decline" title="رفض"><i class="ri-close-line"></i></button>
+                            <button class="sn-call-btn sn-call-accept" title="قبول"><i class="ri-phone-fill"></i></button>
+                        </div>
                     </div>
                 </div>
 
@@ -405,34 +427,81 @@
                     </div>
                 </div>
 
-                {{-- ── موقع الإشعار على الشاشة ──────────────────── --}}
-                <p class="sn-section-label">موقع الإشعار على الشاشة</p>
+                {{-- ── موقع الإشعار + عدد المتراكمة (تفاعلي) ──── --}}
+                <p class="sn-section-label">موقع وعدد الإشعارات</p>
                 <div class="settings-group-card">
                     <div class="sn-screen-picker">
                         <div class="sn-screen-monitor">
-                            <div class="sn-screen-inner">
-                                <button class="sn-corner sn-corner--tl" :class="{active: settingsNotifications.notifPosition==='top-left'}"     @click="settingsNotifications.notifPosition='top-left';     saveMessagingSettings();"><span></span></button>
-                                <button class="sn-corner sn-corner--tr" :class="{active: settingsNotifications.notifPosition==='top-right'}"    @click="settingsNotifications.notifPosition='top-right';    saveMessagingSettings();"><span></span></button>
-                                <button class="sn-corner sn-corner--bl" :class="{active: settingsNotifications.notifPosition==='bottom-left'}"  @click="settingsNotifications.notifPosition='bottom-left';  saveMessagingSettings();"><span></span></button>
-                                <button class="sn-corner sn-corner--br" :class="{active: settingsNotifications.notifPosition==='bottom-right'}" @click="settingsNotifications.notifPosition='bottom-right'; saveMessagingSettings();"><span></span></button>
+                            <div class="sn-screen-inner" @mouseleave="snHoveredCorner=null">
+
+                                {{-- Corner hit areas --}}
+                                <button class="sn-corner sn-corner--tl"
+                                    :class="{active: settingsNotifications.notifPosition==='top-left'}"
+                                    @mouseenter="snHoveredCorner='top-left'"
+                                    @click="settingsNotifications.notifPosition='top-left'; saveMessagingSettings();">
+                                    <span class="sn-corner-dot"></span>
+                                </button>
+                                <button class="sn-corner sn-corner--tr"
+                                    :class="{active: settingsNotifications.notifPosition==='top-right'}"
+                                    @mouseenter="snHoveredCorner='top-right'"
+                                    @click="settingsNotifications.notifPosition='top-right'; saveMessagingSettings();">
+                                    <span class="sn-corner-dot"></span>
+                                </button>
+                                <button class="sn-corner sn-corner--bl"
+                                    :class="{active: settingsNotifications.notifPosition==='bottom-left'}"
+                                    @mouseenter="snHoveredCorner='bottom-left'"
+                                    @click="settingsNotifications.notifPosition='bottom-left'; saveMessagingSettings();">
+                                    <span class="sn-corner-dot"></span>
+                                </button>
+                                <button class="sn-corner sn-corner--br"
+                                    :class="{active: settingsNotifications.notifPosition==='bottom-right'}"
+                                    @mouseenter="snHoveredCorner='bottom-right'"
+                                    @click="settingsNotifications.notifPosition='bottom-right'; saveMessagingSettings();">
+                                    <span class="sn-corner-dot"></span>
+                                </button>
+
+                                {{-- Live mini notification stack preview --}}
+                                <transition name="sn-mini-fade">
+                                    <div class="sn-mini-stack"
+                                        :class="`sn-pos-${snHoveredCorner || settingsNotifications.notifPosition}`"
+                                        v-if="snHoveredCorner || settingsNotifications.notifPosition">
+                                        <div class="sn-mini-card"
+                                            v-for="i in (snHoveredCorner ? 1 : settingsNotifications.notifMaxCount)"
+                                            :key="i"
+                                            :style="{
+                                                zIndex: 20 - i,
+                                                opacity: Math.max(0.25, 1 - (i-1) * 0.22),
+                                                transform: `translateY(${((snHoveredCorner||settingsNotifications.notifPosition).startsWith('bottom') ? -(i-1)*4 : (i-1)*4)}px) scale(${1-(i-1)*0.07})`
+                                            }">
+                                            <span class="sn-mini-av"></span>
+                                            <span class="sn-mini-lines">
+                                                <span class="sn-mini-l1"></span>
+                                                <span class="sn-mini-l2"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </transition>
+
                             </div>
                             <div class="sn-screen-stand"></div>
                         </div>
-                    </div>
-                </div>
 
-                {{-- ── عدد الإشعارات المتراكمة ───────────────────── --}}
-                <p class="sn-section-label">عدد الإشعارات المتراكمة</p>
-                <div class="settings-group-card">
-                    <div class="sn-count-tabs">
-                        <button v-for="n in [1,2,3,4,5]" :key="n"
-                            class="sn-count-tab"
-                            :class="{active: settingsNotifications.notifMaxCount === n}"
-                            @click="settingsNotifications.notifMaxCount=n; saveMessagingSettings();">
-                            @{{ n }}
-                        </button>
+                        {{-- Position label + count tabs side by side --}}
+                        <div class="sn-picker-controls">
+                            <p class="sn-pos-label">
+                                @{{ {'top-right':'أعلى اليمين','top-left':'أعلى اليسار','bottom-right':'أسفل اليمين','bottom-left':'أسفل اليسار'}[settingsNotifications.notifPosition] }}
+                            </p>
+                            <div class="sn-count-tabs">
+                                <button v-for="n in [1,2,3,4,5]" :key="n"
+                                    class="sn-count-tab"
+                                    :class="{active: settingsNotifications.notifMaxCount === n}"
+                                    @click="settingsNotifications.notifMaxCount=n; saveMessagingSettings();">
+                                    @{{ n }}
+                                </button>
+                            </div>
+                            <p class="settings-note" style="margin:0; padding:0;">عدد الإشعارات المتراكمة</p>
+                        </div>
                     </div>
-                    <p class="settings-note">الحد الأقصى لعدد الإشعارات الظاهرة فوق بعضها في آنٍ واحد</p>
                 </div>
 
             </div>
