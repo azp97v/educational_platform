@@ -36,7 +36,7 @@ class CleanupStaleCalls extends Command
         foreach ($stuckAccepted as $call) {
             DB::transaction(function () use ($call) {
                 $duration = $call->answered_at
-                    ? (int) now()->diffInSeconds($call->answered_at)
+                    ? max(0, (int) now()->diffInSeconds($call->answered_at))
                     : 0;
 
                 $call->update([
