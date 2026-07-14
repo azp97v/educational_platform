@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GroupMessageController extends Controller
@@ -119,6 +120,67 @@ class GroupMessageController extends Controller
             'group_id' => $groupId, 'sender_id' => $user->id,
             'content' => $content, 'reply_to' => $data['reply_to'] ?? null,
             'message_type' => 'text', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $msg     = $this->withSender()->where('gm.id', $msgId)->first();
+        $payload = $this->formatMsg($msg);
+
+        DB::table('group_message_reads')->updateOrInsert(
+            ['group_id' => $groupId, 'user_id' => $user->id],
+            ['last_read_message_id' => $msgId, 'updated_at' => now(), 'created_at' => now()]
+        );
+
+        $members = DB::table('group_participants')
+            ->where('group_id', $groupId)->where('user_id', '!=', $user->id)->pluck('user_id');
+        foreach ($members as $memberId) {
+            try { broadcast(new \App\Events\GroupMessageSent($groupId, (int) $memberId, $payload)); }
+            catch (\Throwable $e) { Log::warning('GroupMessageSent broadcast failed: ' . $e->getMessage()); }
+        }
+
+        return response()->json(['success' => true, 'message' => $payload]);
+    }
+
+    public function uploadFile(Request $request, int $groupId)
+    {
+        $group = $this->authorizeGroupMember($groupId);
+        $user  = Auth::user();
+
+        $whoCanSend = $group->who_can_send ?? ($group->only_admins_can_message ? 'admins' : 'all');
+        if ($whoCanSend === 'admins' && !$this->isAdmin($groupId, $user->id)) {
+            return response()->json(['success' => false, 'message' => 'هذه المجموعة في وضع الإعلانات — فقط المشرفون يمكنهم إرسال الرسائل'], 403);
+        }
+
+        $data = $request->validate([
+            'file'     => ['required', 'file', 'max:102400', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,mp4,mov,avi,mkv,webm,mp3,wav,m4a,ogg,zip,rar,7z'],
+            'content'  => ['nullable', 'string', 'max:2000'],
+            'reply_to' => ['nullable', 'integer'],
+        ]);
+
+        $file    = $request->file('file');
+        $path    = $file->store('group_attachments', 'public');
+        $mime    = Storage::disk('public')->mimeType($path) ?: $file->getMimeType();
+        $name    = $file->getClientOriginalName() ?: basename($path);
+        $caption = trim($data['content'] ?? '');
+
+        $ext = strtolower($file->getClientOriginalExtension());
+        $msgType = match(true) {
+            in_array($ext, ['jpg','jpeg','png','gif','webp'])        => 'image',
+            in_array($ext, ['mp4','mov','avi','mkv','webm'])         => 'video',
+            in_array($ext, ['mp3','wav','m4a','ogg'])                => 'audio',
+            default                                                   => 'file',
+        };
+
+        $msgId = DB::table('group_messages')->insertGetId([
+            'group_id'        => $groupId,
+            'sender_id'       => $user->id,
+            'content'         => $caption ?: $name,
+            'attachment_path' => $path,
+            'attachment_type' => $mime,
+            'attachment_name' => $name,
+            'message_type'    => $msgType,
+            'reply_to'        => $data['reply_to'] ?? null,
+            'created_at'      => now(),
+            'updated_at'      => now(),
         ]);
 
         $msg     = $this->withSender()->where('gm.id', $msgId)->first();
