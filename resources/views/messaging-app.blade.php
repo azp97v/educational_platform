@@ -836,6 +836,8 @@ if (typeof Sentry !== 'undefined') Sentry.onLoad(function() {
 <div v-else style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:120px;border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:12px;gap:6px;"><i class="ri-image-off-line" style="font-size:28px;opacity:.5;"></i>ملف غير متاح</div>
 </div>
 
+<div class="media-caption" v-if="(message.messageType === 'image' || message.messageType === 'video') && message.content && message.content !== (message.attachmentName || '')" style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word;padding:2px 2px 4px;">@{{ message.content }}</div>
+
 <div class="media" v-if="message.messageType === 'image'" @click="!brokenMediaByMessageId[message.id] && (message.isSensitive && !revealedSensitiveIds.has(message.id) ? revealSensitiveMessage(message.id) : openMediaModal(message))">
 
 <template v-if="!brokenMediaByMessageId[message.id]">
@@ -8804,7 +8806,9 @@ this.selectedContact.lastMessage = (last.senderName ? last.senderName + ': ' : '
 this.selectedContact.lastMessage = this.getMessagePreviewText(last);
 }
 
-this.selectedContact.lastMessageTime = last.createdAt || last.created_at || this.selectedContact.lastMessageTime;
+const newTime = last.createdAt || last.created_at || new Date().toISOString();
+this.selectedContact.lastMessageTime = newTime;
+this.selectedContact.lastSeenAt = newTime;
 
 this.selectedContact.lastMessageStatusRefId = last.statusRefId || null;
 
@@ -8814,7 +8818,9 @@ if (ci !== -1) {
 
 this.contacts[ci].lastMessage = this.selectedContact.lastMessage;
 
-this.contacts[ci].lastMessageTime = this.selectedContact.lastMessageTime;
+this.contacts[ci].lastMessageTime = newTime;
+
+this.contacts[ci].lastSeenAt = newTime;
 
 this.contacts[ci].lastMessageStatusRefId = this.selectedContact.lastMessageStatusRefId;
 
