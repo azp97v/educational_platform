@@ -1164,7 +1164,12 @@ style="min-width:110px;max-width:220px;border:1px solid var(--soft-2);border-rad
 <button class="delete-chat-inline-btn" @click="deleteChatWithContact">حذف الدردشة</button>
 </div>
 
-<template v-if="!contactBlocked">
+<div v-if="selectedContact.isGroup && groupIsAnnouncement && !groupInfoIsAdmin" class="blocked-compose-bar" style="background:rgba(var(--gold-rgb,212,175,55),0.08);border-top:1px solid var(--border);">
+<i class="ri-megaphone-line" style="color:var(--gold);"></i>
+<span style="color:var(--text);">هذه المجموعة في وضع الإعلانات — فقط المشرفون يمكنهم الإرسال</span>
+</div>
+
+<template v-if="!contactBlocked && !(selectedContact.isGroup && groupIsAnnouncement && !groupInfoIsAdmin)">
 <div class="lock-float" v-if="isRecording && !isRecordingLocked"><i class="ri-lock-line"></i></div>
 
 <transition name="swap" mode="out-in">
@@ -3244,8 +3249,36 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 </div>
 </div>
 
+<!-- Announcement Mode (admin only) -->
+<div v-if="groupInfoIsAdmin" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">
+<div>
+<div style="font-size:13px;font-weight:600;color:var(--text);"><i class="ri-megaphone-line"></i> وضع الإعلانات</div>
+<div style="font-size:11px;color:var(--muted);margin-top:2px;">فقط المشرفون يمكنهم إرسال الرسائل</div>
+</div>
+<div @click="toggleGroupAnnouncement()" style="position:relative;width:44px;height:24px;border-radius:12px;cursor:pointer;transition:background 0.2s;" :style="groupIsAnnouncement ? 'background:var(--gold)' : 'background:var(--border)'">
+<div style="position:absolute;top:3px;transition:left 0.2s;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);" :style="groupIsAnnouncement ? 'left:23px' : 'left:3px'"></div>
+</div>
+</div>
+</div>
+
+<!-- Invite Link -->
+<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
+<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;"><i class="ri-link"></i> رابط الدعوة</div>
+<div v-if="groupInviteUrl" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+<div style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;">@{{ groupInviteUrl }}</div>
+<button @click="copyGroupInviteLink()" title="نسخ الرابط" style="flex-shrink:0;background:var(--gold);border:none;border-radius:10px;padding:7px 11px;cursor:pointer;"><i class="ri-file-copy-line" style="color:#000;"></i></button>
+</div>
+<div v-if="groupInfoIsAdmin" style="display:flex;gap:6px;">
+<button v-if="!groupInviteUrl" @click="generateGroupInviteLink()" style="flex:1;background:var(--gold);border:none;border-radius:10px;padding:8px;cursor:pointer;font-size:12px;font-weight:600;color:#000;"><i class="ri-link-m"></i> إنشاء رابط دعوة</button>
+<button v-if="groupInviteUrl" @click="revokeGroupInviteLink(false)" title="تجديد الرابط" style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;font-size:12px;color:var(--text);"><i class="ri-refresh-line"></i> تجديد</button>
+<button v-if="groupInviteUrl" @click="revokeGroupInviteLink(true)" title="إلغاء الرابط" style="background:var(--input-bg);border:1px solid #dc3545;border-radius:10px;padding:8px 11px;cursor:pointer;font-size:12px;color:#dc3545;"><i class="ri-delete-bin-line"></i></button>
+</div>
+<div v-if="!groupInviteUrl && !groupInfoIsAdmin" style="font-size:12px;color:var(--muted);text-align:center;padding:4px;">لا يوجد رابط دعوة حالياً</div>
+</div>
+
 <!-- Bottom actions -->
-<div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px;display:flex;flex-direction:column;gap:8px;">
+<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;display:flex;flex-direction:column;gap:8px;">
 <button @click="leaveGroup()" style="width:100%;background:none;border:1px solid #dc3545;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;font-weight:600;color:#dc3545;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-logout-box-line"></i> مغادرة المجموعة</button>
 <button v-if="groupInfoIsAdmin" @click="deleteGroup()" style="width:100%;background:#dc3545;border:none;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ri-delete-bin-6-line"></i> حذف المجموعة نهائياً</button>
 </div>
@@ -4859,7 +4892,7 @@ groupCreateLoading: false,
 // Group Info Panel
 groupInfoOpen: false,
 groupInfoLoading: false,
-groupInfoData: { name: '', description: '', avatar_url: null, members_count: 0 },
+groupInfoData: { name: '', description: '', avatar_url: null, members_count: 0, only_admins_can_message: false },
 groupInfoMembers: [],
 groupInfoIsAdmin: false,
 groupInfoEditing: false,
@@ -4868,6 +4901,8 @@ groupInfoDescEdit: '',
 groupAddMemberSearch: '',
 groupAddMemberResults: [],
 _groupAddMemberTimer: null,
+groupInviteUrl: '',
+groupIsAnnouncement: false,
 
 toastMessage: '',
 
@@ -7138,6 +7173,8 @@ if (d.success) {
 this.groupInfoData = { ...d.group };
 this.groupInfoMembers = d.members || [];
 this.groupInfoIsAdmin = !!d.isAdmin;
+this.groupInviteUrl = d.group.invite_url || '';
+this.groupIsAnnouncement = !!(d.group.only_admins_can_message);
 if (this.selectedContact && this.selectedContact._groupId === groupId) {
 this.selectedContact._isAdmin = !!d.isAdmin;
 this.selectedContact._membersCount = (d.members || []).length;
@@ -7286,7 +7323,77 @@ members = d.members || [];
 }
 const participants = members.filter(m => m.id !== this.currentUserId);
 if (!participants.length) { this.showToast('لا يوجد أعضاء آخرون للاتصال بهم', 'info'); return; }
+// Pass group_id so CallController skips messaging-privacy checks
+this._pendingGroupCallId = groupId;
 await this.startCall(type, participants);
+this._pendingGroupCallId = null;
+},
+
+async generateGroupInviteLink() {
+const groupId = this.selectedContact?._groupId;
+if (!groupId) return;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+try {
+const r = await fetch(baseUrl + '/messaging/group/' + groupId + '/invite', {
+method: 'POST',
+headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }
+});
+const d = await r.json();
+if (d.success) { this.groupInviteUrl = d.url; this.showToast('تم إنشاء رابط الدعوة', 'success'); }
+else { this.showToast('فشل إنشاء الرابط', 'error'); }
+} catch(e) { this.showToast('خطأ في إنشاء الرابط', 'error'); }
+},
+
+async revokeGroupInviteLink(fullyRevoke) {
+const groupId = this.selectedContact?._groupId;
+if (!groupId) return;
+if (fullyRevoke && !confirm('هل تريد إلغاء رابط الدعوة؟ لن يعمل الرابط القديم بعد الإلغاء.')) return;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+if (fullyRevoke) {
+try {
+const r = await fetch(baseUrl + '/messaging/group/' + groupId + '/invite', {
+method: 'DELETE',
+headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }
+});
+const d = await r.json();
+if (d.success) { this.groupInviteUrl = ''; this.showToast('تم إلغاء رابط الدعوة', 'success'); }
+} catch(e) { this.showToast('خطأ في إلغاء الرابط', 'error'); }
+} else {
+await this.generateGroupInviteLink();
+}
+},
+
+copyGroupInviteLink() {
+if (!this.groupInviteUrl) return;
+try {
+navigator.clipboard.writeText(this.groupInviteUrl);
+this.showToast('تم نسخ رابط الدعوة', 'success');
+} catch(e) {
+const ta = document.createElement('textarea');
+ta.value = this.groupInviteUrl;
+document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+this.showToast('تم نسخ رابط الدعوة', 'success');
+}
+},
+
+async toggleGroupAnnouncement() {
+const groupId = this.selectedContact?._groupId;
+if (!groupId || !this.groupInfoIsAdmin) return;
+const newVal = !this.groupIsAnnouncement;
+const baseUrl = window.location.pathname.startsWith('/teacher') ? '/teacher' : '';
+try {
+const r = await fetch(baseUrl + '/messaging/group/' + groupId + '/settings', {
+method: 'PUT',
+headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+body: JSON.stringify({ only_admins_can_message: newVal })
+});
+const d = await r.json();
+if (d.success) {
+this.groupIsAnnouncement = newVal;
+this.groupInfoData.only_admins_can_message = newVal;
+this.showToast(newVal ? 'وضع الإعلانات مُفعَّل — فقط المشرفون يرسلون' : 'وضع الإعلانات مُعطَّل', 'success');
+} else { this.showToast('فشل تغيير الإعداد', 'error'); }
+} catch(e) { this.showToast('خطأ في الإعداد', 'error'); }
 },
 
 async deleteGroup() {
@@ -7744,6 +7851,15 @@ this.cancelRecording(true);
 if (window.innerWidth <= 1080) this.showSidebar = false;
 
 if (!contact.isGroup) this.loadWallpaperForContact(contact.id);
+else {
+// For groups: restore wallpaper from localStorage directly
+this.$nextTick(() => this.applyChatThemeVars());
+// Sync admin + announcement state from contact payload
+this.groupInfoIsAdmin = !!contact._isAdmin;
+this.groupIsAnnouncement = !!(contact.only_admins_can_message);
+this.groupInviteUrl = '';
+this.groupInfoMembers = [];
+}
 
 this.$nextTick(() => this.applyChatThemeVars());
 
@@ -15062,10 +15178,9 @@ this.cameraOff = false;
 this.callMinimized = false;
 this.startOutgoingRingtone();
 
-const result = await this.postCallAction(this.callsInitiateRoute, {
-participant_ids: contacts.map(c => Number(c.id)),
-type,
-});
+const callPayload = { participant_ids: contacts.map(c => Number(c.id)), type };
+if (this._pendingGroupCallId) callPayload.group_id = this._pendingGroupCallId;
+const result = await this.postCallAction(this.callsInitiateRoute, callPayload);
 
 if (!result || !result.success) {
 this.showToast(result?.error || 'فشل بدء المكالمة', result?.busy ? 'info' : 'error');

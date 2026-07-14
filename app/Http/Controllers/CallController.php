@@ -36,10 +36,11 @@ class CallController extends Controller
     public function initiate(Request $request)
     {
         $data = $request->validate([
-            'recipient_id' => ['nullable', 'integer', 'exists:users,id'],
+            'recipient_id'    => ['nullable', 'integer', 'exists:users,id'],
             'participant_ids' => ['nullable', 'array', 'min:1', 'max:' . self::MAX_GROUP_PARTICIPANTS],
             'participant_ids.*' => ['integer', 'exists:users,id'],
-            'type' => ['required', 'in:voice,video'],
+            'type'            => ['required', 'in:voice,video'],
+            'group_id'        => ['nullable', 'integer', 'exists:groups,id'],
         ]);
 
         $participantIds = $data['participant_ids'] ?? ($data['recipient_id'] ? [$data['recipient_id']] : []);
@@ -51,10 +52,27 @@ class CallController extends Controller
         $caller = Auth::user();
         abort_if(in_array((int) $caller->id, array_map('intval', $participantIds), true), 422, 'لا يمكن الاتصال بنفسك');
 
+        // For group calls: verify participants are group members instead of checking messaging privacy
+        $groupId = $data['group_id'] ?? null;
+        if ($groupId) {
+            $callerInGroup = \Illuminate\Support\Facades\DB::table('group_participants')
+                ->where('group_id', $groupId)->where('user_id', $caller->id)->exists();
+            abort_unless($callerInGroup, 403, 'لست عضواً في هذه المجموعة');
+
+            $groupMemberIds = \Illuminate\Support\Facades\DB::table('group_participants')
+                ->where('group_id', $groupId)->pluck('user_id')->map('intval')->toArray();
+            foreach ($participantIds as $pid) {
+                abort_unless(in_array((int)$pid, $groupMemberIds), 403, 'أحد المستخدمين ليس عضواً في المجموعة');
+            }
+        }
+
         $isGroup = count($participantIds) > 1;
         $recipients = User::whereIn('id', $participantIds)->get();
         foreach ($recipients as $recipient) {
-            abort_unless($this->userCanMessage($caller, $recipient), 403, 'لا يمكنك الاتصال بـ ' . $recipient->name);
+            // Skip messaging-privacy check for group calls — group membership is the gate
+            if (!$groupId) {
+                abort_unless($this->userCanMessage($caller, $recipient), 403, 'لا يمكنك الاتصال بـ ' . $recipient->name);
+            }
 
             // Clean stale participants from calls that ended abnormally (browser crash, network drop)
             // so they don't permanently block new calls with a false "busy" reading
