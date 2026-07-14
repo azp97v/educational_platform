@@ -6050,8 +6050,8 @@ result.sort((a, b) => {
     const pa = a.isPinned ? 1 : 0;
     const pb = b.isPinned ? 1 : 0;
     if (pa !== pb) return pb - pa;
-    const ta = new Date(a.lastSeenAt || 0).getTime();
-    const tb = new Date(b.lastSeenAt || 0).getTime();
+    const ta = new Date(a.lastMessageTime || a.lastSeenAt || 0).getTime();
+    const tb = new Date(b.lastMessageTime || b.lastSeenAt || 0).getTime();
     return tb - ta;
 });
 
