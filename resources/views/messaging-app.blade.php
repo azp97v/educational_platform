@@ -836,8 +836,6 @@ if (typeof Sentry !== 'undefined') Sentry.onLoad(function() {
 <div v-else style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:120px;border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:12px;gap:6px;"><i class="ri-image-off-line" style="font-size:28px;opacity:.5;"></i>ملف غير متاح</div>
 </div>
 
-<div class="media-caption" v-if="(message.messageType === 'image' || message.messageType === 'video') && message.content && message.content !== (message.attachmentName || '')" style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word;padding:2px 2px 4px;">@{{ message.content }}</div>
-
 <div class="media" v-if="message.messageType === 'image'" @click="!brokenMediaByMessageId[message.id] && (message.isSensitive && !revealedSensitiveIds.has(message.id) ? revealSensitiveMessage(message.id) : openMediaModal(message))">
 
 <template v-if="!brokenMediaByMessageId[message.id]">
@@ -875,6 +873,8 @@ v-on:error="markMediaAsBroken(message); onMediaLoaded(message)"></video>
 <div v-else style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px;min-height:80px;border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:12px;gap:6px;padding:16px;"><i class="ri-vidicon-off-line" style="font-size:28px;opacity:.5;"></i>فيديو غير متاح</div>
 
 </div>
+
+<div class="media-caption" v-if="(message.messageType === 'image' || message.messageType === 'video') && message.content && message.content !== (message.attachmentName || '')" style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word;padding:4px 2px 2px;">@{{ message.content }}</div>
 
 <div class="audio" v-if="message.messageType === 'audio'" :class="{ 'is-playing': message.isPlaying }">
 
