@@ -372,6 +372,7 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::delete('/messaging/group/{groupId}/members/{userId}', [\App\Http\Controllers\GroupMessageController::class, 'removeMember'])->name('messaging.group.members.remove');
     Route::put('/messaging/group/{groupId}/settings', [\App\Http\Controllers\GroupMessageController::class, 'updateSettings'])->name('messaging.group.settings');
     Route::post('/messaging/group/{groupId}/members/{userId}/role', [\App\Http\Controllers\GroupMessageController::class, 'changeRole'])->name('messaging.group.members.role');
+    Route::delete('/messaging/group/{groupId}', [\App\Http\Controllers\GroupMessageController::class, 'deleteGroup'])->name('messaging.group.delete');
     Route::put('/messages/{message}', [MessagingController::class, 'update'])->name('messages.update');
     Route::post('/messages/{message}/audio-position', [MessagingController::class, 'saveAudioPosition'])->name('messaging.audio-position');
     Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('messages.destroy');
@@ -601,6 +602,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     Route::delete('/messaging/group/{groupId}/members/{userId}', [\App\Http\Controllers\GroupMessageController::class, 'removeMember'])->name('teacher.messaging.group.members.remove');
     Route::put('/messaging/group/{groupId}/settings', [\App\Http\Controllers\GroupMessageController::class, 'updateSettings'])->name('teacher.messaging.group.settings');
     Route::post('/messaging/group/{groupId}/members/{userId}/role', [\App\Http\Controllers\GroupMessageController::class, 'changeRole'])->name('teacher.messaging.group.members.role');
+    Route::delete('/messaging/group/{groupId}', [\App\Http\Controllers\GroupMessageController::class, 'deleteGroup'])->name('teacher.messaging.group.delete');
     Route::put('/messages/{message}', [MessagingController::class, 'update'])->name('teacher.messages.update');
     Route::post('/messages/{message}/audio-position', [MessagingController::class, 'saveAudioPosition'])->name('teacher.messaging.audio-position');
     Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('teacher.messages.destroy');
