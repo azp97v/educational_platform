@@ -4151,12 +4151,36 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 <h3><i class="ri-user-add-line"></i> إضافة مشارك</h3>
 <button class="h-icon-btn" @click="showAddParticipant = false"><i class="ri-close-line"></i></button>
 </div>
+
+<!-- Pending invites section -->
+<div v-if="pendingInvites.length" style="padding:10px 14px;border-bottom:1px solid var(--border);">
+<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">الدعوات الجارية</div>
+<div v-for="inv in pendingInvites" :key="inv.id" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-light,rgba(0,0,0,.05));" :style="inv===pendingInvites[pendingInvites.length-1]?'border-bottom:none':''">
+  <div class="call-card-avatar" style="width:36px;height:36px;font-size:13px;">
+    <img v-if="inv.avatar_url" :src="normalizeAvatarUrl(inv.avatar_url)" alt="">
+    <span v-else>@{{ getAuthorInitial(inv.name) }}</span>
+  </div>
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@{{ inv.name }}</div>
+    <div style="font-size:11px;margin-top:2px;" :style="inv.status==='ringing'?'color:#F59E0B':inv.status==='answered'?'color:#22C55E':inv.status==='declined'?'color:#EF4444':'color:var(--muted)'">
+      <span v-if="inv.status==='ringing'"><i class="ri-loader-4-line" style="animation:spin 1s linear infinite;display:inline-block;"></i> جاري الرنين...</span>
+      <span v-else-if="inv.status==='answered'"><i class="ri-check-line"></i> انضم</span>
+      <span v-else-if="inv.status==='declined'"><i class="ri-close-line"></i> رفض المكالمة</span>
+      <span v-else-if="inv.status==='timeout'"><i class="ri-time-line"></i> لم يرد</span>
+    </div>
+  </div>
+  <button v-if="inv.status==='declined'||inv.status==='timeout'" @click="ringAgain(inv)" style="padding:5px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--gold-light,rgba(198,166,117,.15));color:var(--gold-dark,#8D7252);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+    <i class="ri-phone-line"></i> اتصل مجدداً
+  </button>
+</div>
+</div>
+
 <div class="new-call-search-wrap">
 <i class="ri-search-line" style="color:var(--muted);font-size:16px;"></i>
 <input class="new-call-search" v-model="addParticipantQuery" placeholder="ابحث بالاسم...">
 </div>
-<div class="calls-list" style="max-height:320px;">
-<template v-for="c in (contacts || []).filter(c => Number(c.id) !== -1 && !callParticipants.some(p => Number(p.id) === Number(c.id)) && (!addParticipantQuery || c.name.toLowerCase().includes(addParticipantQuery.toLowerCase())))" :key="c.id">
+<div class="calls-list" style="max-height:260px;">
+<template v-for="c in (contacts || []).filter(c => Number(c.id) !== -1 && !callParticipants.some(p => Number(p.id) === Number(c.id)) && !pendingInvites.some(p => Number(p.id) === Number(c.id) && p.status==='ringing') && (!addParticipantQuery || c.name.toLowerCase().includes(addParticipantQuery.toLowerCase())))" :key="c.id">
 <div class="call-card" @click="addParticipantToCall(c)">
 <div class="call-card-avatar">
 <img v-if="c.avatar_url" :src="normalizeAvatarUrl(c.avatar_url)" alt="">
@@ -4164,9 +4188,14 @@ class="qr-bg-option" :class="{active: qrBgIndex===i}"
 </div>
 <div class="call-card-body">
 <div class="call-card-name">@{{ c.name }}</div>
+<div class="call-card-meta" style="font-size:11px;color:var(--muted);">انقر للدعوة</div>
 </div>
+<i class="ri-phone-line" style="color:var(--gold);font-size:16px;opacity:.7;"></i>
 </div>
 </template>
+<div v-if="(contacts||[]).filter(c=>Number(c.id)!==-1&&!callParticipants.some(p=>Number(p.id)===Number(c.id))&&!pendingInvites.some(p=>Number(p.id)===Number(c.id)&&p.status==='ringing')).length===0" style="padding:24px;text-align:center;color:var(--muted);font-size:13px;">
+  لا يوجد مزيد من جهات الاتصال لإضافتها
+</div>
 </div>
 </div>
 </div>
@@ -4612,6 +4641,7 @@ gifsSearchRoute: @json($gifsSearchRoute),
 peerConnections: {},
 remoteStreamsVersion: 0,
 callParticipants: [],
+pendingInvites: [],
 isGroupCall: false,
 showAddParticipant: false,
 addParticipantQuery: '',
@@ -14902,18 +14932,42 @@ this.addParticipantQuery = '';
 
 async addParticipantToCall(contact) {
 if (!this.currentCallId) return;
+const uid = Number(contact.id);
+
+// If already ringing, ignore
+const existing = this.pendingInvites.find(p => Number(p.id) === uid);
+if (existing && existing.status === 'ringing') return;
+
+// Set or update status to ringing
+if (existing) {
+    if (existing._ringTimer) clearTimeout(existing._ringTimer);
+    existing.status = 'ringing';
+    existing._ringTimer = null;
+} else {
+    this.pendingInvites.push({ id: uid, name: contact.name, avatar_url: contact.avatar_url || null, status: 'ringing', _ringTimer: null });
+}
+
+const invite = this.pendingInvites.find(p => Number(p.id) === uid);
 const result = await this.postCallAction(this.callRouteFor(this.callsInviteRouteTemplate, this.currentCallId), {
-user_id: contact.id,
+    user_id: contact.id,
 });
 if (!result || !result.success) {
-this.showToast(result?.message || 'تعذر إضافة المشارك', 'error');
-return;
+    if (invite) invite.status = 'declined';
+    this.showToast(result?.message || 'تعذر إضافة المشارك', 'error');
+    return;
 }
 this.isGroupCall = true;
-this.upsertParticipantTile(contact.id, { name: contact.name, avatar_url: contact.avatar_url || null, stream: null });
-// HMS SDK handles the new participant's media automatically when they join the room
-this.showAddParticipant = false;
-this.showToast('تمت دعوة ' + contact.name, 'success');
+// 30-second ring timeout
+if (invite) {
+    invite._ringTimer = setTimeout(() => {
+        if (invite.status === 'ringing') invite.status = 'timeout';
+    }, 30000);
+}
+this.showToast('جاري استدعاء ' + contact.name + '...', 'info');
+},
+
+ringAgain(invite) {
+this.addParticipantToCall({ id: invite.id, name: invite.name, avatar_url: invite.avatar_url });
 },
 
 async createOfferFor(userId) {
@@ -14933,6 +14987,9 @@ if (this._hmsReconnectTimer) { clearTimeout(this._hmsReconnectTimer); this._hmsR
 if (this._groupCallEmptyTimer) { clearTimeout(this._groupCallEmptyTimer); this._groupCallEmptyTimer = null; }
 if (this._callElapsedTimer) { clearInterval(this._callElapsedTimer); this._callElapsedTimer = null; }
 if (this._callDeviceCloseTimer) { clearTimeout(this._callDeviceCloseTimer); this._callDeviceCloseTimer = null; }
+// Clear pending invite timers
+this.pendingInvites.forEach(p => { if (p._ringTimer) clearTimeout(p._ringTimer); });
+this.pendingInvites = [];
 this._poorQualityToastAt = null;
 this._callNow = 0;
 this.remoteAudioLevel = 0;
@@ -15332,6 +15389,15 @@ channel.listen('.call.participant-joined', (data) => {
 if (Number(data.call_id) !== Number(this.currentCallId)) return;
 this.isGroupCall = true;
 this.upsertParticipantTile(data.user.id, { name: data.user.name, avatar_url: data.user.avatar_url });
+// Update pending invite status to 'answered'
+const invite = this.pendingInvites.find(p => Number(p.id) === Number(data.user.id));
+if (invite) {
+    if (invite._ringTimer) { clearTimeout(invite._ringTimer); invite._ringTimer = null; }
+    invite.status = 'answered';
+    setTimeout(() => {
+        this.pendingInvites = this.pendingInvites.filter(p => Number(p.id) !== Number(data.user.id));
+    }, 2000);
+}
 });
 
 channel.listen('.call.participant-left', (data) => {

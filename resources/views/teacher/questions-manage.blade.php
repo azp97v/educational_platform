@@ -1164,18 +1164,18 @@
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:28px;padding:14px 16px;background:var(--theme-surface);border:1px solid var(--border);border-radius:14px;">
         <div style="position:relative;flex:1;min-width:200px;">
           <i class="ri-search-line" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
-          <input id="qmSearch" type="text" placeholder="ابحث في الأسئلة والاستفسارات..." style="width:100%;padding:9px 38px 9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--theme-input-bg,var(--theme-page-bg));color:var(--text-primary);font-family:inherit;font-size:13px;outline:none;transition:border-color 0.2s;" oninput="qmApplyFilters()">
+          <input id="qmSearch" type="text" placeholder="ابحث في الأسئلة والاستفسارات..." style="width:100%;padding:9px 38px 9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--theme-input-bg,var(--theme-page-bg));color:var(--text-primary);font-family:inherit;font-size:13px;outline:none;transition:border-color 0.2s;">
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="qm-filter-btn active" data-filter="all" onclick="qmSetFilter('all')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--gold-light,rgba(198,166,117,0.15));color:var(--gold-dark,#8D7252);font-size:12px;font-weight:700;cursor:pointer;">الكل</button>
-          <button class="qm-filter-btn" data-filter="pending" onclick="qmSetFilter('pending')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">معلقة فقط</button>
-          <button class="qm-filter-btn" data-filter="answered" onclick="qmSetFilter('answered')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">مجاب عليها</button>
+          <button class="qm-filter-btn active" data-filter="all" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--gold-light,rgba(198,166,117,0.15));color:var(--gold-dark,#8D7252);font-size:12px;font-weight:700;cursor:pointer;">الكل</button>
+          <button class="qm-filter-btn" data-filter="pending" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">معلقة فقط</button>
+          <button class="qm-filter-btn" data-filter="answered" style="padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;">مجاب عليها</button>
         </div>
         <div style="display:flex;gap:6px;margin-right:auto;">
-          <button onclick="qmClearAnswered('questions')" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,59,48,0.3);background:rgba(255,59,48,0.08);color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="حذف جميع الأسئلة المجاب عليها">
+          <button id="qmClearQuestionsBtn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,59,48,0.3);background:rgba(255,59,48,0.08);color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="حذف جميع الأسئلة المجاب عليها">
             <i class="ri-delete-bin-2-line"></i> مسح أسئلة مجابة
           </button>
-          <button onclick="qmClearAnswered('inquiries')" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,59,48,0.3);background:rgba(255,59,48,0.08);color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="حذف جميع الاستفسارات المجاب عليها">
+          <button id="qmClearInquiriesBtn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,59,48,0.3);background:rgba(255,59,48,0.08);color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;" title="حذف جميع الاستفسارات المجاب عليها">
             <i class="ri-delete-bin-2-line"></i> مسح استفسارات مجابة
           </button>
         </div>
@@ -1692,6 +1692,21 @@ document.addEventListener('click', function(e) {
   e.stopPropagation();
   qmDeleteCard(btn.dataset.id, btn.dataset.type, btn);
 });
+
+// Attach filter buttons (replaces inline onclick handlers — CSP-safe)
+document.querySelectorAll('.qm-filter-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() { qmSetFilter(btn.dataset.filter); });
+});
+
+// Attach search input (replaces inline oninput handler — CSP-safe)
+const qmSearchEl = document.getElementById('qmSearch');
+if (qmSearchEl) qmSearchEl.addEventListener('input', qmApplyFilters);
+
+// Attach bulk-clear buttons
+const qmClearQ = document.getElementById('qmClearQuestionsBtn');
+if (qmClearQ) qmClearQ.addEventListener('click', function() { qmClearAnswered('questions'); });
+const qmClearI = document.getElementById('qmClearInquiriesBtn');
+if (qmClearI) qmClearI.addEventListener('click', function() { qmClearAnswered('inquiries'); });
 </script>
 </body>
 </html>
