@@ -5691,6 +5691,36 @@ desktopEnabled: false,
 
 volume: 100,
 
+flashTaskbar: true,
+
+showName: true,
+
+showText: true,
+
+privateChats: true,
+
+groups: true,
+
+notifyContactJoined: false,
+
+notifyPinned: true,
+
+acceptCallsOnDevice: true,
+
+includeMutedBadge: false,
+
+includeMutedFolders: false,
+
+countUnread: true,
+
+useWindowsNotif: false,
+
+respectFocusMode: true,
+
+notifPosition: 'bottom-right',
+
+notifMaxCount: 3,
+
 },
 
 settingsMedia: {

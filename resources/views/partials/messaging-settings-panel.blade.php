@@ -252,53 +252,189 @@
             </div>
 
             <div class="settings-drawer__body">
-                <div class="settings-preview-card">
-                    <div class="settings-preview-card__badge"><i class="ri-notification-2-fill"></i></div>
-                    <div class="settings-preview-card__body">
-                        <strong>معاينة سريعة</strong>
-                        <p>@{{ settingsNotifications.previewEnabled ? 'سيظهر اسم المرسل ومحتوى مختصر عند دعم المتصفح لذلك.' : 'سيظهر إشعار مختصر دون معاينة نص الرسالة.' }}</p>
+
+                {{-- ── معاينة الإشعار ─────────────────────────── --}}
+                <p class="sn-section-label">معاينة الإشعار</p>
+                <div class="settings-group-card">
+                    <div class="sn-preview-notif">
+                        <div class="sn-preview-avatar"><i class="ri-user-3-fill"></i></div>
+                        <div class="sn-preview-body">
+                            <span class="sn-preview-name" v-if="settingsNotifications.showName">أحمد محمد</span>
+                            <span class="sn-preview-name sn-redacted" v-else>●●●●●●</span>
+                            <span class="sn-preview-text" v-if="settingsNotifications.showText">مرحباً، كيف حالك؟</span>
+                            <span class="sn-preview-text sn-redacted" v-else>●●●●●●●●●●●</span>
+                        </div>
+                        <span class="sn-preview-time">الآن</span>
+                    </div>
+                    <div class="sn-preview-checks">
+                        <label class="sn-check-label">
+                            <input type="checkbox" v-model="settingsNotifications.showName" @change="saveMessagingSettings()">
+                            <span>الاسم</span>
+                        </label>
+                        <label class="sn-check-label">
+                            <input type="checkbox" v-model="settingsNotifications.showText" @change="saveMessagingSettings()">
+                            <span>النص</span>
+                        </label>
                     </div>
                 </div>
 
+                {{-- ── الإعدادات العامة ─────────────────────────── --}}
+                <p class="sn-section-label">الإعدادات العامة</p>
                 <div class="settings-group-card">
                     <div class="settings-inline-card">
                         <div class="settings-inline-card__copy">
-                            <strong>صوت الإشعارات</strong>
+                            <strong>إشعارات سطح المكتب</strong>
+                            <small>إشعار من المتصفح عند ورود رسالة والنافذة غير مركّزة</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.desktopEnabled}" @click="settingsNotifications.desktopEnabled ? (settingsNotifications.desktopEnabled=false, saveMessagingSettings()) : requestDesktopNotifications()"></button>
+                    </div>
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>إضاءة شريط المهام</strong>
+                            <small>تومض أيقونة التطبيق عند وصول إشعار جديد</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.flashTaskbar}" @click="settingsNotifications.flashTaskbar=!settingsNotifications.flashTaskbar; saveMessagingSettings();"></button>
+                    </div>
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>السماح بالأصوات</strong>
                             <small>تشغيل أو إيقاف صوت التنبيهات الواردة</small>
                         </div>
                         <button class="sp-toggle" :class="{on: settingsNotifications.soundEnabled}" @click="settingsNotifications.soundEnabled=!settingsNotifications.soundEnabled; saveMessagingSettings();"></button>
                     </div>
-
                     <div class="sp-slider-row" v-if="settingsNotifications.soundEnabled">
                         <span class="sp-slider-label">المستوى</span>
                         <input type="range" min="0" max="100" :value="settingsNotifications.volume" @input="updateGlobalVolume($event.target.value)" class="sp-slider">
                         <span class="sp-slider-value">@{{ settingsNotifications.volume }}%</span>
                     </div>
+                </div>
 
+                {{-- ── الإشعارات للمحادثات ─────────────────────── --}}
+                <p class="sn-section-label">الإشعارات للمحادثات</p>
+                <div class="settings-group-card">
                     <div class="settings-inline-card">
                         <div class="settings-inline-card__copy">
-                            <strong>معاينة الرسائل</strong>
-                            <small>إظهار نص تقريبي داخل الإشعار حين يكون مدعومًا</small>
+                            <strong>المحادثات الخاصة</strong>
+                            <small v-if="mutedContactsCount > 0">@{{ mutedContactsCount }} استثناء نشط</small>
+                            <small v-else>جميع المحادثات الخاصة</small>
                         </div>
-                        <button class="sp-toggle" :class="{on: settingsNotifications.previewEnabled}" @click="settingsNotifications.previewEnabled=!settingsNotifications.previewEnabled; saveMessagingSettings();"></button>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.privateChats}" @click="settingsNotifications.privateChats=!settingsNotifications.privateChats; saveMessagingSettings();"></button>
                     </div>
-
                     <div class="settings-inline-card">
                         <div class="settings-inline-card__copy">
-                            <strong>إشعارات سطح المكتب</strong>
-                            <small>إشعار حقيقي من المتصفح عند ورود رسالة والنافذة غير مركّزة</small>
+                            <strong>المجموعات</strong>
+                            <small>جميع المجموعات والمحادثات الجماعية</small>
                         </div>
-                        <button class="sp-toggle" :class="{on: settingsNotifications.desktopEnabled}" @click="settingsNotifications.desktopEnabled ? (settingsNotifications.desktopEnabled=false, saveMessagingSettings()) : requestDesktopNotifications()"></button>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.groups}" @click="settingsNotifications.groups=!settingsNotifications.groups; saveMessagingSettings();"></button>
                     </div>
                 </div>
 
-                <div class="settings-group-card" v-if="mutedContactsCount > 0">
-                    <div class="settings-stat-row">
-                        <span class="settings-stat-row__label">المحادثات المكتومة</span>
-                        <strong>@{{ mutedContactsCount }}</strong>
+                {{-- ── الأحداث ──────────────────────────────────── --}}
+                <p class="sn-section-label">الأحداث</p>
+                <div class="settings-group-card">
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>انضمام جهة اتصال</strong>
+                            <small>إشعار عند انضمام شخص من جهات اتصالك</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.notifyContactJoined}" @click="settingsNotifications.notifyContactJoined=!settingsNotifications.notifyContactJoined; saveMessagingSettings();"></button>
                     </div>
-                    <p class="settings-note">يوجد @{{ mutedContactsCount }} استثناء نشط حاليًا من إشعارات الدردشات.</p>
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>الرسائل المثبتة</strong>
+                            <small>إشعار عند تثبيت رسالة في محادثة</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.notifyPinned}" @click="settingsNotifications.notifyPinned=!settingsNotifications.notifyPinned; saveMessagingSettings();"></button>
+                    </div>
                 </div>
+
+                {{-- ── المكالمات ─────────────────────────────────── --}}
+                <p class="sn-section-label">المكالمات</p>
+                <div class="settings-group-card">
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>قبول المكالمات على هذا الجهاز</strong>
+                            <small>استقبال المكالمات الواردة على هذا المتصفح</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.acceptCallsOnDevice}" @click="settingsNotifications.acceptCallsOnDevice=!settingsNotifications.acceptCallsOnDevice; saveMessagingSettings();"></button>
+                    </div>
+                </div>
+
+                {{-- ── عداد الشارة ───────────────────────────────── --}}
+                <p class="sn-section-label">عداد الشارة</p>
+                <div class="settings-group-card">
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>تضمين المكتومة في العدد الكلي</strong>
+                            <small>تُحسب الرسائل في المحادثات المكتومة ضمن الشارة</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.includeMutedBadge}" @click="settingsNotifications.includeMutedBadge=!settingsNotifications.includeMutedBadge; saveMessagingSettings();"></button>
+                    </div>
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>تضمين المكتومة في عدادات المجلدات</strong>
+                            <small>تُظهر المجلدات الرسائل المكتومة في عداداتها</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.includeMutedFolders}" @click="settingsNotifications.includeMutedFolders=!settingsNotifications.includeMutedFolders; saveMessagingSettings();"></button>
+                    </div>
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>عد الرسائل غير المقروءة</strong>
+                            <small>عرض عدد الرسائل بدلاً من عدد المحادثات</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.countUnread}" @click="settingsNotifications.countUnread=!settingsNotifications.countUnread; saveMessagingSettings();"></button>
+                    </div>
+                </div>
+
+                {{-- ── تكامل النظام ──────────────────────────────── --}}
+                <p class="sn-section-label">تكامل النظام</p>
+                <div class="settings-group-card">
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>استخدام إشعارات ويندوز</strong>
+                            <small>إرسال الإشعارات عبر نظام ويندوز بدلاً من المتصفح</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.useWindowsNotif}" @click="settingsNotifications.useWindowsNotif=!settingsNotifications.useWindowsNotif; saveMessagingSettings();"></button>
+                    </div>
+                    <div class="settings-inline-card">
+                        <div class="settings-inline-card__copy">
+                            <strong>احترام وضع التركيز</strong>
+                            <small>لا ترسل إشعارات عند تفعيل وضع التركيز في ويندوز</small>
+                        </div>
+                        <button class="sp-toggle" :class="{on: settingsNotifications.respectFocusMode}" @click="settingsNotifications.respectFocusMode=!settingsNotifications.respectFocusMode; saveMessagingSettings();"></button>
+                    </div>
+                </div>
+
+                {{-- ── موقع الإشعار على الشاشة ──────────────────── --}}
+                <p class="sn-section-label">موقع الإشعار على الشاشة</p>
+                <div class="settings-group-card">
+                    <div class="sn-screen-picker">
+                        <div class="sn-screen-monitor">
+                            <div class="sn-screen-inner">
+                                <button class="sn-corner sn-corner--tl" :class="{active: settingsNotifications.notifPosition==='top-left'}"     @click="settingsNotifications.notifPosition='top-left';     saveMessagingSettings();"><span></span></button>
+                                <button class="sn-corner sn-corner--tr" :class="{active: settingsNotifications.notifPosition==='top-right'}"    @click="settingsNotifications.notifPosition='top-right';    saveMessagingSettings();"><span></span></button>
+                                <button class="sn-corner sn-corner--bl" :class="{active: settingsNotifications.notifPosition==='bottom-left'}"  @click="settingsNotifications.notifPosition='bottom-left';  saveMessagingSettings();"><span></span></button>
+                                <button class="sn-corner sn-corner--br" :class="{active: settingsNotifications.notifPosition==='bottom-right'}" @click="settingsNotifications.notifPosition='bottom-right'; saveMessagingSettings();"><span></span></button>
+                            </div>
+                            <div class="sn-screen-stand"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ── عدد الإشعارات المتراكمة ───────────────────── --}}
+                <p class="sn-section-label">عدد الإشعارات المتراكمة</p>
+                <div class="settings-group-card">
+                    <div class="sn-count-tabs">
+                        <button v-for="n in [1,2,3,4,5]" :key="n"
+                            class="sn-count-tab"
+                            :class="{active: settingsNotifications.notifMaxCount === n}"
+                            @click="settingsNotifications.notifMaxCount=n; saveMessagingSettings();">
+                            @{{ n }}
+                        </button>
+                    </div>
+                    <p class="settings-note">الحد الأقصى لعدد الإشعارات الظاهرة فوق بعضها في آنٍ واحد</p>
+                </div>
+
             </div>
         </template>
 
