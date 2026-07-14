@@ -755,6 +755,8 @@ Sentry.onLoad(function() {
 
 </div>
 
+<div v-if="message.isGroup && Number(message.senderId) !== Number(currentUserId) && message.senderName" style="font-size:11px;font-weight:600;color:var(--accent,var(--gold));margin-bottom:2px;padding-bottom:1px;">@{{ message.senderName }}</div>
+
 <div class="reply" v-if="message.replyTo" @click="jumpToRepliedMessage(message.replyTo)" :class="Number(message.replyTo.senderId) === Number(currentUserId) ? 'reply-mine' : 'reply-other'">
 
 <strong><svg class="reply-inline-icon" viewBox="0 0 12 12" fill="none"><path d="M3.5 5L2.5 6L3.5 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 6H8.5C8.77614 6 9 5.77614 9 5.5V4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg> @{{ message.replyTo.senderName || t.previousMessage }}</strong>
@@ -6372,6 +6374,38 @@ return n;
 
 },
 
+normalizeGroupMessage(msg) {
+if (!msg) return null;
+return {
+id: msg.id,
+groupId: msg.groupId ?? msg.group_id,
+senderId: msg.senderId ?? msg.sender_id,
+senderName: msg.senderName ?? msg.sender_name ?? '',
+senderAvatar: msg.senderAvatar ?? msg.sender_avatar ?? null,
+recipientId: null,
+content: msg.content ?? '',
+attachmentUrl: msg.attachmentUrl ?? msg.attachment_url ?? null,
+attachmentName: msg.attachmentName ?? msg.attachment_name ?? null,
+attachmentMime: msg.attachmentMime ?? msg.attachment_type ?? null,
+attachmentKind: msg.attachmentKind ?? msg.attachment_kind ?? null,
+audioPath: msg.audioPath ?? msg.audio_path ?? null,
+audioDuration: msg.audioDuration ?? msg.audio_duration ?? 0,
+messageType: msg.messageType ?? msg.message_type ?? 'text',
+isEdited: !!(msg.isEdited ?? msg.is_edited ?? false),
+replyToId: msg.replyToId ?? msg.reply_to ?? null,
+createdAt: msg.createdAt ?? msg.created_at ?? new Date().toISOString(),
+isGroup: true,
+pending: false,
+failed: false,
+isPlaying: false,
+currentBar: 0,
+playbackPosition: 0,
+_resumePos: 0,
+mediaLoaded: true,
+readAt: null,
+};
+},
+
 onMediaLoaded(message) {
 
 if (message) message.mediaLoaded = true;
@@ -6906,11 +6940,17 @@ lastSeenAt: null,
 
 isGroup: true,
 
+hasConversation: true,
+
+selected: false,
+
 };
 
 this.contacts.unshift(newGroup);
 
 this.showToast(`تم إنشاء قروب "${d.data.name}" بنجاح \u2713`, 'success');
+
+this.selectContact(newGroup);
 
 })
 
@@ -7579,6 +7619,50 @@ if (!this.canSendMessage) return;
 
 const text = this.messageInput.trim();
 
+// Handle group message send
+if (this.selectedContact && this.selectedContact.isGroup) {
+const groupId = this.selectedContact._groupId;
+if (!groupId || !text) return;
+this.messageInput = '';
+this.showEmojiPicker = false;
+const groupSendUrl = @json(
+auth()->user()->role === 'teacher'
+? (\Illuminate\Support\Facades\Route::has('teacher.messaging.group.send') ? route('teacher.messaging.group.send', ['groupId' => '__GID__']) : null)
+: (\Illuminate\Support\Facades\Route::has('student.messaging.group.send') ? route('student.messaging.group.send', ['groupId' => '__GID__']) : null)
+);
+if (!groupSendUrl) { this.showToast('Group send route not configured.', 'error'); return; }
+const tempId = this.pendingMessageCounter--;
+const tempMsg = this.normalizeGroupMessage({ id: tempId, group_id: groupId, senderId: this.currentUserId, senderName: this.userName || '', content: text, messageType: 'text', createdAt: new Date().toISOString(), isGroup: true });
+tempMsg.pending = true;
+this.messages.push(tempMsg);
+this.normalizeMessageOrder();
+this.scrollToBottom(true);
+this.updateContactPreview();
+try {
+const r = await fetch(groupSendUrl.replace('__GID__', groupId), {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+body: JSON.stringify({ content: text, reply_to: this.replyingToMessage?.id || null })
+});
+const d = await r.json();
+if (d.success) {
+const idx = this.messages.findIndex(m => Number(m.id) === Number(tempId));
+if (idx !== -1) { this.messages[idx] = this.normalizeGroupMessage(d.message); this.messages[idx].pending = false; }
+this.lastKnownMessageId = Math.max(Number(this.lastKnownMessageId || 0), Number(d.message.id || 0));
+} else {
+const idx = this.messages.findIndex(m => Number(m.id) === Number(tempId));
+if (idx !== -1) this.messages[idx].failed = true;
+this.showToast(d.message || 'فشل إرسال الرسالة', 'error');
+}
+} catch(_) {
+const idx = this.messages.findIndex(m => Number(m.id) === Number(tempId));
+if (idx !== -1) this.messages[idx].failed = true;
+this.showToast('تعذر إرسال الرسالة', 'error');
+}
+this.replyingToMessage = null;
+return;
+}
+
 this.messageInput = '';
 
 this.showEmojiPicker = false;
@@ -7938,13 +8022,17 @@ if (!this.selectedContact || !this.messages.length) return;
 
 const last = this.messages[this.messages.length - 1];
 
+if (this.selectedContact.isGroup) {
+this.selectedContact.lastMessage = (last.senderName ? last.senderName + ': ' : '') + (last.content || '').substring(0, 60);
+} else {
 this.selectedContact.lastMessage = this.getMessagePreviewText(last);
+}
 
 this.selectedContact.lastMessageTime = last.createdAt || last.created_at || this.selectedContact.lastMessageTime;
 
 this.selectedContact.lastMessageStatusRefId = last.statusRefId || null;
 
-const ci = this.contacts.findIndex(c => Number(c.id) === Number(this.selectedContact.id));
+const ci = this.contacts.findIndex(c => this.selectedContact.isGroup ? (c.isGroup && c._groupId === this.selectedContact._groupId) : Number(c.id) === Number(this.selectedContact.id));
 
 if (ci !== -1) {
 
@@ -7967,6 +8055,30 @@ this.potentialNewContacts = this.potentialNewContacts.filter(c => Number(c.id) !
 async loadMessages(initial = false) {
 
 if (!this.selectedContact) return;
+
+// Handle group conversations separately
+if (this.selectedContact.isGroup) {
+const groupId = this.selectedContact._groupId;
+if (!groupId) return;
+const groupLoadUrl = @json(
+auth()->user()->role === 'teacher'
+? (\Illuminate\Support\Facades\Route::has('teacher.messaging.group.load') ? route('teacher.messaging.group.load', ['groupId' => '__GID__']) : null)
+: (\Illuminate\Support\Facades\Route::has('student.messaging.group.load') ? route('student.messaging.group.load', ['groupId' => '__GID__']) : null)
+);
+if (!groupLoadUrl) { this.showToast('Group load route not configured.', 'error'); return; }
+try {
+const r2 = await fetch(groupLoadUrl.replace('__GID__', groupId), {
+method: 'GET', headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }
+});
+const d2 = await r2.json();
+if (d2.success) {
+this.messages = (d2.messages || []).map(m => this.normalizeGroupMessage(m));
+this.lastKnownMessageId = this.messages.length ? Math.max(...this.messages.map(m => Number(m.id) || 0)) : 0;
+this.scrollToBottom(false);
+}
+} catch(_) { this.showToast('تعذر تحميل رسائل المجموعة', 'error'); }
+return;
+}
 
 this.stopSSE(); // Stop SSE during full load
 
@@ -8333,6 +8445,42 @@ async deltaRefresh() {
 
 if (!this.selectedContact || this.deltaInFlight) return;
 if (Number(this.selectedContact.id) === -1) return; // skip delta for saved messages
+
+// Group delta path
+if (this.selectedContact.isGroup) {
+const groupId = this.selectedContact._groupId;
+if (!groupId) return;
+const groupDeltaUrl = @json(
+auth()->user()->role === 'teacher'
+? (\Illuminate\Support\Facades\Route::has('teacher.messaging.group.delta') ? route('teacher.messaging.group.delta', ['groupId' => '__GID__']) : null)
+: (\Illuminate\Support\Facades\Route::has('student.messaging.group.delta') ? route('student.messaging.group.delta', ['groupId' => '__GID__']) : null)
+);
+if (!groupDeltaUrl) return;
+this.deltaInFlight = true;
+try {
+const r2 = await fetch(groupDeltaUrl.replace('__GID__', groupId) + '?after_id=' + (this.lastKnownMessageId || 0), {
+method: 'GET', headers: { 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' }
+});
+const d2 = await r2.json();
+if (d2.success && this.selectedContact && this.selectedContact.isGroup && this.selectedContact._groupId === groupId) {
+const incoming = d2.messages || [];
+let changed = false;
+for (const raw of incoming) {
+const msg = this.normalizeGroupMessage(raw);
+if (!this.messages.some(m => Number(m.id) === Number(msg.id))) {
+this.messages.push(msg);
+this.lastKnownMessageId = Math.max(Number(this.lastKnownMessageId || 0), Number(msg.id || 0));
+changed = true;
+if (Number(msg.senderId) !== Number(this.currentUserId)) {
+this.playNotificationTone(this.selectedContact.id);
+}
+}
+}
+if (changed) { this.normalizeMessageOrder(); this.scrollToBottom(false); this.updateContactPreview(); }
+}
+} catch(_) {} finally { this.deltaInFlight = false; }
+return;
+}
 
 const baseUrl = @json(
 
@@ -15419,6 +15567,32 @@ if (this.selectedContact && Number(this.selectedContact.id) === uid) {
     this.selectedContact.isTyping = isTyping;
     this.selectedContact.typingMediaType = mediaType;
 }
+});
+
+// Group messages via WebSocket
+channel.listen('.group.message', (data) => {
+const groupId = Number(data.group_id);
+const msg = this.normalizeGroupMessage(data.message);
+if (!msg) return;
+// Update contact preview
+const cIdx = this.contacts.findIndex(c => c.isGroup && Number(c._groupId) === groupId);
+if (cIdx !== -1) {
+    this.contacts[cIdx].lastMessage = msg.senderName + ': ' + (msg.content || '').substring(0, 60);
+    this.contacts[cIdx].lastMessageTime = msg.createdAt;
+    if (!(this.selectedContact && this.selectedContact.isGroup && this.selectedContact._groupId === groupId)) {
+        this.contacts[cIdx].unreadCount = (Number(this.contacts[cIdx].unreadCount) || 0) + 1;
+    }
+}
+// Append to messages if this group is currently selected
+if (this.selectedContact && this.selectedContact.isGroup && Number(this.selectedContact._groupId) === groupId) {
+    if (!this.messages.some(m => Number(m.id) === Number(msg.id))) {
+        this.messages.push(msg);
+        this.lastKnownMessageId = Math.max(Number(this.lastKnownMessageId || 0), Number(msg.id || 0));
+        this.normalizeMessageOrder();
+        if (this.isNearBottom()) this.scrollToBottom(false);
+    }
+}
+this.playNotificationTone('group_' + groupId);
 });
 },
 

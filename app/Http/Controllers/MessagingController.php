@@ -199,6 +199,53 @@ class MessagingController extends Controller
         return $this->viewerMatchesVisibilityRule($viewer, $owner, $rule);
     }
 
+    protected function buildGroupContactsPayload(User $user): array
+    {
+        $groups = DB::table('groups as g')
+            ->join('group_participants as gp', function ($j) use ($user) {
+                $j->on('gp.group_id', '=', 'g.id')->where('gp.user_id', '=', $user->id);
+            })
+            ->leftJoin('group_message_reads as gmr', function ($j) use ($user) {
+                $j->on('gmr.group_id', '=', 'g.id')->where('gmr.user_id', '=', $user->id);
+            })
+            ->select('g.id', 'g.name', 'g.avatar_path', 'gmr.last_read_message_id')
+            ->get();
+
+        $result = [];
+        foreach ($groups as $g) {
+            $lastMsg = DB::table('group_messages as gm')
+                ->join('users as u', 'u.id', '=', 'gm.sender_id')
+                ->where('gm.group_id', $g->id)
+                ->whereNull('gm.deleted_at')
+                ->orderByDesc('gm.created_at')
+                ->select('gm.id', 'gm.content', 'gm.created_at', 'u.name as sender_name')
+                ->first();
+
+            $unread = DB::table('group_messages')
+                ->where('group_id', $g->id)
+                ->where('id', '>', $g->last_read_message_id ?? 0)
+                ->where('sender_id', '!=', $user->id)
+                ->whereNull('deleted_at')
+                ->count();
+
+            $result[] = [
+                'id'              => 'group_' . $g->id,
+                '_groupId'        => $g->id,
+                'name'            => $g->name,
+                'avatar_url'      => $g->avatar_path ? asset('storage/' . $g->avatar_path) : null,
+                'lastMessage'     => $lastMsg ? (Str::limit(($lastMsg->sender_name ?? '') . ': ' . ($lastMsg->content ?? ''), 60)) : '',
+                'lastMessageTime' => $lastMsg ? \Carbon\Carbon::parse($lastMsg->created_at)->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP') : null,
+                'unreadCount'     => $unread,
+                'isGroup'         => true,
+                'hasConversation' => true,
+                'isOnline'        => false,
+                'lastSeenAt'      => null,
+                'selected'        => false,
+            ];
+        }
+        return $result;
+    }
+
     protected function publicContactPayload(User $viewer, User $contact, array $extra = []): array
     {
         $privacy = $this->getUserPrivacySettings($contact);
@@ -333,6 +380,10 @@ class MessagingController extends Controller
             'hasConversation' => (bool) ($contact->has_conversation ?? !is_null($contact->last_message_time)),
             'role' => $contact->contact_type ?? $contact->role ?? 'student',
         ]))->values()->all();
+
+        // Merge groups into contacts list
+        $groupContactsJson = $this->buildGroupContactsPayload($user);
+        $contactsJson = array_merge($contactsJson, $groupContactsJson);
 
         $newContactsJson = $newContacts->map(fn ($contact) => $this->publicContactPayload($user, $contact, [
             'role' => $contact->role ?? 'student',
@@ -494,6 +545,9 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             'hasConversation' => (bool) ($contact->has_conversation ?? !is_null($contact->last_message_time)),
             'role' => $contact->contact_type ?? $contact->role ?? 'student',
         ]))->values()->all();
+
+        $groupContactsJson = $this->buildGroupContactsPayload($user);
+        $contactsJson = array_merge($contactsJson, $groupContactsJson);
 
         $newContactsJson = $newContacts->map(fn ($contact) => $this->publicContactPayload($user, $contact, [
             'role' => $contact->role ?? 'student',
