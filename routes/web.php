@@ -385,6 +385,7 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::post('/messaging/reaction', [MessagingController::class, 'toggleReaction'])->name('messaging.reaction');
     // Status (Stories) Routes
     Route::get('/messaging/statuses', [\App\Http\Controllers\StatusController::class, 'getStatuses'])->name('messaging.statuses');
+    Route::get('/messaging/status-history', [\App\Http\Controllers\StatusController::class, 'getMyStatusHistory'])->name('messaging.status.history');
     Route::post('/messaging/status', [\App\Http\Controllers\StatusController::class, 'createStatus'])->name('messaging.status.create');
     Route::post('/messaging/status/reply', [\App\Http\Controllers\StatusController::class, 'replyToStatus'])->name('messaging.status.reply');
     Route::post('/messaging/status/reaction', [\App\Http\Controllers\StatusController::class, 'reactToStatus'])->name('messaging.status.reaction');
@@ -623,6 +624,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     Route::post('/messaging/reaction', [MessagingController::class, 'toggleReaction'])->name('teacher.messaging.reaction');
     // Status (Stories) Routes
     Route::get('/messaging/statuses', [\App\Http\Controllers\StatusController::class, 'getStatuses'])->name('teacher.messaging.statuses');
+    Route::get('/messaging/status-history', [\App\Http\Controllers\StatusController::class, 'getMyStatusHistory'])->name('teacher.messaging.status.history');
     Route::post('/messaging/status', [\App\Http\Controllers\StatusController::class, 'createStatus'])->name('teacher.messaging.status.create');
     Route::post('/messaging/status/reply', [\App\Http\Controllers\StatusController::class, 'replyToStatus'])->name('teacher.messaging.status.reply');
     Route::post('/messaging/status/reaction', [\App\Http\Controllers\StatusController::class, 'reactToStatus'])->name('teacher.messaging.status.reaction');

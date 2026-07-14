@@ -62,6 +62,8 @@ $deltaRoute = $deltaRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.del
 
 $contactsUnreadRoute = $pickRoute($isTeacherRole ? ['teacher.messaging.contacts-unread', 'messaging.contacts-unread', 'student.messaging.contacts-unread'] : ['student.messaging.contacts-unread', 'messaging.contacts-unread', 'teacher.messaging.contacts-unread']);
 
+$statusHistoryRoute = $pickRoute($isTeacherRole ? ['teacher.messaging.status.history', 'messaging.status.history'] : ['messaging.status.history', 'teacher.messaging.status.history']);
+
 $audioRoute = $audioRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.audio', 'messaging.audio', 'student.messaging.audio'] : ['student.messaging.audio', 'messaging.audio', 'teacher.messaging.audio']);
 
 $fileRoute = $fileRoute ?? $pickRoute($isTeacherRole ? ['teacher.messaging.file', 'messaging.file', 'student.messaging.file'] : ['student.messaging.file', 'messaging.file', 'teacher.messaging.file']);
@@ -2441,7 +2443,7 @@ class="ie2-filter-card" :class="{active: imageEditorFilter===f.css}"
 
 <div v-if="!includeExcludeMode" style="display:flex;justify-content:flex-end;gap:8px;">
 
-<button class="profile-action-btn" @click="resetFolderDraft">إلغاء</button>
+<button class="profile-action-btn" @click="closeFoldersManager">إلغاء</button>
 
 <button class="profile-action-btn primary" @click="saveFolderDraft">حفظ</button>
 
@@ -3511,8 +3513,9 @@ style="border:1px solid var(--theme-border);border-radius:20px;padding:5px 14px;
 <div ref="myProfileStatusDate" style="text-align:center;font-size:11px;color:var(--muted);height:16px;opacity:0;transition:opacity .15s;"></div>
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:220px;overflow-y:auto;" @scroll="onMyStatusScroll">
 <div v-for="(st, si) in myProfileStatuses" :key="si" style="position:relative;aspect-ratio:9/16;border-radius:8px;overflow:hidden;background:var(--panel-2);cursor:pointer;" @click="openMyStatusViewer(si)">
-<img v-if="st.type === 'image' && st.contentUrl" :src="st.contentUrl" style="width:100%;height:100%;object-fit:cover;">
-<div v-else :style="{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:st.bgColor || 'var(--panel-2)',fontSize:'28px',color:'#fff'}"><i class="ri-image-line"></i></div>
+<img v-if="st.type === 'image' && st.contentUrl" :src="st.contentUrl" style="width:100%;height:100%;object-fit:cover;" :style="{opacity: st.isExpired ? 0.55 : 1}">
+<div v-else :style="{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:st.bgColor || 'var(--panel-2)',fontSize:'28px',color:'#fff',opacity: st.isExpired ? 0.55 : 1}"><i class="ri-image-line"></i></div>
+<div v-if="st.isExpired" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);border-radius:4px;padding:1px 5px;font-size:9px;color:rgba(255,255,255,0.7);">منتهية</div>
 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:4px 6px;display:flex;align-items:center;justify-content:space-between;direction:ltr;">
 <span style="font-size:10px;color:#fff;">@{{ st.duration || '0:00' }}</span>
 <button style="width:22px;height:22px;border-radius:50%;border:none;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;" @click.stop="openMyStatusViewer(si)"><i class="ri-play-fill"></i></button>
@@ -5485,6 +5488,7 @@ statusLongPressTimer: null,
 statusLongPressFired: false,
 
 myStatuses: [],
+myStatusHistory: [],
 
 contactStatuses: [],
 
@@ -6390,7 +6394,7 @@ return age >= 0 ? age : 0;
 },
 
 myProfileStatuses() {
-return this.myStatuses || [];
+return this.myStatusHistory.length ? this.myStatusHistory : (this.myStatuses || []);
 },
 
 myProfileViewerStatus() {
@@ -14276,7 +14280,20 @@ this.myProfileAvatar = saved.avatar || this.normalizeAvatarUrl(this.currentUserA
 this.myProfileBannerScale = 1;
 this.myProfileOpen = true;
 this.accountDrawerOpen = false;
+this.fetchMyStatusHistory();
 
+},
+
+async fetchMyStatusHistory() {
+const ROUTE = @json($statusHistoryRoute ?? '#');
+if (!ROUTE || ROUTE === '#') return;
+try {
+    const r = await fetch(ROUTE, { headers: { 'Accept': 'application/json' } });
+    const j = await r.json();
+    if (j.success && Array.isArray(j.data)) {
+        this.myStatusHistory = j.data.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+    }
+} catch(e) {}
 },
 
 openContacts() {
