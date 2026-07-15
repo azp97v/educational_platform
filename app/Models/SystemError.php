@@ -27,7 +27,7 @@ class SystemError extends Model
         return $query->where('resolved', false);
     }
 
-    public static function capture(Throwable $e, ?\Illuminate\Http\Request $request = null): void
+    public static function capture(\Throwable $e, ?\Illuminate\Http\Request $request = null): void
     {
         try {
             $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
