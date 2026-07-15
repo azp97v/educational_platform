@@ -7,6 +7,7 @@ use App\Models\BlockedContact;
 use App\Models\Message;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Http\Controllers\Traits\MessagingPrivacyTrait;
 use App\Services\UserPresenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -19,6 +20,8 @@ use Illuminate\Support\Str;
 
 class MessagingController extends Controller
 {
+    use MessagingPrivacyTrait;
+
     private const CONTACTS_LIMIT      = 200;
     private const MESSAGES_PER_PAGE   = 25;
     private const STREAM_POLL_LIMIT   = 120;
