@@ -42,7 +42,7 @@ details summary:hover { color:#94a3b8; }
 </div>
 
 {{-- Bulk actions --}}
-@if($errors->total() > 0)
+@if($systemErrors->total() > 0)
 <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:14px;">
     @if($filter !== 'resolved')
     <form method="POST" action="{{ route('admin.errors.resolve-all') }}" onsubmit="return confirm('تحديد جميع الأخطاء الظاهرة كمُعالَجة؟')">
@@ -56,7 +56,7 @@ details summary:hover { color:#94a3b8; }
     <form method="POST" action="{{ route('admin.errors.delete-resolved') }}" onsubmit="return confirm('حذف جميع الأخطاء المُعالَجة نهائياً؟')">
         @csrf @method('DELETE')
         <button type="submit" class="admin-btn secondary" style="background:rgba(239,68,68,.1);color:#f87171;">
-            <i class="ri-delete-bin-line"></i> حذف المُعالَجة ({{ $errors->total() }})
+            <i class="ri-delete-bin-line"></i> حذف المُعالَجة ({{ $systemErrors->total() }})
         </button>
     </form>
     @endif
@@ -64,7 +64,7 @@ details summary:hover { color:#94a3b8; }
 @endif
 
 <section class="admin-card">
-    @if($errors->total() === 0)
+    @if($systemErrors->total() === 0)
         <div style="text-align:center;padding:50px;opacity:.45;">
             <div style="font-size:48px;margin-bottom:12px;">🛡</div>
             <div style="font-size:16px;font-weight:600;">{{ $filter === 'unresolved' ? 'لا توجد أخطاء غير مُعالَجة' : 'لا توجد أخطاء' }}</div>
@@ -86,7 +86,7 @@ details summary:hover { color:#94a3b8; }
                 </tr>
             </thead>
             <tbody>
-            @foreach($errors as $err)
+            @foreach($systemErrors as $err)
             <tr>
                 <td style="color:#64748b;font-size:12px;">#{{ $err->id }}</td>
                 <td>
@@ -157,7 +157,7 @@ details summary:hover { color:#94a3b8; }
             </tbody>
         </table>
     </div>
-    <div style="margin-top:16px;">{{ $errors->links() }}</div>
+    <div style="margin-top:16px;">{{ $systemErrors->links() }}</div>
     @endif
 </section>
 

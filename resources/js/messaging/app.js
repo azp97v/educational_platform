@@ -37,10 +37,14 @@ class TelegramMessagingApp {
 
   async init() {
     await db.ready;
+
+    // Only initialize on messaging pages where the DOM exists
+    if (!this.els.sendBtn || !this.els.messagesContainer) return;
+
     this.setupEvents();
 
     // Check authentication first
-    if (!window.messagingConfig.isAuthenticated) {
+    if (!window.messagingConfig?.isAuthenticated) {
       console.error('❌ User not authenticated');
       this.showError('يجب تسجيل الدخول أولاً');
       return;
