@@ -3,56 +3,71 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // messages — zero indexes on the hottest table in the system
-        // conversation lookup: (sender→recipient OR recipient→sender) ORDER BY created_at
-        // unread count:        WHERE recipient_id = X AND read_at IS NULL
-        // soft-delete filter:  WHERE deleted_at IS NULL (almost every query)
-        Schema::table('messages', function (Blueprint $table) {
-            $table->index(['sender_id', 'recipient_id', 'created_at'], 'msg_conversation_idx');
-            $table->index(['recipient_id', 'read_at'],                  'msg_unread_idx');
-            $table->index(['deleted_at', 'created_at'],                 'msg_deleted_created_idx');
+        // messages — indexes already applied by partial run; guard with existence check
+        $msgIndexes = DB::select("SHOW INDEX FROM messages WHERE Key_name IN ('msg_conversation_idx','msg_unread_idx','msg_deleted_created_idx')");
+        $existingMsgKeys = array_column($msgIndexes, 'Key_name');
+
+        Schema::table('messages', function (Blueprint $table) use ($existingMsgKeys) {
+            if (!in_array('msg_conversation_idx', $existingMsgKeys)) {
+                $table->index(['sender_id', 'recipient_id', 'created_at'], 'msg_conversation_idx');
+            }
+            if (!in_array('msg_unread_idx', $existingMsgKeys)) {
+                $table->index(['recipient_id', 'read_at'], 'msg_unread_idx');
+            }
+            if (!in_array('msg_deleted_created_idx', $existingMsgKeys)) {
+                $table->index(['deleted_at', 'created_at'], 'msg_deleted_created_idx');
+            }
         });
 
-        // courses — teacher_id is the primary filter on every teacher page load
-        Schema::table('courses', function (Blueprint $table) {
-            $table->index(['teacher_id', 'created_at'], 'courses_teacher_created_idx');
-        });
+        // courses — instructor_id is the correct column name
+        $courseIndexes = DB::select("SHOW INDEX FROM courses WHERE Key_name = 'courses_instructor_created_idx'");
+        if (empty($courseIndexes)) {
+            Schema::table('courses', function (Blueprint $table) {
+                $table->index(['instructor_id', 'created_at'], 'courses_instructor_created_idx');
+            });
+        }
 
-        // lessons — course_id + order: listing lessons is done in every course view
-        Schema::table('lessons', function (Blueprint $table) {
-            $table->index(['course_id', 'order'], 'lessons_course_order_idx');
-        });
+        // lessons — course_id + order: every course listing sorts by this
+        $lessonIndexes = DB::select("SHOW INDEX FROM lessons WHERE Key_name = 'lessons_course_order_idx'");
+        if (empty($lessonIndexes)) {
+            Schema::table('lessons', function (Blueprint $table) {
+                $table->index(['course_id', 'order'], 'lessons_course_order_idx');
+            });
+        }
 
-        // course_enrollments — existing unique(user_id, course_id) is covered;
-        // add (course_id, status) for teacher queries aggregating per-course counts
-        Schema::table('course_enrollments', function (Blueprint $table) {
-            $table->index(['course_id', 'status'], 'enrollments_course_status_idx');
-        });
+        // course_enrollments — (course_id, status) for teacher aggregate queries
+        $enrollIndexes = DB::select("SHOW INDEX FROM course_enrollments WHERE Key_name = 'enrollments_course_status_idx'");
+        if (empty($enrollIndexes)) {
+            Schema::table('course_enrollments', function (Blueprint $table) {
+                $table->index(['course_id', 'status'], 'enrollments_course_status_idx');
+            });
+        }
     }
 
     public function down(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropIndex('msg_conversation_idx');
-            $table->dropIndex('msg_unread_idx');
-            $table->dropIndex('msg_deleted_created_idx');
+            $table->dropIndexIfExists('msg_conversation_idx');
+            $table->dropIndexIfExists('msg_unread_idx');
+            $table->dropIndexIfExists('msg_deleted_created_idx');
         });
 
         Schema::table('courses', function (Blueprint $table) {
-            $table->dropIndex('courses_teacher_created_idx');
+            $table->dropIndexIfExists('courses_instructor_created_idx');
         });
 
         Schema::table('lessons', function (Blueprint $table) {
-            $table->dropIndex('lessons_course_order_idx');
+            $table->dropIndexIfExists('lessons_course_order_idx');
         });
 
         Schema::table('course_enrollments', function (Blueprint $table) {
-            $table->dropIndex('enrollments_course_status_idx');
+            $table->dropIndexIfExists('enrollments_course_status_idx');
         });
     }
 };
