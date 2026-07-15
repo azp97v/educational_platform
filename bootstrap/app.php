@@ -40,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->reportable(function (Throwable $e, \Illuminate\Http\Request $request) {
+        $exceptions->reportable(function (Throwable $e) {
             \Illuminate\Support\Facades\Log::error($e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -51,6 +51,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 \Sentry\captureException($e);
             }
 
-            \App\Models\SystemError::capture($e, $request);
+            \App\Models\SystemError::capture($e, request());
         });
     })->create();
