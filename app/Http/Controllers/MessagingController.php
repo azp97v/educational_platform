@@ -296,6 +296,40 @@ class MessagingController extends Controller
         ], $extra);
     }
 
+    private function enrichContact(User $contact, ?Message $message, int $unreadCount, string $contactType = 'student'): void
+    {
+        $contact->last_message = $this->getMessagePreviewText($message);
+        $contact->last_message_time = $message?->created_at;
+        $contact->last_message_status_ref_id = $this->extractStatusRefId($message);
+        $contact->has_conversation = !is_null($contact->last_message_time);
+        $contact->unread_count = $unreadCount;
+        $contact->is_online = $this->presence->isOnline($contact);
+        $contact->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($contact));
+        $contact->last_seen = $contact->is_online ? 'نشط الآن' : $contact->last_activity_formatted;
+        $contact->contact_type = $contactType;
+    }
+
+    private function buildInitialMessagesJson($messages): array
+    {
+        return $messages->map(fn ($message) => [
+            'id'               => $message->id,
+            'senderId'         => $message->sender_id,
+            'recipientId'      => $message->recipient_id,
+            'content'          => $message->content,
+            'attachmentUrl'    => $this->getSecureAttachmentUrl($message->attachment_path),
+            'attachmentName'   => $message->attachment_name,
+            'attachmentMime'   => $message->attachment_type,
+            'attachmentKind'   => $message->attachment_kind,
+            'isEdited'         => $message->is_edited,
+            'createdAt'        => $message->created_at->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
+            'status'           => $message->sender_id === Auth::id() ? 'sent' : 'received',
+            'readAt'           => $message->read_at,
+            'senderName'       => $message->sender?->name,
+            'audioPosition'    => (float) ($message->audio_position ?? 0),
+            'isSensitive'      => (bool) $message->is_sensitive,
+        ])->values()->all();
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -341,16 +375,8 @@ class MessagingController extends Controller
             ->select(DB::raw('sender_id, COUNT(*) as cnt'))
             ->pluck('cnt', 'sender_id');
 
-        $contacts = $contacts->map(function (User $student) use ($user, $latestMessages, $unreadCounts) {
-                $message = $latestMessages->get($student->id);
-                $student->last_message = $this->getMessagePreviewText($message);
-                $student->last_message_time = $message?->created_at;
-                $student->last_message_status_ref_id = $this->extractStatusRefId($message);
-                $student->has_conversation = !is_null($student->last_message_time);
-                $student->unread_count = (int) ($unreadCounts->get($student->id) ?? 0);
-                $student->is_online = $this->presence->isOnline($student);
-                $student->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($student));
-                $student->last_seen = $student->is_online ? 'نشط الآن' : $student->last_activity_formatted;
+        $contacts = $contacts->map(function (User $student) use ($latestMessages, $unreadCounts) {
+                $this->enrichContact($student, $latestMessages->get($student->id), (int) ($unreadCounts->get($student->id) ?? 0));
                 return $student;
             })->values();
 
@@ -411,23 +437,7 @@ class MessagingController extends Controller
             'role' => $contact->role ?? 'student',
         ]))->values()->all();
 
-$initialMessagesJson = $messages->map(fn ($message) => [
-            'id' => $message->id,
-            'senderId' => $message->sender_id,
-            'recipientId' => $message->recipient_id,
-            'content' => $message->content,
-            'attachmentUrl' => $this->getSecureAttachmentUrl($message->attachment_path),
-            'attachmentName' => $message->attachment_name,
-            'attachmentMime' => $message->attachment_type,
-            'attachmentKind' => $message->attachment_kind,
-            'isEdited' => $message->is_edited,
-            'createdAt' => $message->created_at->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
-            'status' => $message->sender_id === Auth::id() ? 'sent' : 'received',
-            'readAt' => $message->read_at,
-            'senderName' => $message->sender?->name,
-            'audioPosition' => (float) ($message->audio_position ?? 0),
-            'isSensitive' => (bool) $message->is_sensitive,
-        ])->values()->all();
+        $initialMessagesJson = $this->buildInitialMessagesJson($messages);
 
         return view('teacher.messaging', [
             'userRole' => 'teacher',
@@ -459,19 +469,9 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             ->first();
 
         if ($teacher) {
-            $lastMessage = Message::between($user, $teacher)->latest()->first();
-            $teacher->last_message = $this->getMessagePreviewText($lastMessage);
-            $teacher->last_message_time = $lastMessage?->created_at;
-            $teacher->last_message_status_ref_id = $this->extractStatusRefId($lastMessage);
-            $teacher->has_conversation = !is_null($teacher->last_message_time);
-            $teacher->unread_count = Message::where('sender_id', $teacher->id)
-                ->where('recipient_id', $user->id)
-                ->whereNull('read_at')
-                ->count();
-            $teacher->is_online = $this->presence->isOnline($teacher);
-            $teacher->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($teacher));
-            $teacher->last_seen = $teacher->is_online ? 'نشط الآن' : $teacher->last_activity_formatted;
-            $teacher->contact_type = 'teacher';
+            $lastMessage   = Message::between($user, $teacher)->latest()->first();
+            $teacherUnread = Message::where('sender_id', $teacher->id)->where('recipient_id', $user->id)->whereNull('read_at')->count();
+            $this->enrichContact($teacher, $lastMessage, $teacherUnread, 'teacher');
             $contacts->push($teacher);
         }
 
@@ -510,16 +510,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                 ->pluck('cnt', 'sender_id');
 
             foreach ($classmates as $classmate) {
-                $message = $latestMessages->get($classmate->id);
-                $classmate->last_message = $this->getMessagePreviewText($message);
-                $classmate->last_message_time = $message?->created_at;
-                $classmate->last_message_status_ref_id = $this->extractStatusRefId($message);
-                $classmate->has_conversation = !is_null($classmate->last_message_time);
-                $classmate->unread_count = (int) ($unreadCounts->get($classmate->id) ?? 0);
-                $classmate->is_online = $this->presence->isOnline($classmate);
-                $classmate->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($classmate));
-                $classmate->last_seen = $classmate->is_online ? 'نشط الآن' : $classmate->last_activity_formatted;
-                $classmate->contact_type = 'student';
+                $this->enrichContact($classmate, $latestMessages->get($classmate->id), (int) ($unreadCounts->get($classmate->id) ?? 0));
                 $contacts->push($classmate);
             }
         }
@@ -575,23 +566,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             'role' => $contact->role ?? 'student',
         ]))->values()->all();
 
-        $initialMessagesJson = $messages->map(fn ($message) => [
-            'id' => $message->id,
-            'senderId' => $message->sender_id,
-            'recipientId' => $message->recipient_id,
-            'content' => $message->content,
-            'attachmentUrl' => $this->getSecureAttachmentUrl($message->attachment_path),
-            'attachmentName' => $message->attachment_name,
-            'attachmentMime' => $message->attachment_type,
-            'attachmentKind' => $message->attachment_kind,
-            'isEdited' => $message->is_edited,
-            'createdAt' => $message->created_at->copy()->setTimezone('Asia/Riyadh')->format('Y-m-d\TH:i:sP'),
-            'status' => $message->sender_id === Auth::id() ? 'sent' : 'received',
-            'readAt' => $message->read_at,
-            'senderName' => $message->sender?->name,
-            'audioPosition' => (float) ($message->audio_position ?? 0),
-            'isSensitive' => (bool) $message->is_sensitive,
-        ])->values()->all();
+        $initialMessagesJson = $this->buildInitialMessagesJson($messages);
 
         return view('student.messaging', [
             'userRole' => 'student',
