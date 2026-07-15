@@ -454,9 +454,9 @@ class AdminController extends Controller
             $query->where('resolved', true);
         }
 
-        $errors = $query->paginate(25)->withQueryString();
+        $systemErrors = $query->paginate(25)->withQueryString();
 
-        return $this->renderAdmin('admin.system-errors', compact('errors', 'filter') + $stats);
+        return $this->renderAdmin('admin.system-errors', compact('systemErrors', 'filter') + $stats);
     }
 
     public function resolveSystemError(SystemError $error)

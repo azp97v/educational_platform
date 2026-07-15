@@ -103,115 +103,6 @@ class MessagingController extends Controller
         }
     }
 
-    /**
-     * Sanitize a free-text message payload before persistence.
-     * Defense-in-depth: the Vue frontend already escapes output, but we strip
-     * control characters and neutralize any embedded HTML so stored content can
-     * never be interpreted as markup by any future/legacy renderer.
-     */
-    protected function sanitizeContent(?string $content): ?string
-    {
-        if ($content === null) {
-            return null;
-        }
-
-        // Remove non-printable control chars (keep tab/newline) to block payload smuggling.
-        $clean = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $content);
-        $clean = $clean ?? '';
-
-        // Neutralize HTML/JS markup. Quotes are kept readable rather than encoded.
-        $clean = strip_tags($clean);
-        $clean = htmlspecialchars($clean, ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8', false);
-
-        $clean = trim($clean);
-
-        return $clean === '' ? null : $clean;
-    }
-
-    /**
-     * يُستخدم أيضاً من CallController للسماح/منع المكالمات بنفس قواعد الحظر والخصوصية.
-     */
-    public function userCanMessage(User $sender, User $recipient): bool
-    {
-        return $this->canMessage($sender, $recipient);
-    }
-
-    protected function canMessage(User $sender, User $recipient): bool
-    {
-        if (!$this->passesBaseMessagingRules($sender, $recipient)) {
-            return false;
-        }
-
-        $privacy = $this->getUserPrivacySettings($recipient);
-        $rule = $privacy['messageFrom'] ?? 'all';
-
-        if ($rule === 'nobody') {
-            return false;
-        }
-
-        if ($rule === 'contacts') {
-            return $this->isWithinPrivacyContactsScope($sender, $recipient);
-        }
-
-        return true;
-    }
-
-    protected function passesBaseMessagingRules(User $sender, User $recipient): bool
-    {
-        if ($sender->id === $recipient->id) {
-            return false;
-        }
-
-        if (BlockedContact::where('blocker_id', $recipient->id)->where('blocked_id', $sender->id)->exists()) {
-            return false;
-        }
-
-        if (BlockedContact::where('blocker_id', $sender->id)->where('blocked_id', $recipient->id)->exists()) {
-            return false;
-        }
-
-        if ($sender->role === 'teacher') {
-            return $recipient->role === 'student';
-        }
-
-        if ($sender->role === 'student') {
-            return in_array($recipient->role, ['teacher', 'student'], true);
-        }
-
-        return false;
-    }
-
-    protected function getUserPrivacySettings(User $user): array
-    {
-        $settings = DB::table('user_messaging_settings')->where('user_id', $user->id)->first();
-        return $this->settingsPayload($settings)['privacy'] ?? [];
-    }
-
-    protected function isWithinPrivacyContactsScope(User $viewer, User $owner): bool
-    {
-        return $this->passesBaseMessagingRules($viewer, $owner);
-    }
-
-    protected function viewerMatchesVisibilityRule(User $viewer, User $owner, string $rule): bool
-    {
-        if ($viewer->id === $owner->id) {
-            return true;
-        }
-
-        return match ($rule) {
-            'nobody' => false,
-            'contacts' => $this->isWithinPrivacyContactsScope($viewer, $owner),
-            default => true,
-        };
-    }
-
-    protected function canViewerCall(User $viewer, User $owner): bool
-    {
-        $privacy = $this->getUserPrivacySettings($owner);
-        $rule = $privacy['callFrom'] ?? 'all';
-        return $this->viewerMatchesVisibilityRule($viewer, $owner, $rule);
-    }
-
     protected function buildGroupContactsPayload(User $user): array
     {
         $groups = DB::table('groups as g')
@@ -745,6 +636,12 @@ class MessagingController extends Controller
                         'readAt' => $message->read_at,
                         'audioPosition' => (float) ($message->audio_position ?? 0),
                         'isSensitive' => (bool) $message->is_sensitive,
+                        'replyTo' => $message->replyTo ? [
+                            'id'          => $message->replyTo->id,
+                            'content'     => $message->replyTo->content,
+                            'sender_name' => $message->replyTo->sender?->name,
+                            'senderId'    => $message->replyTo->sender_id,
+                        ] : null,
                     ];
                 }),
                 'total_unread' => $totalUnread,
@@ -895,17 +792,32 @@ class MessagingController extends Controller
         $query = mb_substr(trim((string) $request->query('q', '')), 0, 50);
         $excludeIds = $request->query('exclude', []);
 
-        $users = User::where('id', '!=', Auth::id())
-            ->whereNotIn('id', is_array($excludeIds) ? $excludeIds : [])
-            ->where(function ($q) use ($query) {
-                if ($query !== '') {
-                    $q->whereRaw('MATCH(name, email) AGAINST(? IN BOOLEAN MODE)', ['+' . $query . '*'])
-                      ->orWhere('name', 'like', "{$query}%");
-                }
-            })
-            ->orderBy('name')
-            ->limit(self::SEARCH_USERS_LIMIT)
-            ->get(['id', 'name', 'email', 'avatar_url', 'role']);
+        try {
+            $users = User::where('id', '!=', Auth::id())
+                ->whereNotIn('id', is_array($excludeIds) ? $excludeIds : [])
+                ->where(function ($q) use ($query) {
+                    if ($query !== '') {
+                        $q->whereRaw('MATCH(name, email) AGAINST(? IN BOOLEAN MODE)', ['+' . $query . '*'])
+                          ->orWhere('name', 'like', "{$query}%");
+                    }
+                })
+                ->orderBy('name')
+                ->limit(self::SEARCH_USERS_LIMIT)
+                ->get(['id', 'name', 'email', 'avatar_url', 'role']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Fallback to LIKE if FULLTEXT index missing
+            $users = User::where('id', '!=', Auth::id())
+                ->whereNotIn('id', is_array($excludeIds) ? $excludeIds : [])
+                ->where(function ($q) use ($query) {
+                    if ($query !== '') {
+                        $q->where('name', 'like', "%{$query}%")
+                          ->orWhere('email', 'like', "%{$query}%");
+                    }
+                })
+                ->orderBy('name')
+                ->limit(self::SEARCH_USERS_LIMIT)
+                ->get(['id', 'name', 'email', 'avatar_url', 'role']);
+        }
 
         $viewer = Auth::user();
 
@@ -1182,14 +1094,25 @@ class MessagingController extends Controller
             return response()->json(['success' => true, 'data' => []]);
         }
 
-        $messages = Message::where(function ($q) use ($user) {
-            $q->where('sender_id', $user->id)->orWhere('recipient_id', $user->id);
-        })
-        ->whereRaw('MATCH(content) AGAINST(? IN BOOLEAN MODE)', ['"' . addslashes($query) . '"'])
-        ->with(['sender', 'recipient', 'replyTo.sender'])
-        ->orderBy('created_at', 'desc')
-        ->limit(self::SEARCH_LIMIT)
-        ->get();
+        try {
+            $messages = Message::where(function ($q) use ($user) {
+                $q->where('sender_id', $user->id)->orWhere('recipient_id', $user->id);
+            })
+            ->whereRaw('MATCH(content) AGAINST(? IN BOOLEAN MODE)', ['"' . addslashes($query) . '"'])
+            ->with(['sender', 'recipient', 'replyTo.sender'])
+            ->orderBy('created_at', 'desc')
+            ->limit(self::SEARCH_LIMIT)
+            ->get();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $messages = Message::where(function ($q) use ($user) {
+                $q->where('sender_id', $user->id)->orWhere('recipient_id', $user->id);
+            })
+            ->where('content', 'like', "%{$query}%")
+            ->with(['sender', 'recipient', 'replyTo.sender'])
+            ->orderBy('created_at', 'desc')
+            ->limit(self::SEARCH_LIMIT)
+            ->get();
+        }
 
         return response()->json([
             'success' => true,
