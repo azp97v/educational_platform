@@ -7,6 +7,7 @@ use App\Models\BlockedContact;
 use App\Models\Message;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Services\UserPresenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,8 @@ use Illuminate\Support\Str;
 
 class MessagingController extends Controller
 {
+    public function __construct(private readonly UserPresenceService $presence) {}
+
     public function createGroup(Request $request)
     {
         $user = Auth::user();
@@ -267,10 +270,10 @@ class MessagingController extends Controller
         $showAvatar = $this->viewerMatchesVisibilityRule($viewer, $contact, $privacy['profilePhotoFor'] ?? 'all');
         $showPhone = $this->viewerMatchesVisibilityRule($viewer, $contact, $privacy['phoneVisibleFor'] ?? 'contacts');
 
-        $isOnline = $showPresence ? $this->isUserOnline($contact) : false;
-        $lastSeenAt = $showPresence ? optional($this->getLastActivityTimestamp($contact))?->toISOString() : null;
+        $isOnline = $showPresence ? $this->presence->isOnline($contact) : false;
+        $lastSeenAt = $showPresence ? optional($this->presence->getLastActivityTimestamp($contact))?->toISOString() : null;
         $lastSeen = $showPresence
-            ? ($isOnline ? 'نشط الآن' : $this->formatActivityTime($this->getLastActivityTimestamp($contact)))
+            ? ($isOnline ? 'نشط الآن' : $this->formatActivityTime($this->presence->getLastActivityTimestamp($contact)))
             : 'غير متاح';
 
         return array_merge([
@@ -338,8 +341,8 @@ class MessagingController extends Controller
                 $student->last_message_status_ref_id = $this->extractStatusRefId($message);
                 $student->has_conversation = !is_null($student->last_message_time);
                 $student->unread_count = (int) ($unreadCounts->get($student->id) ?? 0);
-                $student->is_online = $this->isUserOnline($student);
-                $student->last_activity_formatted = $this->formatActivityTime($this->getLastActivityTimestamp($student));
+                $student->is_online = $this->presence->isOnline($student);
+                $student->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($student));
                 $student->last_seen = $student->is_online ? 'نشط الآن' : $student->last_activity_formatted;
                 return $student;
             })->values();
@@ -458,8 +461,8 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                 ->where('recipient_id', $user->id)
                 ->whereNull('read_at')
                 ->count();
-            $teacher->is_online = $this->isUserOnline($teacher);
-            $teacher->last_activity_formatted = $this->formatActivityTime($this->getLastActivityTimestamp($teacher));
+            $teacher->is_online = $this->presence->isOnline($teacher);
+            $teacher->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($teacher));
             $teacher->last_seen = $teacher->is_online ? 'نشط الآن' : $teacher->last_activity_formatted;
             $teacher->contact_type = 'teacher';
             $contacts->push($teacher);
@@ -506,8 +509,8 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                 $classmate->last_message_status_ref_id = $this->extractStatusRefId($message);
                 $classmate->has_conversation = !is_null($classmate->last_message_time);
                 $classmate->unread_count = (int) ($unreadCounts->get($classmate->id) ?? 0);
-                $classmate->is_online = $this->isUserOnline($classmate);
-                $classmate->last_activity_formatted = $this->formatActivityTime($this->getLastActivityTimestamp($classmate));
+                $classmate->is_online = $this->presence->isOnline($classmate);
+                $classmate->last_activity_formatted = $this->formatActivityTime($this->presence->getLastActivityTimestamp($classmate));
                 $classmate->last_seen = $classmate->is_online ? 'نشط الآن' : $classmate->last_activity_formatted;
                 $classmate->contact_type = 'student';
                 $contacts->push($classmate);
@@ -922,8 +925,8 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $viewer = Auth::user();
 
         $result = $users->map(function (User $user) use ($viewer) {
-            $isOnline  = $this->isUserOnline($user);
-            $lastTs    = $this->getLastActivityTimestamp($user);
+            $isOnline  = $this->presence->isOnline($user);
+            $lastTs    = $this->presence->getLastActivityTimestamp($user);
             $privacy   = $this->getUserPrivacySettings($user);
             $showPresence = $this->viewerMatchesVisibilityRule($viewer, $user, $privacy['lastSeenFor'] ?? 'all');
             $showAvatar   = $this->viewerMatchesVisibilityRule($viewer, $user, $privacy['profilePhotoFor'] ?? 'all');
@@ -942,46 +945,6 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         });
 
         return response()->json($result);
-    }
-
-    protected function isUserOnline(User $user): bool
-    {
-        return Cache::has('user-is-online-' . $user->id);
-    }
-
-    protected function getLastActivityTimestamp(User $user): ?Carbon
-    {
-        $cachedActivity = null;
-        $cached = Cache::get('last-activity-' . $user->id);
-        if ($cached instanceof Carbon) {
-            $cachedActivity = $cached->copy()->setTimezone('Asia/Riyadh');
-        }
-        if (!$cachedActivity && is_numeric($cached)) {
-            $cachedActivity = Carbon::createFromTimestamp((int) $cached, 'Asia/Riyadh');
-        }
-        if (!$cachedActivity && is_string($cached) && trim($cached) !== '') {
-            try {
-                $cachedActivity = Carbon::parse($cached, 'Asia/Riyadh');
-            } catch (\Throwable $e) {
-                // Fallback chain below.
-            }
-        }
-
-        $sessionActivity = null;
-        $lastSession = DB::table('sessions')
-            ->where('user_id', $user->id)
-            ->orderByDesc('last_activity')
-            ->first();
-        if ($lastSession && isset($lastSession->last_activity)) {
-            $sessionActivity = Carbon::createFromTimestamp((int) $lastSession->last_activity, 'Asia/Riyadh');
-        }
-
-        $fallbackUpdated = optional($user->updated_at)->copy()?->setTimezone('Asia/Riyadh');
-
-        return collect([$cachedActivity, $sessionActivity, $fallbackUpdated])
-            ->filter()
-            ->sortByDesc(fn (Carbon $ts) => $ts->timestamp)
-            ->first();
     }
 
     public function loadMessages(Request $request)
@@ -1962,72 +1925,6 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             'forwardedFromMessageId' => $message->forwarded_from_message_id,
             'audioPosition' => (float) ($message->audio_position ?? 0),
             'isSensitive' => (bool) $message->is_sensitive,
-        ];
-    }
-
-    protected function settingsPayload($settings): array
-    {
-        $decode = static function ($value, array $fallback): array {
-            if (is_array($value)) {
-                return array_merge($fallback, $value);
-            }
-
-            if (is_string($value) && $value !== '') {
-                $decoded = json_decode($value, true);
-                if (is_array($decoded)) {
-                    return array_merge($fallback, $decoded);
-                }
-            }
-
-            return $fallback;
-        };
-
-        return [
-            'privacy' => $decode($settings->privacy ?? null, [
-                'lastSeenFor' => 'all',
-                'profilePhotoFor' => 'all',
-                'messageFrom' => 'all',
-                'callFrom' => 'all',
-                'phoneVisibleFor' => 'contacts',
-                'forwardedMessagesFor' => 'all',
-                'hideOnlineStatus' => false,
-                'autoDeleteDays' => 0,
-                'frequentContactsEnabled' => true,
-                'deleteAccountAfterMonths' => 0,
-            ]),
-            'notifications' => $decode($settings->notifications ?? null, [
-                'soundEnabled' => true,
-                'previewEnabled' => true,
-                'badgeEnabled' => true,
-                'desktopEnabled' => false,
-                'volume' => 100,
-            ]),
-            'media' => $decode($settings->media ?? null, [
-                'autoDownloadImages' => true,
-                'autoDownloadVideos' => false,
-                'autoDownloadFiles' => false,
-                'quality' => '720p',
-                'wifiOnly' => true,
-            ]),
-            'security' => $decode($settings->security ?? null, [
-                'pinEnabled' => false,
-                'twoFaEnabled' => false,
-            ]),
-            'chats' => $decode($settings->chats ?? null, [
-                'defaultWallpaper' => 'default',
-                'compactMode' => false,
-                'sendWithEnter' => true,
-                'reduceMotion' => false,
-                'defaultTheme' => '',
-                'nameColor' => '',
-                'fontFamily' => 'default',
-                'autoNightMode' => false,
-                'doubleClickAction' => 'reply',
-                'tabsPosition' => 'left',
-                'spellcheckEnabled' => true,
-                'showFolderTags' => false,
-                'showUnreadInTitle' => false,
-            ]),
         ];
     }
 
