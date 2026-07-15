@@ -19,6 +19,13 @@ use Illuminate\Support\Str;
 
 class MessagingController extends Controller
 {
+    private const CONTACTS_LIMIT      = 200;
+    private const MESSAGES_PER_PAGE   = 25;
+    private const STREAM_POLL_LIMIT   = 120;
+    private const SEARCH_LIMIT        = 50;
+    private const SEARCH_USERS_LIMIT  = 30;
+    private const FREQUENT_CONTACTS   = 5;
+
     public function __construct(private readonly UserPresenceService $presence) {}
 
     public function createGroup(Request $request)
@@ -305,7 +312,7 @@ class MessagingController extends Controller
     {
         $contacts = User::where('role', 'student')
             ->orderBy('name')
-            ->limit(200)
+            ->limit(self::CONTACTS_LIMIT)
             ->get();
 
         $studentIds = $contacts->pluck('id');
@@ -472,7 +479,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $classmates = User::where('role', 'student')
             ->where('id', '!=', $user->id)
             ->orderBy('name')
-            ->limit(200)
+            ->limit(self::CONTACTS_LIMIT)
             ->get();
 
         if ($classmates->isNotEmpty()) {
@@ -728,7 +735,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $messages = Message::between($user, $recipient)
             ->with(['sender', 'recipient', 'replyTo.sender'])
             ->orderBy('created_at')
-            ->limit(120)
+            ->limit(self::STREAM_POLL_LIMIT)
             ->get();
 
         $readAt = now();
@@ -919,7 +926,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
                 }
             })
             ->orderBy('name')
-            ->limit(30)
+            ->limit(self::SEARCH_USERS_LIMIT)
             ->get(['id', 'name', 'email', 'avatar_url', 'role']);
 
         $viewer = Auth::user();
@@ -952,7 +959,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         $user = Auth::user();
         $recipientId = (int) $request->query('recipient_id');
         $page = (int) $request->query('page', 1);
-        $perPage = 25;
+        $perPage = self::MESSAGES_PER_PAGE;
 
         $recipient = User::findOrFail($recipientId);
 
@@ -1203,7 +1210,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
         ->whereRaw('MATCH(content) AGAINST(? IN BOOLEAN MODE)', ['"' . addslashes($query) . '"'])
         ->with(['sender', 'recipient', 'replyTo.sender'])
         ->orderBy('created_at', 'desc')
-        ->limit(50)
+        ->limit(self::SEARCH_LIMIT)
         ->get();
 
         return response()->json([
@@ -1979,7 +1986,7 @@ $initialMessagesJson = $messages->map(fn ($message) => [
             ->selectRaw('CASE WHEN sender_id = ? THEN recipient_id ELSE sender_id END as other_id, COUNT(*) as cnt', [$user->id])
             ->groupBy('other_id')
             ->orderByDesc('cnt')
-            ->limit(5)
+            ->limit(self::FREQUENT_CONTACTS)
             ->get();
 
         $users = User::whereIn('id', $contacts->pluck('other_id'))->get()->keyBy('id');
