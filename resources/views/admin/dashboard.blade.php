@@ -78,6 +78,12 @@
             <a href="{{ route('admin.analytics') }}" class="admin-btn secondary"><i class="ri-line-chart-line"></i> التحليلات</a>
             <a href="{{ route('admin.enrollments') }}" class="admin-btn secondary"><i class="ri-user-received-line"></i> الطلبات</a>
             <a href="{{ route('admin.failed-jobs') }}" class="admin-btn secondary"><i class="ri-error-warning-line"></i> الأعمال الفاشلة</a>
+            <a href="{{ route('admin.errors') }}" class="admin-btn secondary" style="{{ isset($adminStatsMini['unresolvedErrors']) && $adminStatsMini['unresolvedErrors'] > 0 ? 'background:rgba(239,68,68,.12);color:#f87171;border-color:#ef444466;' : '' }}">
+                <i class="ri-bug-line"></i> أخطاء النظام
+                @if(isset($adminStatsMini['unresolvedErrors']) && $adminStatsMini['unresolvedErrors'] > 0)
+                    <span style="background:#ef4444;color:#fff;font-size:10px;border-radius:999px;padding:1px 6px;margin-right:2px;">{{ $adminStatsMini['unresolvedErrors'] }}</span>
+                @endif
+            </a>
         </div>
     </article>
 </section>

@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\CourseEnrollment;
 use App\Models\Lesson;
 use App\Models\PlatformSetting;
+use App\Models\SystemError;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -50,6 +51,7 @@ class AdminController extends Controller
             'pendingEnrollments' => $this->safeConditionalCount('course_enrollments', fn($q) => $q->where('status', 'pending')),
             'openTickets'        => $this->safeConditionalCount('support_tickets', fn($q) => $q->whereIn('status', ['open', 'pending'])),
             'failedJobs'         => $this->safeTableCount('failed_jobs'),
+            'unresolvedErrors'   => Schema::hasTable('system_errors') ? SystemError::unresolved()->count() : 0,
             'activeAnnouncements' => $this->safeConditionalCount('announcements', fn($q) => $q->where('is_active', true)->where(fn($q2) => $q2->whereNull('expires_at')->orWhere('expires_at', '>', now()))),
             ]; // end inner array
         }); // end Cache::remember
@@ -74,6 +76,8 @@ class AdminController extends Controller
         if ($pending > 25) $count++;
         if ($unread > 150) $count++;
         if ($new24h > 30)  $count++;
+        $errors = Schema::hasTable('system_errors') ? SystemError::unresolved()->where('created_at', '>=', now()->subHours(24))->count() : 0;
+        if ($errors > 0) $count++;
         return $count;
     }
 
@@ -432,6 +436,63 @@ class AdminController extends Controller
     {
         DB::table('failed_jobs')->delete();
         return redirect()->back()->with('success', 'تم حذف جميع العمليات الفاشلة.');
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       AXIS 8: System Error Monitor
+    ═══════════════════════════════════════════════════════ */
+
+    public function systemErrors(Request $request)
+    {
+        $stats  = $this->baseStats();
+        $filter = $request->get('filter', 'unresolved');
+
+        $query = SystemError::latest();
+        if ($filter === 'unresolved') {
+            $query->where('resolved', false);
+        } elseif ($filter === 'resolved') {
+            $query->where('resolved', true);
+        }
+
+        $errors = $query->paginate(25)->withQueryString();
+
+        return $this->renderAdmin('admin.system-errors', compact('errors', 'filter') + $stats);
+    }
+
+    public function resolveSystemError(SystemError $error)
+    {
+        $error->update([
+            'resolved'    => true,
+            'resolved_at' => now(),
+            'resolved_by' => Auth::id(),
+        ]);
+        Cache::forget('admin_base_stats');
+        return redirect()->back()->with('success', 'تم تحديد الخطأ كمُعالَج.');
+    }
+
+    public function resolveAllSystemErrors()
+    {
+        SystemError::where('resolved', false)->update([
+            'resolved'    => true,
+            'resolved_at' => now(),
+            'resolved_by' => Auth::id(),
+        ]);
+        Cache::forget('admin_base_stats');
+        return redirect()->back()->with('success', 'تم تحديد جميع الأخطاء كمُعالَجة.');
+    }
+
+    public function deleteSystemError(SystemError $error)
+    {
+        $error->delete();
+        Cache::forget('admin_base_stats');
+        return redirect()->back()->with('success', 'تم حذف الخطأ.');
+    }
+
+    public function deleteAllResolvedErrors()
+    {
+        SystemError::where('resolved', true)->delete();
+        Cache::forget('admin_base_stats');
+        return redirect()->back()->with('success', 'تم حذف جميع الأخطاء المُعالَجة.');
     }
 
     /* ═══════════════════════════════════════════════════════

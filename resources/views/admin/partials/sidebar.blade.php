@@ -43,6 +43,13 @@
                 <span style="margin-right:auto;background:#f97316;color:#fff;font-size:11px;padding:1px 7px;border-radius:20px;font-weight:700;">{{ $adminStatsMini['failedJobs'] }}</span>
             @endif
         </a>
+        <a href="{{ route('admin.errors') }}" class="nav-btn {{ request()->routeIs('admin.errors*') ? 'active' : '' }}">
+            <i class="ri-bug-line"></i>
+            <span>أخطاء النظام</span>
+            @if(isset($adminStatsMini['unresolvedErrors']) && $adminStatsMini['unresolvedErrors'] > 0)
+                <span style="margin-right:auto;background:#ef4444;color:#fff;font-size:11px;padding:1px 7px;border-radius:20px;font-weight:700;">{{ $adminStatsMini['unresolvedErrors'] }}</span>
+            @endif
+        </a>
         <a href="{{ route('admin.finance') }}" class="nav-btn {{ request()->routeIs('admin.finance') ? 'active' : '' }}"><i class="ri-funds-line"></i><span>المالية</span></a>
         <a href="{{ route('admin.rbac') }}" class="nav-btn {{ request()->routeIs('admin.rbac') ? 'active' : '' }}"><i class="ri-lock-password-line"></i><span>الصلاحيات</span></a>
         <a href="{{ route('admin.settings') }}" class="nav-btn {{ request()->routeIs('admin.settings') ? 'active' : '' }}"><i class="ri-settings-3-line"></i><span>الإعدادات</span></a>

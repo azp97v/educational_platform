@@ -224,6 +224,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('/failed-jobs/{uuid}', [AdminController::class, 'deleteFailedJob'])->name('failed-jobs.delete');
     Route::delete('/failed-jobs', [AdminController::class, 'deleteAllFailedJobs'])->name('failed-jobs.delete-all');
 
+    // System Error Monitor (Axis 8)
+    Route::get('/errors', [AdminController::class, 'systemErrors'])->name('errors');
+    Route::post('/errors/{error}/resolve', [AdminController::class, 'resolveSystemError'])->name('errors.resolve');
+    Route::post('/errors/resolve-all', [AdminController::class, 'resolveAllSystemErrors'])->name('errors.resolve-all');
+    Route::delete('/errors/{error}', [AdminController::class, 'deleteSystemError'])->name('errors.delete');
+    Route::delete('/errors', [AdminController::class, 'deleteAllResolvedErrors'])->name('errors.delete-resolved');
+
     // Announcements (Axis 5)
     Route::get('/announcements', [AdminController::class, 'announcements'])->name('announcements');
     Route::get('/announcements/create', [AdminController::class, 'createAnnouncement'])->name('announcements.create');
