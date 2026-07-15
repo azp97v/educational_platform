@@ -106,53 +106,65 @@ trait MessagingPrivacyTrait
 
     protected function settingsPayload($settings): array
     {
-        $defaults = [
-            'privacy' => [
-                'lastSeenFor' => 'all',
-                'profilePhotoFor' => 'all',
-                'phoneVisibleFor' => 'contacts',
-                'messageFrom' => 'all',
-                'callFrom' => 'all',
-                'hideOnlineStatus' => false,
-            ],
-            'notifications' => [
-                'soundEnabled' => true,
-                'tone' => 'default',
-                'vibrate' => true,
-                'previewInPopup' => true,
-            ],
-            'media' => [
-                'autoDownloadPhotos' => 'wifi',
-                'autoDownloadAudio' => 'wifi',
-                'autoDownloadVideo' => 'wifi',
-                'autoDownloadFiles' => 'wifi',
-                'maxFileSize' => 64,
-            ],
-            'security' => [
-                'twoFactorEnabled' => false,
-                'twoFactorMethod' => 'email',
-                'sessionTimeout' => 30,
-            ],
-            'chats' => [
-                'enterToSend' => true,
-                'fontSize' => 'medium',
-                'theme' => 'auto',
-                'background' => 'default',
-            ],
+        $decode = static function ($value, array $fallback): array {
+            if (is_array($value)) {
+                return array_merge($fallback, $value);
+            }
+            if (is_string($value) && $value !== '') {
+                $decoded = json_decode($value, true);
+                if (is_array($decoded)) {
+                    return array_merge($fallback, $decoded);
+                }
+            }
+            return $fallback;
+        };
+
+        return [
+            'privacy' => $decode($settings->privacy ?? null, [
+                'lastSeenFor'            => 'all',
+                'profilePhotoFor'        => 'all',
+                'messageFrom'            => 'all',
+                'callFrom'               => 'all',
+                'phoneVisibleFor'        => 'contacts',
+                'forwardedMessagesFor'   => 'all',
+                'hideOnlineStatus'       => false,
+                'autoDeleteDays'         => 0,
+                'frequentContactsEnabled'=> true,
+                'deleteAccountAfterMonths' => 0,
+            ]),
+            'notifications' => $decode($settings->notifications ?? null, [
+                'soundEnabled'   => true,
+                'previewEnabled' => true,
+                'badgeEnabled'   => true,
+                'desktopEnabled' => false,
+                'volume'         => 100,
+            ]),
+            'media' => $decode($settings->media ?? null, [
+                'autoDownloadImages' => true,
+                'autoDownloadVideos' => false,
+                'autoDownloadFiles'  => false,
+                'quality'            => '720p',
+                'wifiOnly'           => true,
+            ]),
+            'security' => $decode($settings->security ?? null, [
+                'pinEnabled'   => false,
+                'twoFaEnabled' => false,
+            ]),
+            'chats' => $decode($settings->chats ?? null, [
+                'defaultWallpaper'   => 'default',
+                'compactMode'        => false,
+                'sendWithEnter'      => true,
+                'reduceMotion'       => false,
+                'defaultTheme'       => '',
+                'nameColor'          => '',
+                'fontFamily'         => 'default',
+                'autoNightMode'      => false,
+                'doubleClickAction'  => 'reply',
+                'tabsPosition'       => 'left',
+                'spellcheckEnabled'  => true,
+                'showFolderTags'     => false,
+                'showUnreadInTitle'  => false,
+            ]),
         ];
-
-        if (!$settings) {
-            return $defaults;
-        }
-
-        $merged = $defaults;
-        foreach (['privacy', 'notifications', 'media', 'security', 'chats'] as $group) {
-            $stored = is_string($settings->{$group} ?? null)
-                ? json_decode($settings->{$group}, true) ?? []
-                : (array) ($settings->{$group} ?? []);
-            $merged[$group] = array_merge($defaults[$group], $stored);
-        }
-
-        return $merged;
     }
 }

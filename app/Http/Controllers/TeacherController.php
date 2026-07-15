@@ -17,6 +17,7 @@ use App\Models\Streak;
 use App\Notifications\AppNotification;
 use App\Services\Media\MediaStorageService;
 use App\Services\StreakService;
+use App\Services\UserPresenceService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class TeacherController extends Controller
 {
     protected MediaStorageService $mediaStorage;
 
-    public function __construct(MediaStorageService $mediaStorage)
+    public function __construct(MediaStorageService $mediaStorage, private readonly UserPresenceService $presence)
     {
         $this->mediaStorage = $mediaStorage;
     }
@@ -1578,11 +1579,11 @@ class TeacherController extends Controller
                 : false;
 
             if (!$lastActivityTimestamp) {
-                $lastActivityTimestamp = $this->getLastActivityTimestamp($student);
+                $lastActivityTimestamp = $this->presence->getLastActivityTimestamp($student)?->timestamp;
             }
 
             if (!$isOnline) {
-                $isOnline = $this->isUserOnline($student);
+                $isOnline = $this->presence->isOnline($student);
             }
 
             $lastSeenText = $isOnline
@@ -1670,25 +1671,6 @@ class TeacherController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             abort(404, 'الطالب غير موجود');
         }
-    }
-
-    private function isUserOnline(User $user): bool
-    {
-        return Cache::has('user-is-online-' . $user->id);
-    }
-
-    private function getLastActivityTimestamp(User $user): ?int
-    {
-        $lastActivity = Cache::get('last-activity-' . $user->id);
-        if (!$lastActivity) {
-            return null;
-        }
-
-        if ($lastActivity instanceof \Carbon\Carbon) {
-            return $lastActivity->timestamp;
-        }
-
-        return \Carbon\Carbon::parse($lastActivity)->timestamp;
     }
 
     private function formatMessagingActivityTime(?int $timestamp): string
