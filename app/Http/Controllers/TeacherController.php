@@ -1546,19 +1546,13 @@ class TeacherController extends Controller
     {
         try {
             /** @var \App\Models\User $user */
-            $user = Auth::user();
-
-            // Get all course IDs for this teacher
+            $user      = Auth::user();
             $courseIds = $user->courses()->pluck('id')->toArray();
 
-            // Get the student
             $student = \App\Models\User::where('id', $student)
                 ->where('role', 'student')
                 ->firstOrFail();
 
-            // IDOR guard: a teacher may only view profiles of students enrolled
-            // or pending in one of their own courses. Prevents enumerating
-            // arbitrary student records by guessing IDs.
             $isOwnStudent = ($student->teacher_id === $user->id) || CourseEnrollment::where('user_id', $student->id)
                 ->whereIn('course_id', $courseIds)
                 ->exists();
@@ -1567,110 +1561,94 @@ class TeacherController extends Controller
                 abort(403, 'لا تملك الصلاحية لعرض ملف هذا الطالب.');
             }
 
-            // Resolve presence using sessions first (more accurate), then fallback to cache.
-            $lastSession = \Illuminate\Support\Facades\DB::table('sessions')
-                ->where('user_id', $student->id)
-                ->orderBy('last_activity', 'desc')
-                ->first();
+            ['isOnline' => $isOnline, 'lastSeenText' => $lastSeenText] = $this->resolveStudentPresence($student);
+            ['studentProgress' => $studentProgress, 'examAttempts' => $examAttempts] = $this->loadStudentProgress($student->id, $courseIds);
+            $courseData = $this->loadEnrolledCoursesWithProgress($student, $courseIds, $studentProgress);
 
-            $lastActivityTimestamp = $lastSession?->last_activity ? (int) $lastSession->last_activity : null;
-            $isOnline = $lastActivityTimestamp
-                ? $lastActivityTimestamp > now()->subMinutes(5)->timestamp
-                : false;
-
-            if (!$lastActivityTimestamp) {
-                $lastActivityTimestamp = $this->presence->getLastActivityTimestamp($student)?->timestamp;
-            }
-
-            if (!$isOnline) {
-                $isOnline = $this->presence->isOnline($student);
-            }
-
-            $lastSeenText = $isOnline
-                ? 'متصل الآن'
-                : $this->formatMessagingActivityTime($lastActivityTimestamp ?: optional($student->updated_at)->timestamp);
-
-            // Get student's progress in teacher's courses
-            $studentProgress = \App\Models\UserProgress::where('user_id', $student->id)
-                ->whereHas('lesson', function ($q) use ($courseIds) {
-                    $q->whereIn('course_id', $courseIds);
-                })
-                ->with('lesson.course')
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            // Get exam attempts data (from user progress records for exams)
-            $examAttempts = \App\Models\UserProgress::where('user_id', $student->id)
-                ->whereHas('lesson', function ($q) use ($courseIds) {
-                    $q->whereIn('course_id', $courseIds)
-                        ->whereHas('exams');
-                })
-                ->with('lesson')
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            // Get actual enrolled and approved course IDs for this student from the teacher's courses
-            $enrolledCourseIds = \App\Models\CourseEnrollment::where('user_id', $student->id)
-                ->where('status', 'approved')
-                ->whereIn('course_id', $courseIds)
-                ->pluck('course_id')->toArray();
-
-            // Calculate statistics
-            $totalLessons = \App\Models\Lesson::whereIn('course_id', $enrolledCourseIds)->count();
-            $completedLessons = $studentProgress->where('status', 'completed')->count();
-            $completionPercentage = $totalLessons ? round(($completedLessons / $totalLessons) * 100, 2) : 0;
-
-            // Get enrolled courses with lessons
-            $enrolledCourses = \App\Models\Course::whereIn('id', $enrolledCourseIds)
-                ->with(['lessons' => function ($q) use ($student) {
-                    $q->with(['userProgress' => function ($qq) use ($student) {
-                        $qq->where('user_id', $student->id);
-                    }]);
-                }])
-                ->get();
-
-            // Calculate average completion percentage
-            $averageScore = 0;
-            if ($enrolledCourses->count() > 0) {
-                $total = 0;
-                foreach ($enrolledCourses as $course) {
-                    $courseProgress = $studentProgress->filter(function ($item) use ($course) {
-                        return $item->lesson->course_id == $course->id;
-                    });
-                    if ($courseProgress->count() > 0) {
-                        $total += $courseProgress->avg('progress_percentage');
-                    }
-                }
-                $averageScore = $enrolledCourses->count() > 0 ? round($total / $enrolledCourses->count(), 2) : 0;
-            }
-
-            // Get streak (consecutive days with activity)
-            $streak = $this->calculateStudentStreak($student->id, $courseIds);
-
-            // Get registration date
+            $streak           = $this->calculateStudentStreak($student->id, $courseIds);
             $registrationDate = $student->created_at;
+            $lastActivity     = $studentProgress->first()?->updated_at ?? $student->updated_at ?? null;
 
-            // Get last activity
-            $lastActivity = $studentProgress->first()?->updated_at ?? $student->updated_at ?? null;
-
-            return view('teacher.student-profile', compact(
-                'student',
-                'studentProgress',
-                'examAttempts',
-                'completionPercentage',
-                'completedLessons',
-                'totalLessons',
-                'enrolledCourses',
-                'averageScore',
-                'streak',
-                'registrationDate',
-                'lastActivity',
-                'isOnline',
-                'lastSeenText'
+            return view('teacher.student-profile', array_merge(
+                compact('student', 'studentProgress', 'examAttempts', 'isOnline', 'lastSeenText', 'streak', 'registrationDate', 'lastActivity'),
+                $courseData
             ));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             abort(404, 'الطالب غير موجود');
         }
+    }
+
+    private function resolveStudentPresence(User $student): array
+    {
+        $lastSession = \Illuminate\Support\Facades\DB::table('sessions')
+            ->where('user_id', $student->id)
+            ->orderByDesc('last_activity')
+            ->first();
+
+        $lastActivityTimestamp = $lastSession?->last_activity ? (int) $lastSession->last_activity : null;
+        $isOnline = $lastActivityTimestamp
+            ? $lastActivityTimestamp > now()->subMinutes(5)->timestamp
+            : false;
+
+        if (!$lastActivityTimestamp) {
+            $lastActivityTimestamp = $this->presence->getLastActivityTimestamp($student)?->timestamp;
+        }
+
+        if (!$isOnline) {
+            $isOnline = $this->presence->isOnline($student);
+        }
+
+        $lastSeenText = $isOnline
+            ? 'متصل الآن'
+            : $this->formatMessagingActivityTime($lastActivityTimestamp ?: optional($student->updated_at)->timestamp);
+
+        return compact('isOnline', 'lastSeenText');
+    }
+
+    private function loadStudentProgress(int $studentId, array $courseIds): array
+    {
+        $studentProgress = \App\Models\UserProgress::where('user_id', $studentId)
+            ->whereHas('lesson', fn ($q) => $q->whereIn('course_id', $courseIds))
+            ->with('lesson.course')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $examAttempts = \App\Models\UserProgress::where('user_id', $studentId)
+            ->whereHas('lesson', fn ($q) => $q->whereIn('course_id', $courseIds)->whereHas('exams'))
+            ->with('lesson')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return compact('studentProgress', 'examAttempts');
+    }
+
+    private function loadEnrolledCoursesWithProgress(User $student, array $courseIds, $studentProgress): array
+    {
+        $enrolledCourseIds = \App\Models\CourseEnrollment::where('user_id', $student->id)
+            ->where('status', 'approved')
+            ->whereIn('course_id', $courseIds)
+            ->pluck('course_id')->toArray();
+
+        $totalLessons     = \App\Models\Lesson::whereIn('course_id', $enrolledCourseIds)->count();
+        $completedLessons = $studentProgress->where('status', 'completed')->count();
+        $completionPercentage = $totalLessons
+            ? round(($completedLessons / $totalLessons) * 100, 2)
+            : 0;
+
+        $enrolledCourses = \App\Models\Course::whereIn('id', $enrolledCourseIds)
+            ->with(['lessons.userProgress' => fn ($q) => $q->where('user_id', $student->id)])
+            ->get();
+
+        $averageScore = 0;
+        if ($enrolledCourses->isNotEmpty()) {
+            $total = $enrolledCourses->sum(function ($course) use ($studentProgress) {
+                $progress = $studentProgress->filter(fn ($p) => $p->lesson->course_id == $course->id);
+                return $progress->isNotEmpty() ? $progress->avg('progress_percentage') : 0;
+            });
+            $averageScore = round($total / $enrolledCourses->count(), 2);
+        }
+
+        return compact('enrolledCourseIds', 'totalLessons', 'completedLessons', 'completionPercentage', 'enrolledCourses', 'averageScore');
     }
 
     private function formatMessagingActivityTime(?int $timestamp): string
