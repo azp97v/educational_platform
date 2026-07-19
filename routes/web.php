@@ -9,8 +9,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\MessagingController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\SmartRewindController;
 use App\Http\Controllers\GamificationController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\StudentInquiryController;

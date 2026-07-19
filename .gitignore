@@ -28,6 +28,11 @@ desktop.ini
 *.cjs
 *.mjs
 temp_*
+
+# Tool artifacts
+.graphifyignore
+graphify-out/
+"$backgroundImageForMpdf,; = "
 _temp-*
 _qa_*
 _*_tmp.*
