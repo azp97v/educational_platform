@@ -193,6 +193,12 @@
                         {{ $autoIssue ? 'إصدار تلقائي: مفعّل' : 'إصدار تلقائي: موقوف' }}
                     </button>
                 </form>
+                <form method="POST" action="{{ route('teacher.certificates.merge-duplicates') }}" style="display:inline;" id="mergeForm">
+                    @csrf
+                    <button type="submit" class="btn btn-outline" onclick="return confirm('سيتم دمج المستفيدين المكررين (نفس البريد الإلكتروني) في إدخال واحد. المتابعة؟')">
+                        <i class="ri-git-merge-line"></i> دمج المكررين
+                    </button>
+                </form>
                 <a href="{{ route('teacher.dashboard') }}" class="btn btn-outline">
                     <i class="ri-arrow-right-line"></i> العودة
                 </a>
@@ -213,8 +219,8 @@
                 <div class="lbl">إجمالي المستفيدين</div>
             </div>
             <div class="stat-box">
-                <div class="num">{{ $allCourses->count() }}</div>
-                <div class="lbl">المسارات المختلفة</div>
+                <div class="num">{{ $linkedCount }}</div>
+                <div class="lbl">مسجل في النظام</div>
             </div>
             <div class="stat-box">
                 <div class="num">{{ $withCertCount }}</div>
@@ -233,12 +239,11 @@
                 <input type="text" name="search" placeholder="اسم - بريد - مسار..." value="{{ request('search') }}">
             </div>
             <div class="filter-group">
-                <label>المسار</label>
-                <select name="course">
+                <label>حالة الربط</label>
+                <select name="linked_status">
                     <option value="">الكل</option>
-                    @foreach($allCourses as $c)
-                        <option value="{{ $c }}" {{ request('course') === $c ? 'selected' : '' }}>{{ $c }}</option>
-                    @endforeach
+                    <option value="linked"   {{ request('linked_status') === 'linked'   ? 'selected' : '' }}><i class="ri-links-line"></i> مسجل في النظام</option>
+                    <option value="unlinked" {{ request('linked_status') === 'unlinked' ? 'selected' : '' }}>طالب خارجي</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -261,7 +266,6 @@
                 <select name="sort">
                     <option value="created_at" {{ request('sort', 'created_at') === 'created_at' ? 'selected' : '' }}>تاريخ الإضافة</option>
                     <option value="name" {{ request('sort') === 'name' ? 'selected' : '' }}>الاسم</option>
-                    <option value="course" {{ request('sort') === 'course' ? 'selected' : '' }}>المسار</option>
                     <option value="course_date" {{ request('sort') === 'course_date' ? 'selected' : '' }}>تاريخ الدورة</option>
                 </select>
             </div>
@@ -273,7 +277,7 @@
 
         @if($students->isEmpty())
             <div class="empty-state">
-                @if(request()->hasAny(['search','course','cert_status']))
+                @if(request()->hasAny(['search','linked_status','cert_status','completion']))
                     <i class="ri-search-eye-line"></i>
                     <h3>لا توجد نتائج للبحث</h3>
                     <p style="color:#8C92A2;font-size:13px;">حاول تغيير معايير البحث أو إلغاء التصفية</p>

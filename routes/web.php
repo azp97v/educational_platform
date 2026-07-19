@@ -653,6 +653,7 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
         Route::post('/students/{student}/custom/{template}/issue', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'customIssue'])->name('custom.issue');
         Route::post('/students/{student}/custom/{template}/copy', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'customCopyToStudent'])->name('custom.copy');
         Route::post('/toggle-auto-issue', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'toggleAutoIssue'])->name('toggle-auto-issue');
+        Route::post('/merge-duplicates', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'mergeDuplicates'])->name('merge-duplicates');
 
         // Upload Template
         Route::get('/students/{student}/upload', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'uploadView'])->name('custom.upload.view');

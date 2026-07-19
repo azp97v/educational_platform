@@ -139,6 +139,12 @@
         <p>تصفح جميع القوالب الجاهزة — اختر القالب المناسب ثم حدد المستفيد</p>
     </div>
 
+    @if(session('success'))
+        <div style="padding:14px 20px;border-radius:12px;margin-bottom:20px;font-size:14px;font-weight:600;background:rgba(52,199,89,0.12);color:#34c759;border:1px solid rgba(52,199,89,0.2);">
+            {{ session('success') }}
+        </div>
+    @endif
+
     @if($students->isEmpty())
         <div class="no-students-note" style="display:flex;margin-bottom:24px;">
             <i class="ri-information-line"></i>
@@ -146,6 +152,57 @@
             <a href="{{ route('teacher.certificates.students.create') }}" style="color:var(--theme-gold);text-decoration:none;font-weight:700;">أضف مستفيداً الآن</a>
         </div>
     @endif
+
+    {{-- ── Custom Templates Library ── --}}
+    @if($customTemplates->isNotEmpty())
+        <div style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:18px;display:flex;align-items:center;gap:10px;">
+            <i class="ri-pencil-ruler-2-line" style="color:var(--theme-gold);"></i>
+            مكتبة قوالبي المخصصة
+            <span style="font-size:13px;color:var(--text-secondary);font-weight:400;">{{ $customTemplates->count() }} قالب</span>
+        </div>
+        <div class="grid" style="margin-bottom:36px;">
+            @foreach($customTemplates as $t)
+                <div class="template-card">
+                    <img src="{{ $t->background_type === 'image' && $t->background_image ? asset('storage/'.$t->background_image) : asset('image/logono.png') }}"
+                         alt="{{ $t->name }}">
+                    <div class="body">
+                        <h5>{{ $t->name }}</h5>
+                        <p style="font-size:11px;color:var(--text-secondary);">
+                            <i class="ri-user-3-line"></i>
+                            أُنشئ لـ: {{ $t->certificateStudent?->name ?? $t->recipient_name ?? '—' }}
+                        </p>
+                        @if($students->isEmpty())
+                            <a href="{{ route('teacher.certificates.students.create') }}" class="btn btn-outline btn-sm btn-block">
+                                <i class="ri-user-add-line"></i> أضف مستفيداً أولاً
+                            </a>
+                        @else
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                @if($t->certificateStudent)
+                                    <a href="{{ route('teacher.certificates.custom.show', [$t->certificateStudent, $t]) }}"
+                                       class="btn btn-outline btn-sm btn-block">
+                                        <i class="ri-eye-line"></i> عرض الأصل
+                                    </a>
+                                @endif
+                                <button class="btn btn-gold btn-sm btn-block open-copy-modal"
+                                        data-template-id="{{ $t->id }}"
+                                        data-template-name="{{ $t->name }}"
+                                        data-student-id="{{ $t->certificateStudent?->id ?? '' }}">
+                                    <i class="ri-file-copy-line"></i> نسخ لمستفيد آخر
+                                </button>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        <hr style="border:none;border-top:1px solid var(--theme-border);margin-bottom:28px;">
+    @endif
+
+    <div style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:18px;display:flex;align-items:center;gap:10px;">
+        <i class="ri-layout-grid-line" style="color:var(--theme-gold);"></i>
+        القوالب الجاهزة
+        <span style="font-size:13px;color:var(--text-secondary);font-weight:400;">9 قوالب</span>
+    </div>
 
     <div class="grid">
         @php
@@ -227,15 +284,45 @@
     </div>
 </div>
 
+{{-- Copy-to-student Modal --}}
+<div class="modal-overlay" id="copyModal">
+    <div class="modal-box">
+        <h2 id="copyTemplateName"><i class="ri-file-copy-line"></i> نسخ القالب لمستفيد</h2>
+        <div class="modal-subtitle">اختر المستفيد الذي سيُنسخ له هذا القالب</div>
+        <label for="copyStudentSelect">المستفيد</label>
+        <select id="copyStudentSelect">
+            <option value="">— اختر المستفيد —</option>
+            @foreach($students as $s)
+                <option value="{{ $s->id }}">{{ $s->name }}{{ $s->course ? ' — '.Str::limit($s->course, 30) : '' }}</option>
+            @endforeach
+        </select>
+        <form id="copyForm" method="POST" action="">
+            @csrf
+        </form>
+        <div class="modal-actions" id="copyActions" style="display:none;">
+            <button type="button" class="btn btn-gold btn-full" id="btnCopySubmit" style="grid-column:1/-1;">
+                <i class="ri-file-copy-line"></i> نسخ واستخدام لهذا المستفيد
+            </button>
+        </div>
+        <div class="modal-close-row">
+            <button class="modal-close-btn" id="closeCopyModal">
+                <i class="ri-close-line"></i> إغلاق
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
+    const baseStudentUrl = '{{ url("teacher/certificates/students") }}';
     const routes = {
         preview:  '{{ url("teacher/certificates/preview") }}',
         download: '{{ url("teacher/certificates/download") }}',
-        customCreate: '{{ url("teacher/certificates/students") }}',
-        gallery:  '{{ url("teacher/certificates/students") }}',
+        customCreate: baseStudentUrl,
+        gallery:  baseStudentUrl,
     };
 
+    // ── Preset modal ──
     let activePreset = null;
 
     document.querySelectorAll('.open-modal').forEach(btn => {
@@ -261,17 +348,57 @@
         document.getElementById('modalActions').style.display = 'grid';
     });
 
-    function closeModal() {
+    function closePresetModal() {
         document.getElementById('studentModal').classList.remove('open');
         activePreset = null;
     }
-
-    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('closeModal').addEventListener('click', closePresetModal);
     document.getElementById('studentModal').addEventListener('click', function (e) {
-        if (e.target === this) closeModal();
+        if (e.target === this) closePresetModal();
     });
+
+    // ── Copy-to-student modal ──
+    let activeCopyTemplateId = null;
+
+    document.querySelectorAll('.open-copy-modal').forEach(btn => {
+        btn.addEventListener('click', function () {
+            activeCopyTemplateId = this.dataset.templateId;
+            const sourceStudentId = this.dataset.studentId;
+            document.getElementById('copyTemplateName').innerHTML =
+                '<i class="ri-file-copy-line"></i> نسخ: ' + this.dataset.templateName;
+            document.getElementById('copyStudentSelect').value = '';
+            // Remove the source student from options to avoid self-copy confusion
+            Array.from(document.getElementById('copyStudentSelect').options).forEach(opt => {
+                opt.disabled = opt.value && opt.value === sourceStudentId;
+            });
+            document.getElementById('copyActions').style.display = 'none';
+            document.getElementById('copyModal').classList.add('open');
+        });
+    });
+
+    document.getElementById('copyStudentSelect').addEventListener('change', function () {
+        document.getElementById('copyActions').style.display = this.value ? 'grid' : 'none';
+    });
+
+    document.getElementById('btnCopySubmit').addEventListener('click', function () {
+        const targetStudentId = document.getElementById('copyStudentSelect').value;
+        if (!targetStudentId || !activeCopyTemplateId) return;
+        const form = document.getElementById('copyForm');
+        form.action = baseStudentUrl + '/' + targetStudentId + '/custom/' + activeCopyTemplateId + '/copy';
+        form.submit();
+    });
+
+    function closeCopyModal() {
+        document.getElementById('copyModal').classList.remove('open');
+        activeCopyTemplateId = null;
+    }
+    document.getElementById('closeCopyModal').addEventListener('click', closeCopyModal);
+    document.getElementById('copyModal').addEventListener('click', function (e) {
+        if (e.target === this) closeCopyModal();
+    });
+
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') { closePresetModal(); closeCopyModal(); }
     });
 })();
 </script>
