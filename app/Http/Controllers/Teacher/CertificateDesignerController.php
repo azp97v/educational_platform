@@ -44,9 +44,13 @@ class CertificateDesignerController extends Controller
         $teacherId = auth()->id();
         $query = CertificateStudent::where('user_id', $teacherId);
 
-        // Filter: course
-        if ($request->filled('course')) {
-            $query->where('course', $request->course);
+        // Filter: system link status
+        if ($request->filled('linked_status')) {
+            if ($request->linked_status === 'linked') {
+                $query->whereNotNull('recipient_user_id');
+            } elseif ($request->linked_status === 'unlinked') {
+                $query->whereNull('recipient_user_id');
+            }
         }
 
         // Filter: certificate status (now uses correct FK-based relationship)
@@ -133,11 +137,12 @@ class CertificateDesignerController extends Controller
             ->whereHas('customTemplates')
             ->count();
 
-        $allCourses = CertificateStudent::where('user_id', $teacherId)
-            ->select('course')->distinct()->orderBy('course')->pluck('course')->filter();
+        $linkedCount = CertificateStudent::where('user_id', $teacherId)
+            ->whereNotNull('recipient_user_id')
+            ->count();
 
         return view('teacher.certificates.students', compact(
-            'students', 'allCourses', 'completionData', 'withCertCount'
+            'students', 'completionData', 'withCertCount', 'linkedCount'
         ));
     }
 
@@ -441,7 +446,52 @@ class CertificateDesignerController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'course']);
 
-        return view('teacher.certificates.global-gallery', compact('students'));
+        $customTemplates = CustomTemplate::where('user_id', auth()->id())
+            ->with('certificateStudent:id,name')
+            ->latest()
+            ->get();
+
+        return view('teacher.certificates.global-gallery', compact('students', 'customTemplates'));
+    }
+
+    public function mergeDuplicates()
+    {
+        $teacherId = auth()->id();
+
+        $all = CertificateStudent::where('user_id', $teacherId)
+            ->withCount('customTemplates')
+            ->get();
+
+        $grouped = $all->groupBy(fn($s) => strtolower(trim($s->email)));
+
+        $mergedCount = 0;
+
+        foreach ($grouped as $email => $group) {
+            if ($group->count() <= 1) continue;
+
+            // Best record: system-linked > most templates > newest id
+            $primary = $group->sortByDesc(function ($s) {
+                return ($s->recipient_user_id ? 10000 : 0)
+                    + ($s->custom_templates_count * 100)
+                    + $s->id;
+            })->first();
+
+            foreach ($group as $dup) {
+                if ($dup->id === $primary->id) continue;
+
+                CustomTemplate::where('certificate_student_id', $dup->id)
+                    ->update(['certificate_student_id' => $primary->id]);
+
+                $dup->delete();
+                $mergedCount++;
+            }
+        }
+
+        $msg = $mergedCount > 0
+            ? "تم دمج {$mergedCount} إدخال مكرر بنجاح."
+            : 'لا توجد إدخالات مكررة — القائمة نظيفة.';
+
+        return back()->with('success', $msg);
     }
 
     // ─── Template Gallery ───────────────────────────────────────
