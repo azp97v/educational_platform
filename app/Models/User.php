@@ -51,6 +51,7 @@ class User extends Authenticatable
         'notify_system',
         'notify_certificate',
         'notify_call',
+        'auto_issue_certificates',
     ];
 
     /**
@@ -81,6 +82,7 @@ class User extends Authenticatable
             'notify_system' => 'bool',
             'notify_certificate' => 'bool',
             'notify_call' => 'bool',
+            'auto_issue_certificates' => 'bool',
         ];
     }
 
