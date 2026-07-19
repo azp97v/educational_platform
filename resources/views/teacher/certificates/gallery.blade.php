@@ -285,9 +285,31 @@
         <div class="page-title">
             <h1>اختر قالب الشهادة</h1>
             <p>إصدار شهادة للمستفيد: <span class="badge">{{ $student->name }}</span></p>
+            @if($selectedCourse)
+                <p style="margin-top:6px;font-size:13px;color:var(--text-secondary);">
+                    <i class="ri-book-2-line" style="color:var(--theme-gold);"></i>
+                    المسار المحدد: <strong style="color:var(--theme-gold);">{{ $selectedCourse->name }}</strong>
+                </p>
+            @endif
         </div>
 
-        <!-- Upload Card — يضم زر الرفع وزر الإنشاء جنباً إلى جنب -->
+        @if($selectedCourse)
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:16px;
+                    background:rgba(198,166,117,0.1);border:1px solid rgba(198,166,117,0.3);margin-bottom:20px;">
+            <i class="ri-book-2-fill" style="font-size:22px;color:var(--theme-gold);flex-shrink:0;"></i>
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:14px;color:var(--theme-gold);">إصدار شهادة لمسار: {{ $selectedCourse->name }}</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+                    اختر قالباً أدناه وسيُسجَّل تلقائياً تحت هذا المسار عند الإصدار.
+                </div>
+            </div>
+            <a href="{{ route('teacher.certificates.gallery', $student) }}" style="font-size:12px;color:var(--text-muted);text-decoration:none;white-space:nowrap;">
+                <i class="ri-close-line"></i> إلغاء تحديد المسار
+            </a>
+        </div>
+        @endif
+
+        <!-- Upload Card -->
         <div class="upload-card">
             <div>
                 <h3><i class="ri-cloud-line"></i> قوالبك الخاصة</h3>
@@ -298,10 +320,17 @@
                 </ul>
             </div>
             <div class="upload-card-actions">
-                <a href="{{ route('teacher.certificates.custom.upload.view', $student) }}" class="btn btn-primary">
+                <a href="{{ route('teacher.certificates.custom.upload.view', $student) }}{{ $selectedCourse ? '?course_id='.$selectedCourse->id : '' }}" class="btn btn-primary">
                     <i class="ri-upload-line"></i> رفع قالب
                 </a>
-                <a href="{{ route('teacher.certificates.custom.create', $student) }}{{ $courseType ? '?course_type='.$courseType : '' }}" class="btn btn-gold">
+                @php
+                    $createUrl = route('teacher.certificates.custom.create', $student);
+                    $createParams = [];
+                    if ($selectedCourse) $createParams['course_id'] = $selectedCourse->id;
+                    if ($courseType) $createParams['course_type'] = $courseType;
+                    if ($createParams) $createUrl .= '?' . http_build_query($createParams);
+                @endphp
+                <a href="{{ $createUrl }}" class="btn btn-gold">
                     <i class="ri-pencil-ruler-2-line"></i> إنشاء قالب مخصص
                 </a>
             </div>
@@ -341,6 +370,39 @@
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-outline btn-sm btn-block" style="color:var(--theme-danger);border-color:rgba(255,59,48,0.2);">
                                         <i class="ri-delete-bin-line"></i> حذف القالب
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        <!-- Template Library (from other students) -->
+        @if(isset($libraryTemplates) && $libraryTemplates->isNotEmpty())
+            <div class="section-title" style="margin-top:16px;">
+                مكتبة قوالبي
+                <span>{{ $libraryTemplates->count() }} قالب — أُنشئت لمستفيدين آخرين، انسخها لهذا المستفيد</span>
+            </div>
+            <div class="grid">
+                @foreach($libraryTemplates as $t)
+                    <div class="template-card">
+                        <img src="{{ $t->background_type === 'image' && $t->background_image ? asset('storage/'.$t->background_image) : asset('image/logono.png') }}" alt="{{ $t->name }}">
+                        <div class="body">
+                            <h5>{{ $t->name }}</h5>
+                            <p style="color:var(--text-muted);font-size:11px;">
+                                <i class="ri-user-3-line"></i>
+                                أُنشئ لـ: {{ $t->certificateStudent?->name ?? $t->recipient_name ?? '—' }}
+                            </p>
+                            <div class="meta">
+                                <div>العنوان: {{ $t->title }}</div>
+                            </div>
+                            <div class="actions">
+                                <form method="POST" action="{{ route('teacher.certificates.custom.copy', [$student, $t]) }}{{ $selectedCourse ? '?course_id='.$selectedCourse->id : '' }}" style="display:block;width:100%;">
+                                    @csrf
+                                    <button type="submit" class="btn btn-gold btn-sm btn-block" style="width:100%;justify-content:center;">
+                                        <i class="ri-file-copy-line"></i> نسخ واستخدام لهذا المستفيد
                                     </button>
                                 </form>
                             </div>

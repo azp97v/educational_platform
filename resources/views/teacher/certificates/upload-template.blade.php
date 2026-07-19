@@ -69,6 +69,9 @@
 
         <form action="{{ route('teacher.certificates.custom.upload', $student) }}" method="POST" enctype="multipart/form-data">
             @csrf
+            @if(request()->query('course_id'))
+                <input type="hidden" name="course_id" value="{{ request()->query('course_id') }}">
+            @endif
             <div class="field">
                 <label>اسم القالب</label>
                 <input type="text" name="name" placeholder="مثال: قالب رياضي" required>

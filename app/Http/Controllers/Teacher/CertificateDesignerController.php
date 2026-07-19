@@ -186,10 +186,8 @@ class CertificateDesignerController extends Controller
     {
         abort_if($student->user_id !== auth()->id(), 403);
 
-        // Find the actual system user by email (if exists)
         $systemUser = User::where('email', $student->email)->where('role', 'student')->first();
 
-        // Courses the system user is enrolled in (approved)
         $enrolledCourses = collect();
         $systemCertificates = collect();
         if ($systemUser) {
@@ -204,23 +202,34 @@ class CertificateDesignerController extends Controller
                 ->get();
         }
 
-        // All certificate designer templates for this student (only issued)
+        // Custom templates issued for this student (by FK or by recipient_name)
         $certTemplates = CustomTemplate::where('user_id', auth()->id())
-            ->where('recipient_name', $student->name)
+            ->where(function ($q) use ($student) {
+                $q->where('certificate_student_id', $student->id)
+                  ->orWhere(function ($q2) use ($student) {
+                      $q2->whereNull('certificate_student_id')
+                         ->where('recipient_name', $student->name);
+                  });
+            })
             ->where('is_issued', true)
+            ->with('course')
             ->latest()
             ->get();
 
-        // Courses completed (all lessons done) but no system certificate yet
+        // Per-course issued custom certificate map: course_id → template
+        $issuedCustomByCourse = $certTemplates
+            ->whereNotNull('course_id')
+            ->keyBy('course_id');
+
+        // Courses completed but no system certificate
         $completedNoCert = collect();
         if ($systemUser) {
             $completedCourseIds = $systemCertificates->pluck('course_id')->toArray();
             foreach ($enrolledCourses as $course) {
                 $totalLessons = $course->lessons_count;
                 $completedLessons = $systemUser->progress()
-                    ->whereHas('lesson', function ($q) use ($course) {
-                        $q->where('course_id', $course->id);
-                    })->where('status', 'completed')->count();
+                    ->whereHas('lesson', fn($q) => $q->where('course_id', $course->id))
+                    ->where('status', 'completed')->count();
 
                 if ($totalLessons > 0 && $completedLessons >= $totalLessons && !in_array($course->id, $completedCourseIds)) {
                     $completedNoCert->push($course);
@@ -228,18 +237,32 @@ class CertificateDesignerController extends Controller
             }
         }
 
-        // Count stats
+        // Completion percentage per enrolled course (for action buttons)
+        $courseCompletion = [];
+        if ($systemUser) {
+            foreach ($enrolledCourses as $course) {
+                $total = $course->lessons_count;
+                if ($total === 0) { $courseCompletion[$course->id] = 0; continue; }
+                $done = $systemUser->progress()
+                    ->whereHas('lesson', fn($q) => $q->where('course_id', $course->id))
+                    ->where('status', 'completed')->count();
+                $courseCompletion[$course->id] = (int) round($done / $total * 100);
+            }
+        }
+
         $totalCerts = $certTemplates->count() + $systemCertificates->count();
         $pendingCerts = $completedNoCert->count();
         $totalCourses = $enrolledCourses->count();
         $completionRate = $totalCourses > 0
             ? round(($systemCertificates->count() / $totalCourses) * 100)
             : 0;
+        $autoIssue = (bool) auth()->user()->auto_issue_certificates;
 
         return view('teacher.certificates.student-profile', compact(
             'student', 'systemUser', 'enrolledCourses', 'systemCertificates',
-            'certTemplates', 'completedNoCert', 'totalCerts', 'pendingCerts',
-            'totalCourses', 'completionRate'
+            'certTemplates', 'completedNoCert', 'issuedCustomByCourse',
+            'courseCompletion', 'totalCerts', 'pendingCerts',
+            'totalCourses', 'completionRate', 'autoIssue'
         ));
     }
 
@@ -350,7 +373,7 @@ class CertificateDesignerController extends Controller
     /**
      * إشعار حقيقي للطالب المستلم عند إصدار/إنشاء شهادة فعلية له (قالب مخصص أو بريد).
      */
-    private function notifyRecipientOfCertificate(CertificateStudent $student): void
+    private function notifyRecipientOfCertificate(CertificateStudent $student, ?string $courseName = null): void
     {
         if (!$student->recipient_user_id) {
             return;
@@ -361,13 +384,45 @@ class CertificateDesignerController extends Controller
             return;
         }
 
+        $course = $courseName ?? $student->course ?? 'مسارك';
+
         $recipient->notify(new \App\Notifications\AppNotification(
             'تم إصدار شهادة جديدة لك',
-            "أصدر لك معلمك شهادة إتمام لدورة \"{$student->course}\".",
+            "أصدر لك معلمك شهادة إتمام لمسار \"{$course}\".",
             route('teacher.certificates.gallery', $student),
             'certificate',
             'ri-award-line'
         ));
+    }
+
+    public function customCopyToStudent(Request $request, CertificateStudent $student, CustomTemplate $template)
+    {
+        abort_if($template->user_id !== auth()->id(), 403);
+        abort_if($student->user_id  !== auth()->id(), 403);
+
+        $courseId   = $request->query('course_id');
+        $courseName = $courseId ? Course::find($courseId)?->name : null;
+
+        $newTemplate = $template->replicate();
+        $newTemplate->certificate_student_id = $student->id;
+        $newTemplate->recipient_name         = $student->name;
+        $newTemplate->course_id              = $courseId;
+        $newTemplate->course_name            = $courseName;
+        $newTemplate->is_issued              = false;
+        $newTemplate->issued_at              = null;
+        $newTemplate->save();
+
+        return redirect()->route('teacher.certificates.custom.show', [$student, $newTemplate])
+            ->with('success', 'تم نسخ القالب لهذا المستفيد — يمكنك تعديله وإصداره.');
+    }
+
+    public function toggleAutoIssue()
+    {
+        $teacher = auth()->user();
+        $teacher->update(['auto_issue_certificates' => !$teacher->auto_issue_certificates]);
+
+        $state = $teacher->auto_issue_certificates ? 'مفعّل' : 'موقوف';
+        return back()->with('success', "الإصدار التلقائي للشهادات الآن {$state}.");
     }
 
     public function destroyStudent($id)
@@ -395,9 +450,11 @@ class CertificateDesignerController extends Controller
     {
         abort_if($student->user_id !== auth()->id(), 403);
 
-        // Load templates for this specific student (FK-based), plus legacy templates
-        // matched by recipient_name that weren't backfilled
-        $uploadedTemplates = CustomTemplate::where('user_id', auth()->id())
+        $selectedCourseId = request()->query('course_id');
+        $selectedCourse = $selectedCourseId ? Course::find($selectedCourseId) : null;
+
+        // Templates tied to this specific student
+        $studentTemplates = CustomTemplate::where('user_id', auth()->id())
             ->where(function ($q) use ($student) {
                 $q->where('certificate_student_id', $student->id)
                   ->orWhere(function ($q2) use ($student) {
@@ -408,31 +465,59 @@ class CertificateDesignerController extends Controller
             ->latest()
             ->get();
 
-        // Check if the linked system user has completed the course (null = cannot determine)
+        // Teacher's entire template library (excluding student-specific templates above)
+        $libraryTemplates = CustomTemplate::where('user_id', auth()->id())
+            ->where(function ($q) use ($student) {
+                $q->where('certificate_student_id', '!=', $student->id)
+                  ->where(function ($q2) use ($student) {
+                      $q2->whereNotNull('certificate_student_id')
+                         ->orWhere(function ($q3) use ($student) {
+                             $q3->whereNull('certificate_student_id')
+                                ->where('recipient_name', '!=', $student->name);
+                         });
+                  });
+            })
+            ->with('certificateStudent:id,name')
+            ->latest()
+            ->get();
+
+        // Check course completion (use selected course_id if provided, else fall back to student.course)
         $courseCompleted = null;
-        if ($student->recipient_user_id && $student->course) {
+        $courseType = null;
+        $checkCourse = $selectedCourse;
+
+        if (!$checkCourse && $student->course) {
+            $checkCourse = Course::where('name', $student->course)
+                ->withCount('lessons')
+                ->first();
+        } elseif ($checkCourse) {
+            $checkCourse->loadCount('lessons');
+        }
+
+        if ($checkCourse && $student->recipient_user_id) {
             $systemUser = User::find($student->recipient_user_id);
-            if ($systemUser) {
-                $course = Course::where('name', $student->course)->withCount('lessons')->first();
-                if ($course && $course->lessons_count > 0) {
-                    $completedLessons = $systemUser->progress()
-                        ->whereHas('lesson', fn($q) => $q->where('course_id', $course->id))
-                        ->where('status', 'completed')
-                        ->count();
-                    $courseCompleted = $completedLessons >= $course->lessons_count;
-                }
+            if ($systemUser && $checkCourse->lessons_count > 0) {
+                $completedLessons = $systemUser->progress()
+                    ->whereHas('lesson', fn($q) => $q->where('course_id', $checkCourse->id))
+                    ->where('status', 'completed')
+                    ->count();
+                $courseCompleted = $completedLessons >= $checkCourse->lessons_count;
             }
         }
 
-        $courseType = null;
-        if ($student->course) {
-            $courseRecord = Course::where('name', $student->course)
+        if ($checkCourse) {
+            $courseType = Course::where('id', $checkCourse->id)
                 ->where('instructor_id', auth()->id())
-                ->first(['course_type']);
-            $courseType = $courseRecord?->course_type;
+                ->value('course_type');
         }
 
-        return view('teacher.certificates.gallery', compact('student', 'uploadedTemplates', 'courseCompleted', 'courseType'));
+        // Merge for backward compat: keep single $uploadedTemplates pointing to student's templates
+        $uploadedTemplates = $studentTemplates;
+
+        return view('teacher.certificates.gallery', compact(
+            'student', 'uploadedTemplates', 'libraryTemplates',
+            'courseCompleted', 'courseType', 'selectedCourse'
+        ));
     }
 
     // ─── Preset Preview ─────────────────────────────────────────
@@ -509,13 +594,19 @@ class CertificateDesignerController extends Controller
         abort_if($student->user_id !== auth()->id(), 403);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:80',
+            'name'           => 'required|string|max:80',
             'template_image' => 'required|image|mimes:jpeg,png,jpg,svg,webp|max:4096',
+            'course_id'      => 'nullable|integer|exists:courses,id',
         ]);
 
+        $courseId   = $validated['course_id'] ?? null;
+        $courseName = $courseId ? Course::find($courseId)?->name : null;
+
         $templateData = [
-            'user_id' => auth()->id(),
-            'name' => $validated['name'],
+            'user_id'     => auth()->id(),
+            'course_id'   => $courseId,
+            'course_name' => $courseName,
+            'name'        => $validated['name'],
             'recipient_name' => $student->name,
             'title' => 'شهادة إتمام',
             'subtitle' => 'تقديراً لجهودكم',
@@ -581,7 +672,7 @@ class CertificateDesignerController extends Controller
     {
         abort_if($student->user_id !== auth()->id(), 403);
 
-        $validated = $request->validate([
+        $validated = $request->validate(['course_id' => 'nullable|integer|exists:courses,id'] + [
             'name' => 'required|string|max:80',
             'recipient_name' => 'nullable|string|max:80',
             'title' => 'required|string|max:80',
@@ -639,12 +730,27 @@ class CertificateDesignerController extends Controller
             $templateData['background_image'] = $request->file('background_image')->store('custom_templates', 'public');
         }
 
+        $courseId   = $validated['course_id'] ?? null;
+        $courseName = $courseId ? Course::find($courseId)?->name : null;
+
+        $autoIssue = (bool) auth()->user()->auto_issue_certificates;
+
         $template = auth()->user()->customTemplates()->create(
-            $templateData + ['is_issued' => false, 'certificate_student_id' => $student->id]
+            $templateData + [
+                'is_issued'              => $autoIssue,
+                'issued_at'              => $autoIssue ? now() : null,
+                'certificate_student_id' => $student->id,
+                'course_id'              => $courseId,
+                'course_name'            => $courseName,
+            ]
         );
 
+        if ($autoIssue) {
+            $this->notifyRecipientOfCertificate($student, $courseName);
+        }
+
         return redirect()->route('teacher.certificates.custom.show', [$student, $template])
-            ->with('success', 'تم حفظ القالب بنجاح');
+            ->with('success', $autoIssue ? 'تم حفظ الشهادة وإصدارها تلقائياً.' : 'تم حفظ القالب بنجاح');
     }
 
     public function customUpdate(Request $request, CertificateStudent $student, CustomTemplate $template)

@@ -183,6 +183,16 @@
                 <a href="{{ route('teacher.certificates.students.create') }}" class="btn btn-primary">
                     <i class="ri-user-add-line"></i> إضافة مستفيد
                 </a>
+                <form method="POST" action="{{ route('teacher.certificates.toggle-auto-issue') }}" style="display:inline;">
+                    @csrf
+                    @php $autoIssue = auth()->user()->auto_issue_certificates; @endphp
+                    <button type="submit" class="btn {{ $autoIssue ? 'btn-primary' : 'btn-outline' }}"
+                            title="{{ $autoIssue ? 'الإصدار التلقائي مفعّل — انقر لإيقافه' : 'الإصدار التلقائي موقوف — انقر لتفعيله' }}"
+                            style="{{ $autoIssue ? 'background:rgba(52,199,89,0.18);color:#34c759;border:1px solid rgba(52,199,89,0.35);' : '' }}">
+                        <i class="ri-toggle-{{ $autoIssue ? 'fill' : 'line' }}"></i>
+                        {{ $autoIssue ? 'إصدار تلقائي: مفعّل' : 'إصدار تلقائي: موقوف' }}
+                    </button>
+                </form>
                 <a href="{{ route('teacher.dashboard') }}" class="btn btn-outline">
                     <i class="ri-arrow-right-line"></i> العودة
                 </a>
@@ -323,7 +333,19 @@
                                     </a>
                                 </td>
                                 <td style="direction:ltr;text-align:right;font-size:12px;">{{ $s->email }}</td>
-                                <td><span class="tag-pill">{{ $s->course ?? '—' }}</span></td>
+                                <td>
+                                    @if($s->recipient_user_id)
+                                        <span style="font-size:12px;color:var(--text-secondary);">
+                                            <i class="ri-links-line" style="color:var(--theme-gold);"></i>
+                                            مرتبط بالنظام
+                                            @if($s->course)
+                                                <br><span style="font-size:11px;color:var(--text-muted);">{{ Str::limit($s->course, 28) }}</span>
+                                            @endif
+                                        </span>
+                                    @else
+                                        <span style="font-size:12px;color:var(--text-secondary);">{{ $s->course ?? '—' }}</span>
+                                    @endif
+                                </td>
                                 <td style="font-size:12px;">{{ $s->course_date?->format('Y-m-d') ?? '—' }}</td>
                                 <td>{{ $s->degree ?? '—' }}</td>
                                 <td>
