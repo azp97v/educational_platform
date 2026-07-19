@@ -330,6 +330,9 @@
                 @if($editingTemplate)
                     @method('PUT')
                 @endif
+                @if(request()->query('course_id'))
+                    <input type="hidden" name="course_id" value="{{ request()->query('course_id') }}">
+                @endif
 
                 <div class="control-group mb-3">
                     <div class="flex-row">

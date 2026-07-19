@@ -651,6 +651,8 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
         Route::delete('/students/{student}/custom/{template}', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'customDestroy'])->name('custom.destroy');
         Route::get('/students/{student}/custom/{template}/download', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'customDownload'])->name('custom.download');
         Route::post('/students/{student}/custom/{template}/issue', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'customIssue'])->name('custom.issue');
+        Route::post('/students/{student}/custom/{template}/copy', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'customCopyToStudent'])->name('custom.copy');
+        Route::post('/toggle-auto-issue', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'toggleAutoIssue'])->name('toggle-auto-issue');
 
         // Upload Template
         Route::get('/students/{student}/upload', [\App\Http\Controllers\Teacher\CertificateDesignerController::class, 'uploadView'])->name('custom.upload.view');

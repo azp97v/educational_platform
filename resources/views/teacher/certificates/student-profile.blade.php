@@ -194,10 +194,19 @@
                     <h1><i class="ri-bar-chart-2-line"></i> ملف الشهادات</h1>
                     <div class="sub">إحصائيات وإنجازات المستفيد {{ $student->name }}</div>
                 </div>
-                <div style="display:flex;gap:10px;">
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
                     <a href="{{ route('teacher.certificates.gallery', $student) }}" class="btn btn-primary"><i class="ri-award-line"></i> إصدار شهادة</a>
                     <a href="{{ route('teacher.certificates.students.edit', $student) }}" class="btn btn-outline"><i class="ri-edit-line"></i> تعديل</a>
                     <a href="{{ route('teacher.certificates.students') }}" class="btn btn-outline"><i class="ri-arrow-right-line"></i> العودة</a>
+                    <form method="POST" action="{{ route('teacher.certificates.toggle-auto-issue') }}" style="display:inline;">
+                        @csrf
+                        <button type="submit" class="btn {{ $autoIssue ? 'btn-primary' : 'btn-outline' }}"
+                                title="{{ $autoIssue ? 'الإصدار التلقائي مفعّل — انقر لإيقافه' : 'الإصدار التلقائي موقوف — انقر لتفعيله' }}"
+                                style="{{ $autoIssue ? 'background:rgba(52,199,89,0.18);color:#34c759;border:1px solid rgba(52,199,89,0.35);' : '' }}">
+                            <i class="ri-toggle-{{ $autoIssue ? 'fill' : 'line' }}" style="font-size:16px;"></i>
+                            {{ $autoIssue ? 'إصدار تلقائي: مفعّل' : 'إصدار تلقائي: موقوف' }}
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -282,23 +291,41 @@
                     <div class="course-list">
                         @foreach($enrolledCourses as $course)
                             @php
-                                $hasSystemCert = $systemCertificates->where('course_id', $course->id)->isNotEmpty();
-                                $isPending = $completedNoCert->contains('id', $course->id);
+                                $hasSystemCert    = $systemCertificates->where('course_id', $course->id)->isNotEmpty();
+                                $hasCustomCert    = isset($issuedCustomByCourse[$course->id]);
+                                $isPending        = $completedNoCert->contains('id', $course->id);
+                                $pct              = $courseCompletion[$course->id] ?? 0;
+                                $galleryUrl       = route('teacher.certificates.gallery', $student) . '?course_id=' . $course->id;
                             @endphp
                             <div class="course-item">
-                                <div>
+                                <div style="flex:1;min-width:0;">
                                     <div class="course-name"><i class="ri-book-2-line"></i> {{ $course->name }}</div>
-                                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+                                    <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">
                                         {{ $course->lessons_count }} درس
+                                        @if($pct > 0)
+                                            · <span style="color:{{ $pct >= 100 ? 'var(--success)' : 'var(--warning)' }};">{{ $pct }}% مكتمل</span>
+                                        @endif
                                     </div>
                                 </div>
-                                @if($hasSystemCert)
-                                    <span class="course-badge has-cert"><i class="ri-checkbox-circle-fill"></i> شهادة نظام</span>
-                                @elseif($isPending)
-                                    <span class="course-badge pending"><i class="ri-time-line"></i> مكتمل — لم تصدر شهادة</span>
-                                @else
-                                    <span class="course-badge enrolled"><i class="ri-user-follow-line"></i> مسجل</span>
-                                @endif
+                                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                                    @if($hasSystemCert)
+                                        <span class="course-badge has-cert"><i class="ri-checkbox-circle-fill"></i> شهادة نظام ✓</span>
+                                    @endif
+                                    @if($hasCustomCert)
+                                        @php $issuedTpl = $issuedCustomByCourse[$course->id]; @endphp
+                                        <span class="course-badge has-cert"><i class="ri-award-fill"></i> صدرت</span>
+                                        <a href="{{ route('teacher.certificates.custom.show', [$student, $issuedTpl]) }}"
+                                           class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;">عرض</a>
+                                    @elseif($isPending)
+                                        <a href="{{ $galleryUrl }}" class="btn btn-primary btn-sm" style="font-size:11px;padding:5px 12px;background:rgba(255,149,0,0.85);color:#fff;">
+                                            <i class="ri-award-line"></i> إصدار الآن
+                                        </a>
+                                    @elseif(!$hasSystemCert)
+                                        <a href="{{ $galleryUrl }}" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;">
+                                            <i class="ri-award-line"></i> إصدار شهادة
+                                        </a>
+                                    @endif
+                                </div>
                             </div>
                         @endforeach
                     </div>
@@ -306,6 +333,9 @@
                     <div class="empty-hint">
                         <i class="ri-user-unfollow-line"></i>
                         <p>{{ $student->name }} غير مسجل في النظام — بيانات المسارات غير متوفرة</p>
+                        <a href="{{ route('teacher.certificates.gallery', $student) }}" class="btn btn-primary btn-sm" style="margin-top:12px;">
+                            <i class="ri-award-line"></i> إصدار شهادة
+                        </a>
                     </div>
                 @else
                     <div class="empty-hint">
