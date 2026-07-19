@@ -279,7 +279,7 @@ class CertificateDesignerController extends Controller
             'name' => $validated['name'],
             'username' => $validated['username'] ?? null,
             'email' => $validated['email'],
-            'course' => $validated['course'],
+            'course' => $validated['course'] ?? null,
             'course_date' => $validated['course_date'],
             'degree' => $validated['degree'],
             'image' => $imagePath,

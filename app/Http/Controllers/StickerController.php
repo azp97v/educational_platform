@@ -39,17 +39,53 @@ class StickerController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => ['required', 'string', 'in:static,animated'],
-            'file' => ['required', 'file', 'max:8192', 'mimes:png,webp,webm'],
+            'type'       => ['required', 'string', 'in:static,animated'],
+            'file'       => ['required', 'file', 'max:8192', 'mimes:png,webp,webm'],
+            'source_url' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
 
         $user = Auth::user();
+
+        // If a source URL is provided, derive the original file path and check for duplicates.
+        // We reference the same file instead of creating a copy — this prevents duplicate saves
+        // and ensures findStickerByUrl matches by URL on any subsequent page load.
+        if (!empty($data['source_url'])) {
+            $urlPath = parse_url($data['source_url'], PHP_URL_PATH) ?? '';
+            // Strip /storage/ prefix to get the relative disk path (e.g. stickers/xxx.png)
+            $sourcePath = ltrim(preg_replace('#^/?storage/#', '', ltrim($urlPath, '/')), '/');
+
+            if ($sourcePath && Storage::disk('public')->exists($sourcePath)) {
+                // Check if user already has this sticker
+                $existing = Sticker::where('user_id', $user->id)
+                    ->where('file_path', $sourcePath)
+                    ->first();
+
+                if ($existing) {
+                    return response()->json([
+                        'success'      => true,
+                        'data'         => $this->present($existing),
+                        'already_saved' => true,
+                    ]);
+                }
+
+                // Create a record pointing to the same file — no duplication on disk
+                $sticker = Sticker::create([
+                    'user_id'   => $user->id,
+                    'type'      => $data['type'],
+                    'file_path' => $sourcePath,
+                ]);
+
+                return response()->json(['success' => true, 'data' => $this->present($sticker)]);
+            }
+        }
+
+        // Fallback: save the uploaded file normally (user-created stickers, or unknown source)
         $file = $request->file('file');
         $path = $file->store('stickers', 'public');
 
         $sticker = Sticker::create([
-            'user_id' => $user->id,
-            'type' => $data['type'],
+            'user_id'   => $user->id,
+            'type'      => $data['type'],
             'file_path' => $path,
         ]);
 
