@@ -661,7 +661,7 @@ class TeacherController extends Controller
             $validated['video_file_path'] = null;
         } else {
             // AJAX uploaded path is the only valid source
-            if (!$validated['video_file_path']) {
+            if (!($validated['video_file_path'] ?? null)) {
                 return back()->withErrors(['video_file' => 'يجب رفع ملف فيديو'])->withInput();
             }
             $validated['video_file'] = $validated['video_file_path'];
@@ -672,7 +672,7 @@ class TeacherController extends Controller
             $validated['audio_file_path'] = null;
         } else {
             // AJAX uploaded path is the only valid source
-            if (!$validated['audio_file_path']) {
+            if (!($validated['audio_file_path'] ?? null)) {
                 return back()->withErrors(['audio_file' => 'يجب رفع ملف صوتي'])->withInput();
             }
             $validated['audio_file'] = $validated['audio_file_path'];

@@ -4646,6 +4646,11 @@ this.messages[i].content = await this._e2eDecrypt(msg.content, window._e2ePartne
 
 async saveStickerToMyLibrary(message) {
 if (this.stickerSaveBusy) return;
+// Prevent double-save: if sticker is already in library, switch to favorite toggle
+if (this.findStickerByUrl(message.attachmentUrl)) {
+this.toggleStickerFavoriteFromMessage(message);
+return;
+}
 this.stickerSaveBusy = true;
 try {
 const res = await fetch(message.attachmentUrl);
@@ -4654,11 +4659,21 @@ const isAnimated = message.messageType === 'sticker_animated';
 const fd = new FormData();
 fd.append('type', isAnimated ? 'animated' : 'static');
 fd.append('file', blob, isAnimated ? 'sticker.webm' : 'sticker.png');
+// Pass source URL so backend can reference the same file (no disk duplication)
+fd.append('source_url', message.attachmentUrl);
 const saveRes = await fetch(this.stickersStoreRoute, { method: 'POST', headers: { 'X-CSRF-TOKEN': this.csrfToken }, body: fd });
 const d = await saveRes.json();
 if (d.success) {
+if (d.already_saved) {
+// Sticker was already in library (race condition or second attempt)
+if (!this.stickerList.some(s => s.id === d.data.id)) {
 this.stickerList = [d.data, ...this.stickerList];
-this.showToast('تم حفظ الملصق في مكتبتك', 'success');
+}
+this.showToast('الملصق موجود بالفعل في مكتبتك', 'info');
+} else {
+this.stickerList = [d.data, ...this.stickerList];
+this.showToast('تم حفظ الملصق في مكتبتك ✓', 'success');
+}
 this.stickerViewer = null;
 } else {
 this.showToast(d.message || 'تعذر حفظ الملصق', 'error');
@@ -4672,10 +4687,16 @@ this.stickerSaveBusy = false;
 
 findStickerByUrl(url) {
 if (!url) return null;
-const norm = (u) => String(u).split('?')[0];
-return this.stickerList.find(s => norm(s.url) === norm(url))
-|| this.stickerFavorites.find(s => norm(s.url) === norm(url))
-|| this.stickerRecent.find(s => norm(s.url) === norm(url))
+// Strip query params; also strip domain so storage/stickers/x.png matches https://domain.com/storage/stickers/x.png
+const norm = (u) => {
+const bare = String(u).split('?')[0];
+try { return new URL(bare).pathname; } catch { return bare; }
+};
+const normUrl = norm(url);
+const match = (s) => norm(s.url) === normUrl;
+return this.stickerList.find(match)
+|| this.stickerFavorites.find(match)
+|| this.stickerRecent.find(match)
 || null;
 },
 
