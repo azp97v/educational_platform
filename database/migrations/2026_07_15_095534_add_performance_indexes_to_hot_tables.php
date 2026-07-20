@@ -7,47 +7,36 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    private function indexExists(string $table, string $indexName): bool
+    {
+        try {
+            if (DB::getDriverName() === 'sqlite') {
+                $rows = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=?", [$table]);
+                return collect($rows)->pluck('name')->contains($indexName);
+            }
+            $rows = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
+            return !empty($rows);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function safeAddIndex(string $table, array|string $columns, string $name): void
+    {
+        if ($this->indexExists($table, $name)) return;
+        try {
+            Schema::table($table, fn(Blueprint $t) => $t->index((array) $columns, $name));
+        } catch (\Throwable) {}
+    }
+
     public function up(): void
     {
-        // messages — indexes already applied by partial run; guard with existence check
-        $msgIndexes = DB::select("SHOW INDEX FROM messages WHERE Key_name IN ('msg_conversation_idx','msg_unread_idx','msg_deleted_created_idx')");
-        $existingMsgKeys = array_column($msgIndexes, 'Key_name');
-
-        Schema::table('messages', function (Blueprint $table) use ($existingMsgKeys) {
-            if (!in_array('msg_conversation_idx', $existingMsgKeys)) {
-                $table->index(['sender_id', 'recipient_id', 'created_at'], 'msg_conversation_idx');
-            }
-            if (!in_array('msg_unread_idx', $existingMsgKeys)) {
-                $table->index(['recipient_id', 'read_at'], 'msg_unread_idx');
-            }
-            if (!in_array('msg_deleted_created_idx', $existingMsgKeys)) {
-                $table->index(['deleted_at', 'created_at'], 'msg_deleted_created_idx');
-            }
-        });
-
-        // courses — instructor_id is the correct column name
-        $courseIndexes = DB::select("SHOW INDEX FROM courses WHERE Key_name = 'courses_instructor_created_idx'");
-        if (empty($courseIndexes)) {
-            Schema::table('courses', function (Blueprint $table) {
-                $table->index(['instructor_id', 'created_at'], 'courses_instructor_created_idx');
-            });
-        }
-
-        // lessons — course_id + order: every course listing sorts by this
-        $lessonIndexes = DB::select("SHOW INDEX FROM lessons WHERE Key_name = 'lessons_course_order_idx'");
-        if (empty($lessonIndexes)) {
-            Schema::table('lessons', function (Blueprint $table) {
-                $table->index(['course_id', 'order'], 'lessons_course_order_idx');
-            });
-        }
-
-        // course_enrollments — (course_id, status) for teacher aggregate queries
-        $enrollIndexes = DB::select("SHOW INDEX FROM course_enrollments WHERE Key_name = 'enrollments_course_status_idx'");
-        if (empty($enrollIndexes)) {
-            Schema::table('course_enrollments', function (Blueprint $table) {
-                $table->index(['course_id', 'status'], 'enrollments_course_status_idx');
-            });
-        }
+        $this->safeAddIndex('messages', ['sender_id', 'recipient_id', 'created_at'], 'msg_conversation_idx');
+        $this->safeAddIndex('messages', ['recipient_id', 'read_at'], 'msg_unread_idx');
+        $this->safeAddIndex('messages', ['deleted_at', 'created_at'], 'msg_deleted_created_idx');
+        $this->safeAddIndex('courses', ['instructor_id', 'created_at'], 'courses_instructor_created_idx');
+        $this->safeAddIndex('lessons', ['course_id', 'order'], 'lessons_course_order_idx');
+        $this->safeAddIndex('course_enrollments', ['course_id', 'status'], 'enrollments_course_status_idx');
     }
 
     public function down(): void
