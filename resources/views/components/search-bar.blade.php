@@ -89,7 +89,7 @@ html[data-theme="light"] .search-no-results {
 </style>
 @endonce
 
-<script>
+<script nonce="{{ $cspNonce ?? '' }}">
 document.addEventListener('DOMContentLoaded', function() {
     const ADMIN_SEARCH_ITEMS = [
         { label: 'لوحة التحكم', icon: 'ri-dashboard-line', url: '/admin/users' },

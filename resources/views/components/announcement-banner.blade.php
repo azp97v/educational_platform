@@ -150,7 +150,7 @@
 }
 </style>
 
-<script>
+<script nonce="{{ $cspNonce ?? '' }}">
 // نقل شريط الإعلانات إلى بداية <body> حتى لو أُدرج البانر ضمن الـfooter
 (function () {
     function moveToTop() {

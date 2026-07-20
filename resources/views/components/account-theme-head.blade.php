@@ -1,4 +1,4 @@
-<script>
+<script nonce="{{ $cspNonce ?? '' }}">
     (function () {
         var currentRole = @json(auth()->check() ? auth()->user()->role : null);
         function safeGet(storage, key) {

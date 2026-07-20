@@ -98,10 +98,10 @@ class RoleBasedAccessTest extends TestCase
         $this->actingAs($admin)->post('/admin/users', [
             'name' => 'طالب جديد',
             'email' => 'new.student@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
             'role' => 'student',
-        ])->assertRedirect(route('admin.index'));
+        ])->assertRedirect(route('admin.users'));
 
         $student = User::where('email', 'new.student@example.com')->first();
         $this->assertNotNull($student);
@@ -109,7 +109,7 @@ class RoleBasedAccessTest extends TestCase
 
         $this->post('/login', [
             'email' => 'new.student@example.com',
-            'password' => 'password123',
+            'password' => 'Password123',
         ])->assertRedirect('/student/dashboard');
     }
 
@@ -121,8 +121,8 @@ class RoleBasedAccessTest extends TestCase
         $this->actingAs($admin)->post('/admin/users', [
             'name' => 'طالب مرتبط',
             'email' => 'linked.student@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
             'role' => 'student',
             'teacher_id' => $teacher->id,
         ]);
@@ -138,7 +138,7 @@ class RoleBasedAccessTest extends TestCase
 
         $response = $this->actingAs($admin)->delete("/admin/users/{$admin->id}");
 
-        $response->assertRedirect(route('admin.index'));
+        $response->assertRedirect(route('admin.users'));
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }
 }
