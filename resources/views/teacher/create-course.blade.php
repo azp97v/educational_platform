@@ -595,6 +595,22 @@
                             </div>
                         </div>
 
+                        <!-- Sequential Lessons -->
+                        <div class="form-group" style="margin-top:8px;">
+                          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
+                            <input type="checkbox" name="sequential_lessons" value="1"
+                              {{ old('sequential_lessons') ? 'checked' : '' }}
+                              style="width:18px;height:18px;accent-color:var(--gold);cursor:pointer;">
+                            <span>
+                              <i class="ri-lock-line" style="color:var(--gold-dark);margin-left:4px;"></i>
+                              <strong>فتح الدروس بالترتيب</strong>
+                              <span style="color:var(--text-muted);font-size:13px;display:block;margin-top:2px;">
+                                لا يمكن للطالب الوصول إلى الدرس التالي إلا بعد إكمال الدرس السابق
+                              </span>
+                            </span>
+                          </label>
+                        </div>
+
                         <!-- Form Actions -->
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">
@@ -671,7 +687,7 @@
     // Attach event listeners for preview update
     const previewInputs = document.querySelectorAll('input[name="name"], textarea[name="description"], input[name="duration"]');
     previewInputs.forEach(function(el) { el.addEventListener('input', updatePreview); });
-    const previewSelects = document.querySelectorAll('select[name="category"], select[name="level"]');
+    const previewSelects = document.querySelectorAll('select[name="category_id"], select[name="level"]');
     previewSelects.forEach(function(el) { el.addEventListener('change', updatePreview); });
     const darkBtn = document.getElementById('darkBtn');
     if (darkBtn) { darkBtn.addEventListener('click', toggleDark); }
@@ -679,20 +695,17 @@
 
   // Preview Update
   function updatePreview() {
-    const name = document.querySelector('input[name="name"]').value || 'اسم المسار';
-    const description = document.querySelector('textarea[name="description"]').value || 'أضف وصفاً للمسار';
-    const category = document.querySelector('select[name="category"]').value || '-';
-    const level = document.querySelector('select[name="level"]').value || '-';
-    const duration = document.querySelector('input[name="duration"]').value || '-';
+    const nameEl = document.querySelector('input[name="name"]');
+    const descEl = document.querySelector('textarea[name="description"]');
+    const catEl  = document.querySelector('select[name="category_id"]');
+    const lvlEl  = document.querySelector('select[name="level"]');
+    const durEl  = document.querySelector('input[name="duration"]');
 
-    const categoryNames = {
-      programming: 'البرمجة',
-      design: 'التصميم',
-      business: 'الأعمال',
-      language: 'اللغات',
-      science: 'العلوم',
-      other: 'أخرى'
-    };
+    const name        = nameEl?.value || 'اسم المسار';
+    const description = descEl?.value || 'أضف وصفاً للمسار';
+    const categoryTxt = catEl ? (catEl.options[catEl.selectedIndex]?.text || '-') : '-';
+    const level       = lvlEl?.value || '-';
+    const duration    = durEl?.value || '-';
 
     const levelNames = {
       beginner: 'مبتدئ',
@@ -701,6 +714,7 @@
     };
 
     const preview = document.getElementById('preview');
+    if (!preview) return;
     preview.innerHTML = `
       <div class="course-preview-image">
         <i class="ri-book-2-line"></i>
@@ -709,7 +723,7 @@
       <p>${description.substring(0, 60)}...</p>
       <div class="preview-info">
         <label>الفئة:</label>
-        <strong>${categoryNames[category] || '-'}</strong>
+        <strong>${categoryTxt}</strong>
       </div>
       <div class="preview-info">
         <label>المستوى:</label>

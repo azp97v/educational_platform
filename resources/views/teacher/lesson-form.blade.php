@@ -422,17 +422,20 @@
 
     .form-group {
       margin-bottom: 22px;
-      animation: fadeIn 0.5s ease-out forwards;
-      opacity: 0;
+      animation: fadeIn 0.5s ease-out both;
     }
     @keyframes fadeIn {
-      to { opacity: 1; }
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .form-group:nth-child(1) { animation-delay: 0.1s; }
     .form-group:nth-child(2) { animation-delay: 0.2s; }
     .form-group:nth-child(3) { animation-delay: 0.3s; }
     .form-group:nth-child(4) { animation-delay: 0.4s; }
     .form-group:nth-child(5) { animation-delay: 0.5s; }
+    @media (prefers-reduced-motion: reduce) {
+      .form-group { animation: none !important; opacity: 1 !important; }
+    }
     .form-group:last-child { margin-bottom: 0; }
 
     .form-label {

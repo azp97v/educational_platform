@@ -646,6 +646,9 @@
       .page-header h1 { font-size: 28px; }
       .form-actions { flex-direction: column; }
       .btn { width: 100%; }
+      .search-wrap { display: none !important; }
+      .user-profile-btn { min-width: auto !important; padding: 8px 10px !important; }
+      .user-profile-btn .u-info { display: none !important; }
     }
 
     /* ===== HIDE SCROLLBAR ===== */

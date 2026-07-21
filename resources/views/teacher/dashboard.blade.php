@@ -1311,6 +1311,8 @@
         padding: 28px 18px !important;
         overflow-y: auto !important;
         transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
       }
       .sidebar.sidebar-open {
         transform: translateX(0) !important;

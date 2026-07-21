@@ -13,6 +13,7 @@
     <!-- Sentry Browser SDK -->
     <script src="https://js-de.sentry-cdn.com/021ff6ade06b8bf73a6467b845f06dbc.min.js" crossorigin="anonymous"></script>
     <script>
+    if (typeof Sentry !== 'undefined') {
     Sentry.onLoad(function() {
         Sentry.init({
             dsn: "https://021ff6ade06b8bf73a6467b845f06dbc@o4511728095199232.ingest.de.sentry.io/4511728109224016",
@@ -23,6 +24,7 @@
         });
         @auth Sentry.setUser({ id: {{ auth()->id() }}, role: "admin" }); @endauth
     });
+    }
     </script>
 </head>
 <body class="admin-console" data-admin-live="true" data-role="admin">
