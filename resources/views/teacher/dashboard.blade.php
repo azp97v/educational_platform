@@ -1288,14 +1288,10 @@
     }
     .sidebar-backdrop.active { display: block; }
 
-    /* Hamburger shows at ≤1280px */
+    /* Hamburger shows + sidebar becomes overlay at ≤1280px (aligned breakpoints) */
     @media (max-width: 1280px) {
       .hamburger-btn { display: flex; }
       .topbar { padding: 0 20px !important; }
-    }
-
-    /* Sidebar fully hidden at ≤1024px — slides in on hamburger click */
-    @media (max-width: 1024px) {
       .sidebar {
         position: fixed !important;
         transform: translateX(110%) !important;
@@ -1314,7 +1310,7 @@
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
       }
-      /* Override the theme CSS (html.teacher-account[data-theme="light"] .sidebar { backdrop-filter: blur(24px) !important }) which has higher specificity */
+      /* Override the high-specificity theme CSS that re-enables backdrop-filter */
       html.teacher-account[data-theme] .sidebar {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
