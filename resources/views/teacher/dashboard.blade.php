@@ -1278,13 +1278,14 @@
       border-color: var(--gold);
     }
 
-    /* Sidebar backdrop */
+    /* Sidebar backdrop — pointer-events:none so clicks always reach the sidebar */
     .sidebar-backdrop {
       display: none;
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.55);
       z-index: 9998;
+      pointer-events: none !important;
     }
     .sidebar-backdrop.active { display: block; }
 
@@ -1294,19 +1295,22 @@
       .topbar { padding: 0 20px !important; }
       .sidebar {
         position: fixed !important;
-        transform: translateX(110%) !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        width: var(--sidebar-w) !important;
+        /* Use right-offset instead of transform to avoid RTL+transform iOS Safari compositing bug */
+        right: calc(-1 * var(--sidebar-w) - 20px) !important;
+        left: auto !important;
         top: 0 !important;
-        right: 0 !important;
         bottom: 0 !important;
         height: 100vh !important;
+        height: 100dvh !important;
+        width: var(--sidebar-w) !important;
         z-index: 9999 !important;
         border-radius: 0 !important;
         padding: 28px 18px !important;
         overflow-y: auto !important;
-        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transform: none !important;
+        transition: right 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
       }
@@ -1316,7 +1320,7 @@
         -webkit-backdrop-filter: none !important;
       }
       .sidebar.sidebar-open {
-        transform: translateX(0) !important;
+        right: 0 !important;
         visibility: visible !important;
         pointer-events: auto !important;
       }
@@ -1372,8 +1376,8 @@
 </head>
 <body>
 @include('components.alerts')
-<div class="sidebar-backdrop" id="teacherSidebarBackdrop"></div>
 <div class="app">
+  <div class="sidebar-backdrop" id="teacherSidebarBackdrop"></div>
   <aside class="sidebar" id="teacherSidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">
@@ -1917,19 +1921,26 @@
       });
     }
 
-    if (teacherBackdrop) {
-      teacherBackdrop.addEventListener('click', closeTeacherSidebar);
-    }
+    // Close when clicking outside sidebar (capture=true so we catch all taps;
+    // backdrop has pointer-events:none so it never swallows the click itself)
+    document.addEventListener('click', function(e) {
+      if (!teacherSidebar || !teacherSidebar.classList.contains('sidebar-open')) return;
+      if (!teacherSidebar.contains(e.target) &&
+          (!teacherHamburger || !teacherHamburger.contains(e.target))) {
+        closeTeacherSidebar();
+      }
+    }, true);
 
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeTeacherSidebar();
     });
 
-    // Close sidebar when a nav link is clicked on mobile
+    // Close sidebar when a nav link is clicked on mobile (match hamburger breakpoint)
     if (teacherSidebar) {
+      var mql = window.matchMedia('(max-width: 1280px)');
       teacherSidebar.querySelectorAll('.nav-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          if (window.innerWidth <= 1024) closeTeacherSidebar();
+          if (mql.matches) closeTeacherSidebar();
         });
       });
     }
