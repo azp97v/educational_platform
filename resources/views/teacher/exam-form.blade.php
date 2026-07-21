@@ -636,6 +636,9 @@
         pointer-events: auto !important;
       }
       .main { margin-right: 0 !important; }
+      .search-wrap { display: none !important; }
+      .user-profile-btn { min-width: auto !important; padding: 8px 10px !important; }
+      .user-profile-btn .u-info { display: none !important; }
     }
 
     @media (max-width: 768px) {
