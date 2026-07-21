@@ -1314,6 +1314,11 @@
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
       }
+      /* Override the theme CSS (html.teacher-account[data-theme="light"] .sidebar { backdrop-filter: blur(24px) !important }) which has higher specificity */
+      html.teacher-account[data-theme] .sidebar {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
       .sidebar.sidebar-open {
         transform: translateX(0) !important;
         visibility: visible !important;

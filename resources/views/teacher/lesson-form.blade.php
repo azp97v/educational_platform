@@ -425,8 +425,8 @@
       animation: fadeIn 0.5s ease-out both;
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { transform: translateY(6px); }
+      to { transform: translateY(0); }
     }
     .form-group:nth-child(1) { animation-delay: 0.1s; }
     .form-group:nth-child(2) { animation-delay: 0.2s; }
