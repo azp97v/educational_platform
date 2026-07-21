@@ -766,13 +766,41 @@
     .logout-btn:hover { background: rgba(255,59,48,0.08); }
 
     @media (max-width: 1024px) {
-      .main { margin-right: 90px !important; }
+      .hamburger-btn { display: flex; }
+      .sidebar {
+        position: fixed !important;
+        transform: translateX(110%) !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        width: var(--sidebar-w) !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        z-index: 9999 !important;
+        border-radius: 0 !important;
+        padding: 28px 18px !important;
+        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s !important;
+      }
+      .sidebar.sidebar-open {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
+      .main { margin-right: 0 !important; }
+      .search-wrap { display: none !important; }
+      .user-profile-btn { min-width: auto !important; padding: 8px 10px !important; }
+      .user-profile-btn .u-info { display: none !important; }
     }
 
     @media (max-width: 768px) {
+      .topbar { padding: 16px 20px; }
       .main { margin-right: 0 !important; }
       .form-row { grid-template-columns: 1fr; }
       .content { padding: 20px; }
+      .search-wrap { display: none !important; }
+      .user-profile-btn { min-width: auto !important; padding: 8px 10px !important; }
+      .user-profile-btn .u-info { display: none !important; }
     }
 
     /* Extra Creative Touches */
