@@ -269,6 +269,14 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     Route::delete('/lesson/{lesson}/notes/{note}', [\App\Http\Controllers\LessonInteractionController::class, 'deleteNote'])->name('lesson.notes.delete');
     Route::put('/lesson/{lesson}/notes/{note}', [\App\Http\Controllers\LessonInteractionController::class, 'updateNote'])->name('lesson.notes.update');
 
+    // Smart Rewind Routes
+    Route::get('/smart-rewind', [\App\Http\Controllers\SmartRewindController::class, 'index'])->name('smart-rewind.index');
+    Route::get('/smart-rewind/{rewind}', [\App\Http\Controllers\SmartRewindController::class, 'show'])->name('smart-rewind.show');
+    Route::post('/smart-rewind/{rewind}/watch', [\App\Http\Controllers\SmartRewindController::class, 'recordWatch'])->name('smart-rewind.watch');
+    Route::post('/smart-rewind/{rewind}/mastered', [\App\Http\Controllers\SmartRewindController::class, 'markMastered'])->name('smart-rewind.mastered');
+    Route::get('/smart-rewind-stats', [\App\Http\Controllers\SmartRewindController::class, 'statistics'])->name('smart-rewind.stats');
+    Route::post('/exam/submit-answer', [StudentController::class, 'submitExamAnswer'])->name('exam.submit-answer');
+
     // Inquiry Routes
     Route::post('/inquiry/store', [StudentInquiryController::class, 'store'])->name('inquiry.store');  // إرسال سؤال
     Route::get('/my-inquiries', [StudentInquiryController::class, 'studentIndex'])->name('inquiries.index');  // أسئلتي
