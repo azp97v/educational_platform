@@ -11,6 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('messaging:delete-expired')->daily();
 Schedule::command('messaging:deactivate-inactive')->daily();
 Schedule::command('calls:cleanup')->everyMinute()->withoutOverlapping();
+Schedule::command('horizon:snapshot')->everyFiveMinutes();
 
 if (PHP_OS_FAMILY === 'Windows') {
     Schedule::exec(sprintf(
