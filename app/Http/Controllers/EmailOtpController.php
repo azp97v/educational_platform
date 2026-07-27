@@ -112,19 +112,16 @@ class EmailOtpController extends Controller
                 return back()->with('error', 'انتهت صلاحية جلستك. يرجى التسجيل مرة أخرى');
             }
 
-            // Find teacher
-            $teacher = User::where('email', 'teacher@iglal.com')->first();
-            $teacherId = $teacher ? $teacher->id : null;
-
             $user = User::create([
                 'name' => $name,
                 'username' => $username,
                 'email' => strtolower(trim($request->email)),
                 'password' => $hashedPassword,
-                'role' => 'student',
-                'teacher_id' => $teacherId,
+                'teacher_id' => null,
                 'email_verified_at' => now(),
             ]);
+            $user->role = 'student';
+            $user->save();
 
             Log::info('User created after OTP verification:', [
                 'user_id' => $user->id,
@@ -151,6 +148,7 @@ class EmailOtpController extends Controller
         $emailOtp->delete();
 
         // Log user in
+        $request->session()->regenerate();
         auth()->login($user);
         \Illuminate\Support\Facades\Cache::put('user-is-online-' . $user->id, true, now()->addSeconds(3));
         \Illuminate\Support\Facades\Cache::put('last-activity-' . $user->id, now(), now()->addDays(7));

@@ -149,7 +149,8 @@ class AdminController extends Controller
         $validated['email_verified_at'] = now();
         $validated['teacher_id']        = $validated['role'] === 'student' ? ($validated['teacher_id'] ?? null) : null;
 
-        $newUser = User::create($validated);
+        $newUser = (new User)->forceFill($validated);
+        $newUser->save();
         $this->adminLog('user_created', 'User', $newUser->id, "Created {$newUser->role}: {$newUser->email}");
 
         return redirect()->route('admin.users')->with('success', 'تم إنشاء الحساب بنجاح.');
@@ -214,7 +215,7 @@ class AdminController extends Controller
         ]);
 
         $validated['teacher_id'] = $validated['role'] === 'student' ? ($validated['teacher_id'] ?? null) : null;
-        $user->update($validated);
+        $user->forceFill($validated)->save();
 
         return redirect()->route('admin.users')->with('success', 'تم تحديث الحساب بنجاح.');
     }
