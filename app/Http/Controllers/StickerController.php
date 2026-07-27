@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Sticker;
 use App\Models\UserMessagingSetting;
+use App\Services\Media\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class StickerController extends Controller
 {
+    public function __construct(private readonly MediaStorageService $media) {}
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -54,7 +56,7 @@ class StickerController extends Controller
             // Strip /storage/ prefix to get the relative disk path (e.g. stickers/xxx.png)
             $sourcePath = ltrim(preg_replace('#^/?storage/#', '', ltrim($urlPath, '/')), '/');
 
-            if ($sourcePath && Storage::disk('public')->exists($sourcePath)) {
+            if ($sourcePath && Storage::disk($this->media->disk())->exists($sourcePath)) {
                 // Check if user already has this sticker
                 $existing = Sticker::where('user_id', $user->id)
                     ->where('file_path', $sourcePath)
@@ -81,7 +83,7 @@ class StickerController extends Controller
 
         // Fallback: save the uploaded file normally (user-created stickers, or unknown source)
         $file = $request->file('file');
-        $path = $file->store('stickers', 'public');
+        $path = $this->media->store($file, 'stickers');
 
         $sticker = Sticker::create([
             'user_id'   => $user->id,
@@ -145,7 +147,7 @@ class StickerController extends Controller
             abort(403);
         }
 
-        Storage::disk('public')->delete($sticker->file_path);
+        $this->media->deleteIfExists($sticker->file_path);
 
         $setting = UserMessagingSetting::where('user_id', $user->id)->first();
         if ($setting) {
@@ -166,7 +168,7 @@ class StickerController extends Controller
         return [
             'id' => $sticker->id,
             'type' => $sticker->type,
-            'url' => asset('storage/' . $sticker->file_path),
+            'url' => $this->media->resolveUrl($sticker->file_path),
         ];
     }
 }

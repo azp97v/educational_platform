@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Media\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -9,27 +10,20 @@ use App\Models\User;
 
 class ProfileController extends Controller
 {
-    /**
-     * عرض صفحة الملف الشخصي
-     */
+    public function __construct(private readonly MediaStorageService $media) {}
+
     public function show()
     {
         $user = Auth::user();
         return view('profile.index', compact('user'));
     }
 
-    /**
-     * عرض صفحة تحرير الملف الشخصي
-     */
     public function edit()
     {
         $user = Auth::user();
         return view('profile.edit', compact('user'));
     }
 
-    /**
-     * تحديث معلومات الملف الشخصي
-     */
     public function update(Request $request)
     {
         $user = Auth::user();
@@ -43,7 +37,6 @@ class ProfileController extends Controller
             'avatar_url' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // فحص cooldown تغيير اسم المستخدم
         $newUsername = $validated['username'] ?? null;
         if ($newUsername && $newUsername !== $user->username) {
             if ($user->username && $user->username_changed_at) {
@@ -56,19 +49,11 @@ class ProfileController extends Controller
             $validated['username_changed_at'] = now();
         }
 
-        // معالجة الصورة الشخصية
         if ($request->hasFile('avatar_url')) {
-            // حذف الصورة القديمة إذا كانت موجودة
-            if ($user->avatar_url && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar_url)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar_url);
-            }
-
-            $avatar = $request->file('avatar_url')->store('avatars', 'public');
-            $validated['avatar_url'] = $avatar;
+            $this->media->deleteIfExists($user->avatar_url);
+            $validated['avatar_url'] = $this->media->store($request->file('avatar_url'), 'avatars');
         } elseif ($request->has('remove_avatar') && $user->avatar_url) {
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar_url)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar_url);
-            }
+            $this->media->deleteIfExists($user->avatar_url);
             $validated['avatar_url'] = null;
         }
 
@@ -98,17 +83,11 @@ class ProfileController extends Controller
         return response()->json(['available' => !$exists, 'reason' => $exists ? 'هذا الاسم مستخدم بالفعل' : null]);
     }
 
-    /**
-     * عرض صفحة تغيير كلمة المرور
-     */
     public function editPassword()
     {
         return view('profile.change-password');
     }
 
-    /**
-     * تحديث كلمة المرور
-     */
     public function updatePassword(Request $request)
     {
         $validated = $request->validate([
@@ -120,29 +99,20 @@ class ProfileController extends Controller
             'password.confirmed' => 'كلمتا المرور غير متطابقتين',
         ]);
 
-        // التحقق من كلمة المرور الحالية
         if (!Hash::check($validated['current_password'], Auth::user()->password)) {
             return back()->withErrors(['current_password' => 'كلمة المرور الحالية غير صحيحة']);
         }
 
-        Auth::user()->update([
-            'password' => Hash::make($validated['password'])
-        ]);
+        Auth::user()->update(['password' => Hash::make($validated['password'])]);
 
         return redirect()->route('profile.show')->with('success', 'تم تغيير كلمة المرور بنجاح');
     }
 
-    /**
-     * عرض صفحة حذف الحساب
-     */
     public function showDeleteAccount()
     {
         return view('profile.delete-account');
     }
 
-    /**
-     * حذف الحساب
-     */
     public function deleteAccount(Request $request)
     {
         $validated = $request->validate([
@@ -150,19 +120,13 @@ class ProfileController extends Controller
             'confirmation' => 'required|in:تأكيد حذف حسابي,تاكيد حذف حسابي'
         ]);
 
-        // التحقق من كلمة المرور
         if (!Hash::check($validated['password'], Auth::user()->password)) {
             return back()->withErrors(['password' => 'كلمة المرور غير صحيحة']);
         }
 
         $user = Auth::user();
+        $this->media->deleteIfExists($user->avatar_url);
 
-        // حذف الصورة الشخصية إذا كانت موجودة
-        if ($user->avatar_url && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar_url)) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar_url);
-        }
-
-        // تسجيل الخروج وحذف الحساب
         \Illuminate\Support\Facades\Cache::forget('user-is-online-' . $user->id);
         \Illuminate\Support\Facades\Cache::put('last-activity-' . $user->id, now(), now()->addDays(7));
         \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->delete();

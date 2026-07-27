@@ -7,6 +7,7 @@ use App\Http\Controllers\Traits\MessagingPrivacyTrait;
 use App\Models\Message;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Services\Media\MediaStorageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Storage;
 class StatusController extends Controller
 {
     use MessagingPrivacyTrait;
+
+    public function __construct(private readonly MediaStorageService $media) {}
 
     public function getStatuses(Request $request)
     {
@@ -230,10 +233,10 @@ class StatusController extends Controller
         $contentPath = null;
         $audioPath = null;
         if ($request->hasFile('media')) {
-            $contentPath = $request->file('media')->store('statuses/media', 'public');
+            $contentPath = $this->media->store($request->file('media'), 'statuses/media');
         }
         if ($request->hasFile('audio')) {
-            $audioPath = $request->file('audio')->store('statuses/audio', 'public');
+            $audioPath = $this->media->store($request->file('audio'), 'statuses/audio');
         }
 
         $textObjectsJson = null;
@@ -369,12 +372,8 @@ class StatusController extends Controller
             return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
         }
 
-        if (!empty($row->content_url) && Storage::disk('public')->exists($row->content_url)) {
-            Storage::disk('public')->delete($row->content_url);
-        }
-        if (!empty($row->audio_url) && Storage::disk('public')->exists($row->audio_url)) {
-            Storage::disk('public')->delete($row->audio_url);
-        }
+        $this->media->deleteIfExists($row->content_url ?: null);
+        $this->media->deleteIfExists($row->audio_url ?: null);
         DB::table('status_viewers')->where('status_id', (int) $status)->delete();
         DB::table('user_statuses')->where('id', (int) $status)->delete();
 
@@ -424,24 +423,18 @@ class StatusController extends Controller
         $contentPath = $row->content_url;
         $audioPath = $row->audio_url;
         if ($request->hasFile('media')) {
-            if (!empty($contentPath) && Storage::disk('public')->exists($contentPath)) {
-                Storage::disk('public')->delete($contentPath);
-            }
-            $contentPath = $request->file('media')->store('statuses/media', 'public');
+            $this->media->deleteIfExists($contentPath ?: null);
+            $contentPath = $this->media->store($request->file('media'), 'statuses/media');
         } elseif (($data['type'] ?? 'text') === 'text') {
-            if (!empty($contentPath) && Storage::disk('public')->exists($contentPath)) {
-                Storage::disk('public')->delete($contentPath);
-            }
+            $this->media->deleteIfExists($contentPath ?: null);
             $contentPath = null;
         } elseif (empty($contentPath)) {
             return response()->json(['success' => false, 'message' => 'يرجى إرفاق وسائط للحالة.'], 422);
         }
 
         if ($request->hasFile('audio')) {
-            if (!empty($audioPath) && Storage::disk('public')->exists($audioPath)) {
-                Storage::disk('public')->delete($audioPath);
-            }
-            $audioPath = $request->file('audio')->store('statuses/audio', 'public');
+            $this->media->deleteIfExists($audioPath ?: null);
+            $audioPath = $this->media->store($request->file('audio'), 'statuses/audio');
         }
 
         $textObjectsJsonUpd = null;
