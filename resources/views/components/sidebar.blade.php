@@ -51,6 +51,11 @@
                 <span>الشهادات</span>
             </a>
 
+            <a href="{{ route('student.smart-rewind.index') }}" class="nav-link @if(request()->is('student/smart-rewind*')) active @endif">
+                <i class="ri-rewind-line"></i>
+                <span>Smart Rewind</span>
+            </a>
+
             <a href="{{ route('student.inquiries.index') }}" class="nav-link @if(request()->is('student/my-inquiries*')) active @endif">
                 <i class="ri-question-line"></i>
                 <span>الاستفسارات</span>
