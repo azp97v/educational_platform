@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Media\MediaStorageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 
 class GroupMessageController extends Controller
 {
+    public function __construct(private readonly MediaStorageService $media) {}
     private function authorizeGroupMember(int $groupId): object
     {
         $group = DB::table('groups')->where('id', $groupId)->first();
@@ -157,8 +159,8 @@ class GroupMessageController extends Controller
         ]);
 
         $file    = $request->file('file');
-        $path    = $file->store('group_attachments', 'public');
-        $mime    = Storage::disk('public')->mimeType($path) ?: $file->getMimeType();
+        $path    = $this->media->store($file, 'group_attachments');
+        $mime    = $this->media->mimeType($path) ?: $file->getMimeType();
         $name    = $file->getClientOriginalName() ?: basename($path);
         $caption = trim($data['content'] ?? '');
 
@@ -330,7 +332,7 @@ class GroupMessageController extends Controller
             if (array_key_exists('description', $data)) $updates['description'] = $data['description'];
         }
         if ($isAdminUser && $request->hasFile('avatar')) {
-            $updates['avatar_path'] = $request->file('avatar')->store('group-avatars', 'public');
+            $updates['avatar_path'] = $this->media->store($request->file('avatar'), 'group-avatars');
         }
         if ($updates) { $updates['updated_at'] = now(); DB::table('groups')->where('id', $groupId)->update($updates); }
 

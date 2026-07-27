@@ -32,6 +32,20 @@ class MediaStorageService
         ];
     }
 
+    public function store(UploadedFile $file, string $directory): string
+    {
+        return $this->storeUploadedFile($file, $directory)['path'];
+    }
+
+    public function mimeType(string $path): ?string
+    {
+        try {
+            return Storage::disk($this->disk())->mimeType($path) ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function resolveUrl(?string $path): ?string
     {
         if (!$path) {
@@ -61,7 +75,20 @@ class MediaStorageService
             }
         }
 
-        return $disk->url($value);
+        $url = $disk->url($value);
+
+        // Replace storage endpoint with CDN URL when configured.
+        $cdnUrl = config('media.cdn_url');
+        if ($cdnUrl && $this->disk() === 'r2') {
+            $r2Endpoint = rtrim(config('filesystems.disks.r2.endpoint', ''), '/');
+            $bucket = config('filesystems.disks.r2.bucket', '');
+            $r2Base = $r2Endpoint . '/' . $bucket;
+            if ($r2Base && Str::startsWith($url, $r2Base)) {
+                $url = rtrim($cdnUrl, '/') . '/' . ltrim(Str::after($url, $r2Base), '/');
+            }
+        }
+
+        return $url;
     }
 
     public function deleteIfExists(?string $path): void
@@ -83,4 +110,3 @@ class MediaStorageService
         }
     }
 }
-
