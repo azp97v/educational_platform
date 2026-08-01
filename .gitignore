@@ -213,3 +213,4 @@ scratch/
 AGENTS.md
 start-with-queue.ps1
 scripts/
+.gstack/
