@@ -55,7 +55,13 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
                 <span>الاختبارات</span>
             </a>
             
-            <a href="{{ route('student.inquiries.index') }}" 
+            <a href="{{ route('student.smart-rewind.index') }}"
+               class="nav-btn {{ request()->routeIs('student.smart-rewind.*') ? 'active' : '' }}">
+                <i class="ri-rewind-line"></i>
+                <span>Smart Rewind</span>
+            </a>
+
+            <a href="{{ route('student.inquiries.index') }}"
                class="nav-btn {{ request()->routeIs('student.inquiries.index') ? 'active' : '' }}">
                 <i class="ri-question-line"></i>
                 <span>الاستفسارات</span>
