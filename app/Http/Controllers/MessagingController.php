@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Notifications\AppNotification;
 use App\Http\Controllers\Traits\MessagingPrivacyTrait;
+use App\Services\Media\MediaStorageService;
 use App\Services\UserPresenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -21,6 +22,8 @@ use Illuminate\Support\Str;
 class MessagingController extends Controller
 {
     use MessagingPrivacyTrait;
+
+    public function __construct(private readonly MediaStorageService $media) {}
 
     private const CONTACTS_LIMIT      = 200;
     private const MESSAGES_PER_PAGE   = 25;
@@ -61,7 +64,7 @@ class MessagingController extends Controller
 
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
-            $avatarPath = $request->file('avatar')->store('messaging/groups', 'public');
+            $avatarPath = $this->media->store($request->file('avatar'), 'messaging/groups');
         }
 
         DB::beginTransaction();
@@ -515,8 +518,8 @@ class MessagingController extends Controller
         try {
             if ($request->hasFile('attachment')) {
                 $file = $request->file('attachment');
-                $attachmentPath = $file->store('message_attachments', 'public');
-                $attachmentType = Storage::disk('public')->mimeType($attachmentPath) ?: $file->getMimeType();
+                $attachmentPath = $this->media->store($file, 'message_attachments');
+                $attachmentType = $this->media->mimeType($attachmentPath) ?: $file->getMimeType();
                 $attachmentName = $file->getClientOriginalName();
             }
 
