@@ -11,13 +11,16 @@ class SetLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->cookie('locale')
+        $supported = config('app.supported_locales', ['ar', 'en']);
+
+        $raw = $request->cookie('locale')
             ?? session('locale')
             ?? config('app.locale');
 
-        if (!in_array($locale, ['ar', 'en'])) {
-            $locale = 'ar';
-        }
+        // Cast to string — guards against array-shaped cookie injection
+        $locale = in_array((string) $raw, $supported, true)
+            ? (string) $raw
+            : config('app.locale', 'ar');
 
         App::setLocale($locale);
 
