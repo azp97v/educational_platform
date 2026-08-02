@@ -29,99 +29,99 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
                 <i class="ri-book-read-fill"></i>
             @endif
         </div>
-        <div class="logo-name">إجلال</div>
-        <div class="logo-sub">المنصة التعليمية</div>
+        <div class="logo-name">{{ __('sidebar.platform_name') }}</div>
+        <div class="logo-sub">{{ __('sidebar.platform_subtitle') }}</div>
     </div>
     
     {{-- قائمة التنقل حسب دور المستخدم --}}
     <nav class="sidebar-nav">
         @if(auth()->user()->role === 'student')
             {{-- قائمة الطالب --}}
-            <a href="{{ route('student.index') }}" 
+            <a href="{{ route('student.index') }}"
                class="nav-btn {{ request()->routeIs('student.index') ? 'active' : '' }}">
                 <i class="ri-home-4-line"></i>
-                <span>الرئيسية</span>
+                <span>{{ __('sidebar.home') }}</span>
             </a>
-            
-            <a href="{{ route('student.academy') }}" 
+
+            <a href="{{ route('student.academy') }}"
                class="nav-btn {{ request()->routeIs('student.academy') ? 'active' : '' }}">
                 <i class="ri-book-open-line"></i>
-                <span>المسارات</span>
+                <span>{{ __('sidebar.courses') }}</span>
             </a>
-            
-            <a href="{{ route('student.exams') }}" 
+
+            <a href="{{ route('student.exams') }}"
                class="nav-btn {{ request()->routeIs('student.exams') ? 'active' : '' }}">
                 <i class="ri-file-list-line"></i>
-                <span>الاختبارات</span>
+                <span>{{ __('sidebar.exams') }}</span>
             </a>
-            
+
             <a href="{{ route('student.smart-rewind.index') }}"
                class="nav-btn {{ request()->routeIs('student.smart-rewind.*') ? 'active' : '' }}">
                 <i class="ri-rewind-line"></i>
-                <span>Smart Rewind</span>
+                <span>{{ __('sidebar.smart_rewind') }}</span>
             </a>
 
             <a href="{{ route('student.inquiries.index') }}"
                class="nav-btn {{ request()->routeIs('student.inquiries.index') ? 'active' : '' }}">
                 <i class="ri-question-line"></i>
-                <span>الاستفسارات</span>
+                <span>{{ __('sidebar.inquiries') }}</span>
             </a>
-            
-            <a href="{{ route('gamification.leaderboard') }}" 
+
+            <a href="{{ route('gamification.leaderboard') }}"
                class="nav-btn {{ request()->routeIs('gamification.*') ? 'active' : '' }}">
                 <i class="ri-bar-chart-2-line"></i>
-                <span>إحصائياتي</span>
+                <span>{{ __('sidebar.my_stats') }}</span>
             </a>
             
         @elseif(auth()->user()->role === 'teacher')
             <a href="{{ route('teacher.dashboard') }}" class="nav-btn {{ request()->routeIs('teacher.dashboard') ? 'active' : '' }}" id="nb-home">
-                <i class="ri-home-4-line"></i><span>الرئيسية</span>
+                <i class="ri-home-4-line"></i><span>{{ __('sidebar.home') }}</span>
             </a>
             <a href="{{ route('teacher.courses') }}" class="nav-btn {{ request()->routeIs('teacher.courses') ? 'active' : '' }}" id="nb-courses">
-                <i class="ri-book-2-line"></i><span>المسارات</span>
+                <i class="ri-book-2-line"></i><span>{{ __('sidebar.courses') }}</span>
             </a>
             <a href="{{ route('teacher.categories') }}" class="nav-btn {{ request()->routeIs('teacher.categories*') ? 'active' : '' }}" id="nb-categories">
-                <i class="ri-price-tag-3-line"></i><span>الفئات</span>
+                <i class="ri-price-tag-3-line"></i><span>{{ __('sidebar.categories') }}</span>
             </a>
             <a href="{{ route('teacher.enrollment.requests') }}" class="nav-btn {{ request()->routeIs('teacher.enrollment.requests') ? 'active' : '' }}" id="nb-enrollment">
-                <i class="ri-user-add-line"></i><span>طلبات الالتحاق</span>
+                <i class="ri-user-add-line"></i><span>{{ __('sidebar.enrollment_requests') }}</span>
             </a>
             <a href="{{ route('teacher.exams') }}" class="nav-btn {{ request()->routeIs('teacher.exams') ? 'active' : '' }}" id="nb-exams">
-                <i class="ri-file-list-line"></i><span>الاختبارات</span>
+                <i class="ri-file-list-line"></i><span>{{ __('sidebar.exams') }}</span>
             </a>
             <a href="{{ route('teacher.analytics') }}" class="nav-btn {{ request()->routeIs('teacher.analytics') ? 'active' : '' }}" id="nb-analytics">
-                <i class="ri-bar-chart-2-line"></i><span>نسبة الإنجاز</span>
+                <i class="ri-bar-chart-2-line"></i><span>{{ __('sidebar.progress') }}</span>
             </a>
             <a href="{{ route('teacher.students') }}" class="nav-btn {{ request()->routeIs('teacher.students') ? 'active' : '' }}" id="nb-students">
-                <i class="ri-team-line"></i><span>طلابي</span>
+                <i class="ri-team-line"></i><span>{{ __('sidebar.my_students') }}</span>
             </a>
             <a href="{{ route('teacher.certificates.students') }}" class="nav-btn {{ request()->routeIs('teacher.certificates.*') ? 'active' : '' }}" id="nb-certificates">
-                <i class="ri-award-line"></i><span>الشهادات</span>
+                <i class="ri-award-line"></i><span>{{ __('sidebar.certificates') }}</span>
             </a>
             <a href="{{ route('teacher.questions.manage') }}" class="nav-btn {{ request()->routeIs('teacher.questions.manage') ? 'active' : '' }}" id="nb-inquiries">
-                <i class="ri-chat-3-line"></i><span>الأسئلة والاستفسارات</span>
+                <i class="ri-chat-3-line"></i><span>{{ __('sidebar.questions_inquiries') }}</span>
             </a>
             <a href="{{ route('teacher.messaging') }}" class="nav-btn {{ request()->routeIs('teacher.messaging') ? 'active' : '' }}" id="nb-messaging">
-                <i class="ri-message-2-line"></i><span>المراسلة</span>
+                <i class="ri-message-2-line"></i><span>{{ __('sidebar.messaging') }}</span>
             </a>
         @elseif(auth()->user()->role === 'admin')
             {{-- قائمة الإدارة --}}
-            <a href="{{ route('admin.index') }}" 
+            <a href="{{ route('admin.index') }}"
                class="nav-btn {{ request()->routeIs('admin.index') ? 'active' : '' }}">
                 <i class="ri-home-4-line"></i>
-                <span>لوحة التحكم</span>
+                <span>{{ __('sidebar.dashboard') }}</span>
             </a>
-            
-            <a href="{{ route('admin.index') }}" 
+
+            <a href="{{ route('admin.index') }}"
                class="nav-btn {{ request()->routeIs('admin.index') && request()->segment(3) === 'users' ? 'active' : '' }}">
                 <i class="ri-team-line"></i>
-                <span>المستخدمون</span>
+                <span>{{ __('sidebar.users') }}</span>
             </a>
-            
-            <a href="{{ route('admin.create') }}" 
+
+            <a href="{{ route('admin.create') }}"
                class="nav-btn {{ request()->routeIs('admin.create') ? 'active' : '' }}">
                 <i class="ri-user-add-line"></i>
-                <span>إضافة مستخدم</span>
+                <span>{{ __('sidebar.add_user') }}</span>
             </a>
             
         @endif
@@ -133,26 +133,26 @@ SIDEBAR COMPONENT - شريط التنقل الجانبي الموحد
             <form action="{{ route('teacher.logout') }}" method="POST" style="width: 100%;">
                 @csrf
                 <button type="submit" class="nav-btn logout" style="width: 100%; margin: 0; border: none;">
-                    <i class="ri-logout-box-r-line"></i><span>خروج</span>
+                    <i class="ri-logout-box-r-line"></i><span>{{ __('sidebar.logout') }}</span>
                 </button>
             </form>
         @else
             {{-- زر تبديل المظهر --}}
-            <button class="nav-btn nav-toggle-theme" 
+            <button class="nav-btn nav-toggle-theme"
                     id="sidebarThemeToggle"
-                    title="تبديل بين الوضع الفاتح والغامق">
+                    title="{{ __('sidebar.theme_toggle_title') }}">
                 <i class="ri-moon-line theme-icon"></i>
-                <span>المظهر</span>
+                <span>{{ __('sidebar.theme') }}</span>
             </button>
-            
+
             {{-- زر تسجيل الخروج --}}
-            <form method="POST" 
-                  action="{{ route('logout') }}" 
+            <form method="POST"
+                  action="{{ route('logout') }}"
                   class="logout-form">
                 @csrf
-                <button type="submit" class="nav-btn nav-logout" title="تسجيل الخروج الآمن">
+                <button type="submit" class="nav-btn nav-logout" title="{{ __('sidebar.logout_title') }}">
                     <i class="ri-logout-box-line"></i>
-                    <span>خروج</span>
+                    <span>{{ __('sidebar.logout') }}</span>
                 </button>
             </form>
         @endif

@@ -15,7 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
-        
+
+        // Locale must be set early so all views receive the correct locale
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
+        ]);
+
         // تسجيل نشاط المستخدم (تحديث الـ streak)
         $middleware->append(\App\Http\Middleware\UpdateUserActivity::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);

@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ in_array(app()->getLocale(), config('app.rtl_locales', ['ar'])) ? 'rtl' : 'ltr' }}">
 <head>
   <meta charset="UTF-8">
   @include('components.account-theme-head')
