@@ -23,7 +23,10 @@ class MessagingController extends Controller
 {
     use MessagingPrivacyTrait;
 
-    public function __construct(private readonly MediaStorageService $media) {}
+    public function __construct(
+        private readonly MediaStorageService $media,
+        private readonly UserPresenceService $presence,
+    ) {}
 
     private const CONTACTS_LIMIT      = 200;
     private const MESSAGES_PER_PAGE   = 25;
@@ -31,8 +34,6 @@ class MessagingController extends Controller
     private const SEARCH_LIMIT        = 50;
     private const SEARCH_USERS_LIMIT  = 30;
     private const FREQUENT_CONTACTS   = 5;
-
-    public function __construct(private readonly UserPresenceService $presence) {}
 
     public function createGroup(Request $request)
     {
