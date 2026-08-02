@@ -12,6 +12,11 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private function userPayload(User $user): array
+    {
+        return $user->only('id', 'name', 'email', 'role', 'avatar');
+    }
+
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -27,7 +32,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return response()->json(['user' => $request->user()]);
+        return response()->json(['user' => $this->userPayload($request->user())]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -41,7 +46,7 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json(['user' => $request->user()]);
+        return response()->json(['user' => $this->userPayload($request->user())]);
     }
 
     public function register(Request $request): JsonResponse
@@ -58,8 +63,10 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        // Regenerate session ID to prevent session fixation
         Auth::login($user);
+        $request->session()->regenerate();
 
-        return response()->json(['user' => $user], 201);
+        return response()->json(['user' => $this->userPayload($user)], 201);
     }
 }

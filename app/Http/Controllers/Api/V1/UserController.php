@@ -42,7 +42,7 @@ class UserController extends Controller
 
         $user->update($validated);
 
-        return response()->json($user->fresh());
+        return response()->json($user->fresh()->only('id', 'name', 'email', 'role', 'is_active', 'created_at'));
     }
 
     public function destroy(User $user): JsonResponse
