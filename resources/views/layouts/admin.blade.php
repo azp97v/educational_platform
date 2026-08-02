@@ -1,8 +1,9 @@
 ﻿<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ in_array(app()->getLocale(), config('app.rtl_locales', ['ar'])) ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     @include('components.account-theme-head')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'لوحة الإدارة | جمعية إجلال')</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo/logo.png') }}">

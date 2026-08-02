@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ in_array(app()->getLocale(), config('app.rtl_locales', ['ar'])) ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -39,13 +39,16 @@
     <!-- ًںژ¨ Icons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css" rel="stylesheet">
 
-    <!-- ًںژ¯ Master Styles -->
+    <!-- 🎨 Master Styles -->
     <link rel="stylesheet" href="{{ asset('css/master.css') }}">
 
-    <!-- ï؟½ Layout Styles -->
+    <!-- 📐 Layout Styles -->
     <link rel="stylesheet" href="{{ asset('css/layout.css') }}">
     <link rel="stylesheet" href="{{ asset('css/brand-theme-overrides.css') }}">
     @include('components.account-theme-head')
+
+    <!-- 🎯 Tailwind CSS + Design Tokens (loaded after theme vars so @theme inline resolves correctly) -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         .notification-wrapper {
