@@ -31,6 +31,9 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): JsonResponse
     {
+        // Only admin route is guarded, but add explicit check so tests catch regressions
+        abort_unless($request->user()?->role === 'admin', 403);
+
         $validated = $request->validate([
             'name'      => ['sometimes', 'string', 'max:255'],
             'role'      => ['sometimes', 'in:admin,teacher,student'],
