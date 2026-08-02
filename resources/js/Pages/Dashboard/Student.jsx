@@ -1,62 +1,158 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
-export default function StudentDashboard({ user, stats, courses }) {
+export default function StudentDashboard({ user, stats, enrolledCourses, availableCourses, recentActivity }) {
     return (
-        <AppLayout>
-            <Head title="لوحة التحكم" />
-            <div className="content">
-                <div className="p-6">
-                    <h1 className="text-2xl font-bold text-text mb-6">
-                        أهلاً {user?.name} 👋
-                    </h1>
+        <AppLayout title="لوحة التحكم">
+            <Head title="الرئيسية" />
 
-                    {/* Stats row */}
-                    <div className="grid grid-cols-1 gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-                        <StatCard label="مسارات نشطة" value={stats?.active_courses ?? 0} icon="ri-book-open-line" />
-                        <StatCard label="نقاطي" value={stats?.points ?? 0} icon="ri-trophy-line" />
-                        <StatCard label="شهاداتي" value={stats?.certificates ?? 0} icon="ri-award-line" />
-                        <StatCard label="أيام متواصلة" value={stats?.streak ?? 0} icon="ri-fire-line" />
+            {/* Welcome */}
+            <div className="page-header">
+                <h2 className="page-greeting">
+                    أهلاً {user?.name} <span role="img" aria-label="wave">👋</span>
+                </h2>
+                <p className="page-sub">تابع مسيرتك التعليمية</p>
+            </div>
+
+            {/* Stats */}
+            <div className="stats-grid">
+                <StatCard icon="ri-book-open-line"   label="مسارات نشطة"    value={stats?.active_courses ?? 0}  color="blue" />
+                <StatCard icon="ri-trophy-line"       label="نقاطي"          value={stats?.points ?? 0}           color="gold" />
+                <StatCard icon="ri-award-line"        label="شهاداتي"        value={stats?.certificates ?? 0}    color="green" />
+                <StatCard icon="ri-fire-line"         label="أيام متواصلة"  value={stats?.streak ?? 0}           color="orange" />
+                <StatCard icon="ri-check-double-line" label="دروس مكتملة"   value={stats?.completed_lessons ?? 0} color="purple" />
+                <StatCard icon="ri-time-line"         label="وقت التعلم"    value={formatHours(stats?.total_minutes)} color="teal" />
+            </div>
+
+            <div className="dashboard-grid">
+                {/* Enrolled Courses */}
+                <section className="card">
+                    <div className="card-header">
+                        <h3 className="card-title"><i className="ri-book-open-line" /> مساراتي التعليمية</h3>
+                        <a href="/student/academy" className="card-link">عرض الكل</a>
                     </div>
+                    <div className="card-body">
+                        {enrolledCourses?.length > 0 ? (
+                            <div className="course-list">
+                                {enrolledCourses.map(course => (
+                                    <CourseRow key={course.id} course={course} />
+                                ))}
+                            </div>
+                        ) : (
+                            <Empty icon="ri-book-open-line" text="لم تلتحق بأي مسار بعد" action={{ href: '/student/academy', label: 'استعرض المسارات' }} />
+                        )}
+                    </div>
+                </section>
 
-                    {/* Courses */}
-                    {courses?.length > 0 && (
-                        <div className="mt-6">
-                            <h2 className="text-lg font-semibold text-text mb-3">مساراتك التعليمية</h2>
-                            <div className="grid grid-cols-1 gap-3">
-                                {courses.map(course => (
-                                    <CourseCard key={course.id} course={course} />
+                {/* Available Courses */}
+                <section className="card">
+                    <div className="card-header">
+                        <h3 className="card-title"><i className="ri-compass-discover-line" /> مسارات متاحة</h3>
+                        <a href="/student/academy" className="card-link">عرض الكل</a>
+                    </div>
+                    <div className="card-body">
+                        {availableCourses?.length > 0 ? (
+                            <div className="course-list">
+                                {availableCourses.slice(0, 4).map(course => (
+                                    <AvailableCourseRow key={course.id} course={course} />
+                                ))}
+                            </div>
+                        ) : (
+                            <Empty icon="ri-compass-discover-line" text="لا توجد مسارات متاحة حالياً" />
+                        )}
+                    </div>
+                </section>
+
+                {/* Recent Activity */}
+                {recentActivity?.length > 0 && (
+                    <section className="card card-full">
+                        <div className="card-header">
+                            <h3 className="card-title"><i className="ri-history-line" /> آخر نشاطاتي</h3>
+                        </div>
+                        <div className="card-body">
+                            <div className="activity-list">
+                                {recentActivity.map((item, i) => (
+                                    <ActivityRow key={i} item={item} />
                                 ))}
                             </div>
                         </div>
-                    )}
-                </div>
+                    </section>
+                )}
             </div>
         </AppLayout>
     );
 }
 
-function StatCard({ label, value, icon }) {
+function StatCard({ icon, label, value, color }) {
     return (
-        <div className="rounded-md p-4" style={{ background: 'var(--theme-surface)', border: '1px solid var(--theme-border)' }}>
-            <i className={`${icon} text-gold text-xl mb-2 block`}></i>
-            <div className="text-2xl font-bold text-text">{value}</div>
-            <div className="text-sm text-muted mt-1">{label}</div>
+        <div className={`stat-card stat-${color}`}>
+            <i className={`${icon} stat-icon`} />
+            <div className="stat-value">{value}</div>
+            <div className="stat-label">{label}</div>
         </div>
     );
 }
 
-function CourseCard({ course }) {
+function CourseRow({ course }) {
     const progress = course.progress ?? 0;
     return (
-        <div className="rounded-md p-4" style={{ background: 'var(--theme-surface)', border: '1px solid var(--theme-border)' }}>
-            <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-text">{course.title}</span>
-                <span className="text-sm text-muted">{progress}%</span>
+        <a href={`/student/course/${course.id}`} className="course-row">
+            <div className="course-info">
+                <span className="course-title">{course.title}</span>
+                <span className="course-meta">{course.lessons_count ?? 0} درس</span>
             </div>
-            <div style={{ background: 'var(--theme-border)', borderRadius: 4, height: 6 }}>
-                <div style={{ width: `${progress}%`, background: 'var(--theme-gold)', borderRadius: 4, height: 6, transition: 'width 0.4s' }} />
+            <div className="progress-wrap">
+                <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${progress}%` }} />
+                </div>
+                <span className="progress-label">{progress}%</span>
+            </div>
+        </a>
+    );
+}
+
+function AvailableCourseRow({ course }) {
+    return (
+        <div className="course-row">
+            <div className="course-info">
+                <span className="course-title">{course.title}</span>
+                <span className="course-meta">{course.lessons_count ?? 0} درس</span>
+            </div>
+            <button
+                className="btn-sm btn-primary"
+                onClick={() => router.post(`/student/enroll/${course.id}`)}
+            >
+                الالتحاق
+            </button>
+        </div>
+    );
+}
+
+function ActivityRow({ item }) {
+    const icons = { lesson: 'ri-play-circle-line', exam: 'ri-file-list-line', certificate: 'ri-award-line' };
+    return (
+        <div className="activity-row">
+            <i className={`${icons[item.type] ?? 'ri-check-line'} activity-icon`} />
+            <div className="activity-info">
+                <span className="activity-title">{item.title}</span>
+                <span className="activity-time">{item.time_ago}</span>
             </div>
         </div>
     );
+}
+
+function Empty({ icon, text, action }) {
+    return (
+        <div className="empty-state">
+            <i className={icon} />
+            <p>{text}</p>
+            {action && <a href={action.href} className="btn-sm btn-primary">{action.label}</a>}
+        </div>
+    );
+}
+
+function formatHours(minutes) {
+    if (!minutes) return '0 س';
+    const h = Math.floor(minutes / 60);
+    return h > 0 ? `${h} س` : `${minutes} د`;
 }

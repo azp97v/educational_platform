@@ -15,6 +15,15 @@ use App\Http\Controllers\StudentInquiryController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\PdfController;
+use App\Http\Controllers\Inertia\DashboardController as InertiaDashboard;
+
+// ─── P5 Inertia React Routes ─────────────────────────────────────────────────
+Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
+    Route::get('/student/dashboard', [InertiaDashboard::class, 'student'])->middleware('role:student')->name('student.dashboard');
+    Route::get('/teacher/dashboard', [InertiaDashboard::class, 'teacher'])->middleware('role:teacher')->name('teacher.dashboard');
+    Route::get('/admin/dashboard',   [InertiaDashboard::class, 'admin'])->middleware('role:admin')->name('admin.dashboard');
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 Route::get('/', function () {
     if (Auth::check()) {
