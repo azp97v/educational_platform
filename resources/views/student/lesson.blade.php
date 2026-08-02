@@ -1538,7 +1538,7 @@
         <i class="ri-list-check-2"></i> الدروس
       </div>
       <div class="lessons-wrapper">
-        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $lessonsWithProgress; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ls): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+        <?php $__empty_1 = true; $__currentLoopData = $lessonsWithProgress; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ls): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
           <?php if(!empty($ls['locked'])): ?>
             <div class="lesson-item lesson-item--locked" title="أكمل الدرس السابق لفتح هذا الدرس">
               <div class="lesson-item-info">
@@ -1566,12 +1566,12 @@
             </div>
           </a>
           <?php endif; ?>
-        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
           <div style="text-align: center; padding: 2rem 0; color: var(--light-gray); font-size: 0.9rem;">
             <i class="ri-inbox-line" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
             <div>لا توجد دروس</div>
           </div>
-        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -1663,7 +1663,7 @@
           }
         }
       ?>
-      <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($lesson->lesson_type === 'video-upload' && $lesson->video_file): ?>
+      <?php if($lesson->lesson_type === 'video-upload' && $lesson->video_file): ?>
         <video id="mainVideo" controls preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
           <source src="<?php echo e($videoSource); ?>" type="<?php echo e($videoMimeType); ?>">
         </video>
@@ -1756,7 +1756,7 @@
           <div class="empty-icon">&#x1F4F9;</div>
           <div class="empty-text">لم يتم رفع محتوى بعد</div>
         </div>
-      <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+      <?php endif; ?>
     </div>
 
     <!-- Video Info Bar -->
@@ -1771,12 +1771,12 @@
     <div class="lesson-content">
       <h2><?php echo e($lesson->title); ?></h2>
       <p><?php echo e($lesson->description ?? 'وصف الدرس سيظهر هنا'); ?></p>
-      <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($lesson->content): ?>
+      <?php if($lesson->content): ?>
         <p style="margin-top: 1.5rem; opacity: 0.85; border-top: 1px solid rgba(198, 166, 117, 0.2); padding-top: 1rem;">
           <?php echo nl2br($lesson->content); ?>
 
         </p>
-      <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+      <?php endif; ?>
     </div>
 
     <!-- Materials -->

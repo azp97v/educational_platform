@@ -7,7 +7,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "barryvdh/laravel-dompdf": "^3.1",
         "endroid/qr-code": "^6.0",
         "inertiajs/inertia-laravel": "^3.2",
         "laravel/framework": "^12.0",
@@ -30,8 +29,7 @@
     },
     "autoload": {
         "files": [
-            "app/Support/messaging_helpers.php",
-            "bootstrap/livewire-shim.php"
+            "app/Support/messaging_helpers.php"
         ],
         "psr-4": {
             "App\\": "app/",
@@ -91,6 +89,8 @@
         "deploy": [
             "php artisan down --retry=60",
             "@composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader",
+            "npm ci --omit=dev",
+            "npm run build",
             "php artisan migrate --force",
             "php artisan config:cache",
             "php artisan route:cache",
@@ -103,7 +103,9 @@
         "health": "php artisan route:list --name=health && curl -s http://localhost:8000/health",
         "check": [
             "@php artisan test",
-            "@php artisan migrate --dry-run --force"
+            "@php artisan migrate --dry-run --force",
+            "@php artisan route:list --compact",
+            "./vendor/bin/pint --test"
         ]
     },
     "extra": {
